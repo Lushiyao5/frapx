@@ -1,5 +1,5 @@
 import type { ExplicitUniformInput, GLContext, UniformInput, UniformType } from "../types";
-import { toUniformName } from "./names";
+import { toUniformName } from "@frapx/runtime";
 
 export type NormalizedUniform = {
   type: UniformType;

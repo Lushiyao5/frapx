@@ -22,7 +22,6 @@ export const hexToRgba = (hex: string): Rgba => {
 
 const normalizeHex = (hex: string): string => {
   const value = hex.startsWith("#") ? hex.slice(1) : hex;
-
   if (
     !/^(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(
       value,
@@ -30,12 +29,11 @@ const normalizeHex = (hex: string): string => {
   ) {
     throw new Error(`Invalid hex color: ${hex}`);
   }
-
   if (value.length === 3 || value.length === 4) {
     return Array.from(value, (char) => `${char}${char}`).join("");
   }
-
   return value;
 };
 
-const parseChannel = (hex: string): number => Number.parseInt(hex, 16) / 255;
+const parseChannel = (hex: string): number =>
+  Number.parseInt(hex, 16) / 255;

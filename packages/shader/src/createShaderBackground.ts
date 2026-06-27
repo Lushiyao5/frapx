@@ -11,19 +11,14 @@ import type {
   UniformRuntimeValue
 } from "./types";
 import {
-  DestroyedError,
-  TargetNotFoundError,
   TextureLoadError,
-  UnsupportedError
-} from "./internal/errors";
-import {
-  resolveDpr,
-  resizeCanvasToTarget,
-  setupCanvas,
-  type DomSetup
-} from "./internal/dom";
-import { toUniformName } from "./internal/names";
-import { loadTexture, type LoadedTexture } from "./internal/textures";
+  UnsupportedError,
+  createRuntimeHost,
+  isGLSL300,
+  loadTexture,
+  toUniformName
+} from "@frapx/runtime";
+import type { HostFrameState, RuntimeHostInstance } from "@frapx/runtime";
 import {
   applyProgramUniform,
   applyUniform,
@@ -47,18 +42,9 @@ import {
   createFullscreenBuffer,
   createProgram,
   defaultVertexShader,
-  defaultVertexShader300,
-  isGLSL300
+  defaultVertexShader300
 } from "./internal/webgl";
-
-const MAX_DELTA_SECONDS = 0.1;
-
-// A "closed" gate suppresses the render loop. The instance runs only when the
-// user intends it to (start()) AND every gate is open (the set is empty).
-// "offscreen"/"hidden" are visibility gates: they suppress all rendering.
-// "reducedMotion" is a motion gate: it stops the loop but allows one static
-// frame, and only applies to the continuous (non-demand) render mode.
-type Gate = "offscreen" | "hidden" | "reducedMotion";
+import type { LoadedTexture } from "./internal/textures";
 
 export const createShaderBackground = <
   TUniforms extends UniformInputMap = UniformInputMap
@@ -76,10 +62,10 @@ class ShaderBackground<TUniforms extends UniformInputMap>
   private readonly options: CreateShaderBackgroundOptions<TUniforms>;
   private readonly uniformCache: Map<string, NormalizedUniform>;
   private readonly warnedUniforms = new Set<string>();
-  private readyResolve: (() => void) | null = null;
-  private readyReject: ((error: Error) => void) | null = null;
-  private dom: DomSetup | null = null;
-  private context: GLContext | null = null;
+  private readonly host: RuntimeHostInstance;
+
+  // Shader-specific GL state
+  private _gl: GLContext | null = null;
   private program: WebGLProgram | null = null;
   private buffer: WebGLBuffer | null = null;
   private attribLocation = -1;
@@ -90,213 +76,122 @@ class ShaderBackground<TUniforms extends UniformInputMap>
   private textureVersions = new Map<string, number>();
   private feedbackOptions: NormalizedFeedbackOptions | null = null;
   private feedbackState: FeedbackState | null = null;
-  private resizeObserver: ResizeObserver | null = null;
-  private intersectionObserver: IntersectionObserver | null = null;
-  private rafId = 0;
-  private running = false;
-  private inRender = false;
-  private destroyed = false;
-  private gates = new Set<Gate>();
-  private reducedMotionActive = false;
-  private frame = 0;
-  private elapsed = 0;
-  private lastTimestamp = 0;
-  private pixelRatio = 1;
-  private width = 1;
-  private height = 1;
-  private viewportWidth = 1;
-  private viewportHeight = 1;
-  private pointer = { x: 0, y: 0, uvX: 0, uvY: 0, active: 0 };
-  private removeListeners: Array<() => void> = [];
-  private currentStatus: ShaderStatus = "idle";
-  private contextRestoredShouldRun = false;
+  private shaderDestroyed = false;
 
   constructor(options: CreateShaderBackgroundOptions<TUniforms>) {
     this.options = options;
     this.uniformCache = createUniformCache(options.uniforms);
-    this.ready = new Promise<void>((resolve, reject) => {
-      this.readyResolve = resolve;
-      this.readyReject = reject;
+
+    this.host = createRuntimeHost({
+      ...(options.target !== undefined && { target: options.target }),
+      ...(options.canvas !== undefined && { canvas: options.canvas }),
+      ...(options.layer !== undefined && { layer: options.layer }),
+      ...(options.dpr !== undefined && { dpr: options.dpr }),
+      ...(options.maxDpr !== undefined && { maxDpr: options.maxDpr }),
+      ...(options.autoResize !== undefined && { autoResize: options.autoResize }),
+      ...(options.canvasClass !== undefined && { canvasClass: options.canvasClass }),
+      ...(options.canvasStyle !== undefined && { canvasStyle: options.canvasStyle }),
+      ...(options.autoStart !== undefined && { autoStart: options.autoStart }),
+      ...(options.pauseWhenOffscreen !== undefined && { pauseWhenOffscreen: options.pauseWhenOffscreen }),
+      ...(options.pauseWhenHidden !== undefined && { pauseWhenHidden: options.pauseWhenHidden }),
+      ...(options.respectReducedMotion !== undefined && { respectReducedMotion: options.respectReducedMotion }),
+      ...(options.renderMode !== undefined && { renderMode: options.renderMode }),
+      ...(options.debug !== undefined && { debug: options.debug }),
+
+      createContext: (canvas) => {
+        const want300 = isGLSL300(options.fragment);
+        const contextType = want300 ? "webgl2" : "webgl";
+        const attrs = {
+          alpha: true,
+          antialias: false,
+          depth: false,
+          stencil: false,
+          premultipliedAlpha: true,
+          preserveDrawingBuffer: false
+        };
+        const gl = canvas.getContext(contextType, attrs) as GLContext | null;
+        if (!gl && want300) {
+          throw new UnsupportedError("WebGL2 is not supported in this browser.");
+        }
+        return gl;
+      },
+
+      onInit: async (gl, width, height) => {
+        this._gl = gl;
+        if (this.host.canvas) {
+          this.host.canvas.dataset.frapxShaderCanvas = "";
+        }
+        this.feedbackOptions = normalizeFeedbackOptions(options.feedback);
+        this.initProgram(gl);
+        this.textureInputs = new Map(Object.entries(options.textures ?? {}));
+        this.assertNoFeedbackTextureConflict();
+        this.initFeedback(gl, width, height);
+        await this.loadTextureInputs(gl);
+        this.applyTextureSizeUniforms();
+      },
+
+      onDraw: (state) => {
+        if (this.shaderDestroyed || !this.program) return;
+        this.drawFrame(state);
+      },
+
+      onContextLost: () => {
+        this.feedbackState = null;
+      },
+
+      onContextRestored: async (gl, width, height) => {
+        this._gl = gl;
+        this.initProgram(gl);
+        this.applyCachedUniforms(gl);
+        this.initFeedback(gl, width, height);
+        await this.loadTextureInputs(gl);
+        this.applyTextureSizeUniforms();
+      },
+
+      onReady: () => options.onReady?.(this),
+      ...(options.onError !== undefined && { onError: options.onError })
     });
 
-    queueMicrotask(() => {
-      void this.init();
-    });
+    this.ready = this.host.ready;
   }
 
   get canvas(): HTMLCanvasElement | null {
-    return this.dom?.canvas ?? null;
+    return this.host.canvas;
   }
 
   get gl(): GLContext | null {
-    return this.context;
+    return this.host.gl;
   }
 
   get status(): ShaderStatus {
-    return this.currentStatus;
+    return this.host.status;
   }
 
   get supported(): boolean {
-    return !["unsupported", "destroyed"].includes(this.currentStatus);
+    return this.host.supported;
   }
 
   start(): void {
-    if (this.destroyed || this.currentStatus === "unsupported") return;
-    this.running = true;
-    this.reconcile();
+    this.host.start();
   }
 
   stop(): void {
-    this.running = false;
-    this.cancelFrame();
-    if (!this.destroyed && this.currentStatus !== "unsupported") {
-      this.currentStatus = "paused";
-    }
-  }
-
-  // A visibility gate ("offscreen"/"hidden") suppresses all rendering.
-  private get hasVisibilityBlock(): boolean {
-    return this.gates.has("offscreen") || this.gates.has("hidden");
-  }
-
-  // The motion gate only stops the continuous loop; demand mode has no loop to
-  // throttle, so reduced motion does not apply there.
-  private get hasMotionBlock(): boolean {
-    return (
-      this.gates.has("reducedMotion") && this.options.renderMode !== "demand"
-    );
-  }
-
-  // Open or close a gate, then reconcile the runtime to the new gate set.
-  private setGate(gate: Gate, closed: boolean): void {
-    if (closed === this.gates.has(gate)) return;
-    if (closed) this.gates.add(gate);
-    else this.gates.delete(gate);
-    this.reconcile();
-  }
-
-  // Single source of truth: derive the runtime state from intent + gates.
-  // Every lifecycle event funnels through here so the result is consistent
-  // regardless of which event (start, visibility, reduced-motion) triggered it.
-  private reconcile(): void {
-    if (
-      this.destroyed ||
-      this.currentStatus === "unsupported" ||
-      this.currentStatus === "error" ||
-      this.currentStatus === "context-lost"
-    ) {
-      return;
-    }
-
-    if (this.running) {
-      if (this.hasVisibilityBlock) {
-        this.cancelFrame();
-        this.currentStatus = "paused";
-        return;
-      }
-
-      if (this.hasMotionBlock) {
-        // Reduced motion: hold a single static frame instead of animating.
-        this.cancelFrame();
-        this.currentStatus = "paused";
-        this.renderStaticFrame();
-        return;
-      }
-
-      this.currentStatus = "running";
-      if (this.options.renderMode === "demand") this.render();
-      else this.scheduleFrame();
-      return;
-    }
-
-    // Not running: in demand mode keep the static frame fresh when visible
-    // (e.g. scrolled back on screen). render() no-ops if a visibility gate is
-    // closed, so this is safe to call unconditionally.
-    if (this.options.renderMode === "demand") this.render();
-  }
-
-  // Render one frame at the current (frozen) time without scheduling more.
-  private renderStaticFrame(): void {
-    if (this.hasVisibilityBlock) return;
-    this.setBuiltInTime(0);
-    this.render();
+    this.host.stop();
   }
 
   render(): void {
-    if (
-      this.destroyed ||
-      !this.dom ||
-      !this.program ||
-      this.currentStatus === "unsupported" ||
-      this.hasVisibilityBlock
-    ) {
-      return;
-    }
-
-    const gl = this.context;
-    if (!gl) return;
-
-    this.inRender = true;
-    this.resize();
-    this.resizeFeedback(gl);
-    gl.bindFramebuffer(
-      gl.FRAMEBUFFER,
-      this.feedbackState ? this.feedbackState.write.framebuffer : null
-    );
-    gl.viewport(0, 0, this.width, this.height);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.useProgram(this.program);
-    this.applyBuiltInUniforms(gl);
-
-    const state = this.createRenderState(gl);
-    this.options.onBeforeRender?.(state);
-    // Re-establish all of the core's draw state after the user hook so any GL
-    // side-effects (program, array buffer, attrib pointer, textures) cannot
-    // corrupt the core draw. This is what makes the core a safe FBO host.
-    this.prepareDrawState(gl);
-
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    this.options.onAfterRender?.(state);
-
-    if (this.feedbackState) {
-      copyFeedbackToCanvas(gl, this.feedbackState, this.width, this.height);
-      swapFeedbackTargets(this.feedbackState);
-    }
-
-    this.frame += 1;
-    this.inRender = false;
+    this.host.render();
   }
 
   resize(): void {
-    if (this.destroyed || !this.dom) return;
-    this.pixelRatio = resolveDpr(this.options.dpr, this.options.maxDpr);
-    const size = resizeCanvasToTarget(
-      this.dom.canvas,
-      this.dom.target,
-      this.pixelRatio
-    );
-    this.width = size.width;
-    this.height = size.height;
-    this.viewportWidth = size.viewportWidth;
-    this.viewportHeight = size.viewportHeight;
-
-    if (this.options.renderMode === "demand" && !this.inRender) {
-      this.render();
-    }
+    this.host.resize();
   }
 
   destroy(): void {
-    if (this.destroyed) return;
-    this.destroyed = true;
-    this.running = false;
-    this.cancelFrame();
-    this.resizeObserver?.disconnect();
-    this.intersectionObserver?.disconnect();
+    if (this.shaderDestroyed) return;
+    this.shaderDestroyed = true;
 
-    for (const remove of this.removeListeners) remove();
-    this.removeListeners = [];
-
-    const gl = this.context;
+    const gl = this._gl;
     if (gl) {
       for (const texture of this.textures.values()) {
         gl.deleteTexture(texture.texture);
@@ -306,20 +201,8 @@ class ShaderBackground<TUniforms extends UniformInputMap>
       if (this.buffer) gl.deleteBuffer(this.buffer);
       if (this.program) gl.deleteProgram(this.program);
     }
-    this.context = null;
 
-    if (this.dom?.createdCanvas) {
-      this.dom.canvas.remove();
-    }
-
-    const dom = this.dom;
-    if (dom?.restoredPosition !== null && dom && this.options.target) {
-      const target = dom.target as HTMLElement;
-      target.style.position = dom.restoredPosition;
-    }
-
-    this.currentStatus = "destroyed";
-    this.readyReject?.(new DestroyedError("Shader background was destroyed."));
+    this.host.destroy();
   }
 
   setUniform<K extends keyof TUniforms & string>(
@@ -328,11 +211,11 @@ class ShaderBackground<TUniforms extends UniformInputMap>
   ): void;
   setUniform(name: string, value: UniformInput): void;
   setUniform(name: string, value: UniformInput): void {
-    if (this.destroyed) return;
+    if (this.shaderDestroyed) return;
     const uniformName = toUniformName(name);
     this.uniformCache.set(uniformName, normalizeUniform(value));
 
-    const gl = this.context;
+    const gl = this._gl;
     const location = this.uniformLocations.get(uniformName);
     if (gl && this.program && location) {
       applyProgramUniform(
@@ -345,12 +228,8 @@ class ShaderBackground<TUniforms extends UniformInputMap>
       this.warnUnknownUniform(uniformName);
     }
 
-    if (
-      this.options.renderMode === "demand" &&
-      !this.inRender &&
-      !this.hasVisibilityBlock
-    ) {
-      this.render();
+    if (this.options.renderMode === "demand" && !this.shaderDestroyed) {
+      this.host.render();
     }
   }
 
@@ -361,7 +240,7 @@ class ShaderBackground<TUniforms extends UniformInputMap>
   }
 
   async setTexture(name: string, input: TextureInput): Promise<void> {
-    if (this.destroyed) return;
+    if (this.shaderDestroyed) return;
     if (this.feedbackOptions?.uniform === name) {
       const error = new TextureLoadError(
         `Texture name conflicts with feedback uniform: ${name}`
@@ -370,11 +249,11 @@ class ShaderBackground<TUniforms extends UniformInputMap>
       throw error;
     }
 
-    let gl = this.context;
+    let gl = this._gl;
     if (!gl) {
       await this.ready;
-      if (this.destroyed) return;
-      gl = this.context;
+      if (this.shaderDestroyed) return;
+      gl = this._gl;
     }
 
     if (!gl) {
@@ -392,7 +271,7 @@ class ShaderBackground<TUniforms extends UniformInputMap>
       const unit = this.resolveTextureUnit(gl, name);
       const loaded = await loadTexture(gl, name, input, unit);
 
-      if (this.destroyed || this.textureVersions.get(name) !== version) {
+      if (this.shaderDestroyed || this.textureVersions.get(name) !== version) {
         gl.deleteTexture(loaded.texture);
         return;
       }
@@ -403,12 +282,8 @@ class ShaderBackground<TUniforms extends UniformInputMap>
       if (previous) gl.deleteTexture(previous.texture);
       this.applyTextureSizeUniform(loaded);
 
-      if (
-        this.options.renderMode === "demand" &&
-        !this.inRender &&
-        !this.hasVisibilityBlock
-      ) {
-        this.render();
+      if (this.options.renderMode === "demand" && !this.shaderDestroyed) {
+        this.host.render();
       }
     } catch (error) {
       if (!this.textures.has(name) && !this.textureInputs.has(name)) {
@@ -429,71 +304,38 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     );
   }
 
-  private async init(): Promise<void> {
-    if (typeof window === "undefined" || typeof document === "undefined") {
-      this.failUnsupported(new UnsupportedError("WebGL requires a browser."));
-      return;
-    }
+  private drawFrame(state: HostFrameState): void {
+    const gl = state.gl;
 
-    this.dom = setupCanvas(this.options);
-    if (!this.dom) {
-      this.failUnsupported(new TargetNotFoundError("Target or canvas not found."));
-      return;
-    }
+    this.uniformCache.set("u_time", { type: "float", value: [state.time] });
+    this.uniformCache.set("u_delta", { type: "float", value: [state.delta] });
 
-    const want300 = isGLSL300(this.options.fragment);
-    const contextType = want300 ? "webgl2" : "webgl";
-    const attrs = {
-      alpha: true,
-      antialias: false,
-      depth: false,
-      stencil: false,
-      premultipliedAlpha: true,
-      preserveDrawingBuffer: false
-    };
-    const gl = this.dom.canvas.getContext(contextType, attrs) as GLContext | null;
+    this.resizeFeedback(gl, state.width, state.height);
+    gl.bindFramebuffer(
+      gl.FRAMEBUFFER,
+      this.feedbackState ? this.feedbackState.write.framebuffer : null
+    );
+    gl.viewport(0, 0, state.width, state.height);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(this.program);
+    this.applyBuiltInUniforms(gl, state);
 
-    if (!gl) {
-      this.failUnsupported(
-        want300
-          ? new UnsupportedError(
-              "WebGL2 (GLSL ES 3.00) is not supported on this device."
-            )
-          : new UnsupportedError("WebGL is not supported.")
-      );
-      return;
-    }
+    const renderState = this.createRenderState(state);
+    this.options.onBeforeRender?.(renderState);
+    // Re-establish core draw state after user hook so GL side-effects
+    // (program, buffer, attribs, textures) cannot corrupt the core draw.
+    this.prepareDrawState(gl);
 
-    this.context = gl;
-    this.currentStatus = "loading";
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    this.options.onAfterRender?.(renderState);
 
-    try {
-      this.feedbackOptions = normalizeFeedbackOptions(this.options.feedback);
-      this.setupDomObservers();
-      this.setupContextEvents();
-      this.setupProgram(gl);
-      this.resize();
-      this.textureInputs = new Map(Object.entries(this.options.textures ?? {}));
-      this.assertNoFeedbackTextureConflict();
-      this.setupFeedback(gl);
-      await this.loadTextureInputs(gl);
-      if (this.destroyed) return;
-      this.applyTextureSizeUniforms();
-      this.currentStatus = "ready";
-      this.readyResolve?.();
-      this.options.onReady?.(this);
-
-      if (this.running || (this.options.autoStart ?? true)) {
-        this.start();
-      } else if (this.options.renderMode === "demand") {
-        this.render();
-      }
-    } catch (error) {
-      this.fail(error instanceof Error ? error : new Error(String(error)));
+    if (this.feedbackState) {
+      copyFeedbackToCanvas(gl, this.feedbackState, state.width, state.height);
+      swapFeedbackTargets(this.feedbackState);
     }
   }
 
-  private setupProgram(gl: GLContext): void {
+  private initProgram(gl: GLContext): void {
     if (this.program) gl.deleteProgram(this.program);
     if (this.buffer) gl.deleteBuffer(this.buffer);
     deleteFeedbackState(gl, this.feedbackState);
@@ -513,8 +355,8 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     this.uniformLocations = collectUniformLocations(gl, this.program);
   }
 
-  // Re-bind the core's program, fullscreen geometry, textures and uniforms so a
-  // draw is correct regardless of GL state changed by onBeforeRender/onAfterRender.
+  // Re-bind core program, geometry, textures and uniforms so a draw is correct
+  // regardless of GL state changed by onBeforeRender/onAfterRender.
   private prepareDrawState(gl: GLContext): void {
     if (!this.program) return;
     gl.useProgram(this.program);
@@ -528,208 +370,41 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     this.applyFeedbackTexture(gl);
   }
 
-  private setupFeedback(gl: GLContext): void {
+  private initFeedback(gl: GLContext, width: number, height: number): void {
     if (!this.feedbackOptions) return;
     const unit = this.resolveTextureUnit(gl, this.feedbackOptions.uniform);
     this.feedbackState = createFeedbackState(
       gl,
       this.feedbackOptions,
-      this.width,
-      this.height,
+      width,
+      height,
       unit,
       this.options.fragment
     );
     this.applyFeedbackSizeUniform();
   }
 
-  private resizeFeedback(gl: GLContext): void {
+  private resizeFeedback(gl: GLContext, width: number, height: number): void {
     if (!this.feedbackState) return;
-    resizeFeedbackState(gl, this.feedbackState, this.width, this.height);
+    resizeFeedbackState(gl, this.feedbackState, width, height);
     this.applyFeedbackSizeUniform();
   }
 
-  private setupDomObservers(): void {
-    if (!this.dom) return;
-
-    if (this.options.autoResize ?? true) {
-      this.resizeObserver = new ResizeObserver(() => {
-        this.resize();
-      });
-      this.resizeObserver.observe(this.dom.target);
-    }
-
-    if (this.options.pauseWhenOffscreen ?? true) {
-      this.intersectionObserver = new IntersectionObserver((entries) => {
-        const entry = entries[0];
-        this.setGate("offscreen", !entry?.isIntersecting);
-      });
-      this.intersectionObserver.observe(this.dom.target);
-    }
-
-    if (this.options.pauseWhenHidden ?? true) {
-      if (document.hidden) this.gates.add("hidden");
-      const onVisibility = () => {
-        this.setGate("hidden", document.hidden);
-      };
-      document.addEventListener("visibilitychange", onVisibility);
-      this.removeListeners.push(() => {
-        document.removeEventListener("visibilitychange", onVisibility);
-      });
-    }
-
-    this.setupMotionObserver();
-
-    const onPointerMove = (event: Event) => {
-      if (!this.dom) return;
-      const pointerEvent = event as PointerEvent;
-      const rect = this.dom.target.getBoundingClientRect();
-      const x = pointerEvent.clientX - rect.left;
-      const y = pointerEvent.clientY - rect.top;
-      this.pointer.x = x * this.pixelRatio;
-      this.pointer.y = (rect.height - y) * this.pixelRatio;
-      this.pointer.uvX = rect.width > 0 ? x / rect.width : 0;
-      this.pointer.uvY = rect.height > 0 ? 1 - y / rect.height : 0;
-      this.pointer.active = 1;
-
-      if (this.options.renderMode === "demand") this.render();
-    };
-    const onPointerLeave = () => {
-      this.pointer.active = 0;
-      if (this.options.renderMode === "demand") this.render();
-    };
-
-    this.dom.target.addEventListener("pointermove", onPointerMove);
-    this.dom.target.addEventListener("pointerenter", onPointerMove);
-    this.dom.target.addEventListener("pointerleave", onPointerLeave);
-    this.removeListeners.push(() => {
-      this.dom?.target.removeEventListener("pointermove", onPointerMove);
-      this.dom?.target.removeEventListener("pointerenter", onPointerMove);
-      this.dom?.target.removeEventListener("pointerleave", onPointerLeave);
-    });
-  }
-
-  // Track the OS "prefers reduced motion" setting and keep it live: the
-  // u_reducedMotion uniform always reflects the current value, and when
-  // respectReducedMotion is enabled the motion gate opens/closes with it.
-  private setupMotionObserver(): void {
-    if (typeof window.matchMedia !== "function") return;
-
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    this.reducedMotionActive = query.matches;
-    if (this.options.respectReducedMotion && query.matches) {
-      this.gates.add("reducedMotion");
-    }
-
-    const onChange = (event: MediaQueryListEvent) => {
-      this.reducedMotionActive = event.matches;
-      if (this.options.respectReducedMotion) {
-        this.setGate("reducedMotion", event.matches);
-      } else if (this.options.renderMode === "demand") {
-        // Reflect the new uniform value in the static frame immediately;
-        // the continuous loop picks it up on the next frame on its own.
-        this.render();
-      }
-    };
-
-    query.addEventListener("change", onChange);
-    this.removeListeners.push(() => {
-      query.removeEventListener("change", onChange);
-    });
-  }
-
-  private setupContextEvents(): void {
-    if (!this.dom) return;
-
-    const onLost = (event: Event) => {
-      event.preventDefault();
-      this.contextRestoredShouldRun = this.running;
-      this.cancelFrame();
-      this.context = null;
-      this.feedbackState = null;
-      this.currentStatus = "context-lost";
-      this.options.onError?.(new UnsupportedError("WebGL context lost."));
-    };
-
-    const onRestored = () => {
-      if (!this.dom || this.destroyed) return;
-      const contextType = isGLSL300(this.options.fragment) ? "webgl2" : "webgl";
-      const gl = this.dom.canvas.getContext(contextType) as GLContext | null;
-      if (!gl) return;
-      this.context = gl;
-
-      try {
-        this.setupProgram(gl);
-        this.applyCachedUniforms(gl);
-        this.setupFeedback(gl);
-        void this.loadTextureInputs(gl).then(
-          () => {
-            this.applyTextureSizeUniforms();
-            if (this.contextRestoredShouldRun) this.start();
-            else this.render();
-          },
-          (error: unknown) =>
-            this.fail(error instanceof Error ? error : new Error(String(error)))
-        );
-      } catch (error) {
-        this.fail(error instanceof Error ? error : new Error(String(error)));
-      }
-    };
-
-    this.dom.canvas.addEventListener("webglcontextlost", onLost);
-    this.dom.canvas.addEventListener("webglcontextrestored", onRestored);
-    this.removeListeners.push(() => {
-      this.dom?.canvas.removeEventListener("webglcontextlost", onLost);
-      this.dom?.canvas.removeEventListener("webglcontextrestored", onRestored);
-    });
-  }
-
-  private scheduleFrame(): void {
-    if (this.rafId || this.options.renderMode === "demand") return;
-
-    this.rafId = requestAnimationFrame((timestamp) => {
-      this.rafId = 0;
-      if (!this.running || this.destroyed) return;
-
-      const seconds = timestamp / 1000;
-      const rawDelta = this.lastTimestamp ? seconds - this.lastTimestamp : 0;
-      const delta = Math.min(Math.max(rawDelta, 0), MAX_DELTA_SECONDS);
-      this.lastTimestamp = seconds;
-      this.elapsed += delta;
-      this.setBuiltInTime(delta);
-      this.render();
-      this.scheduleFrame();
-    });
-  }
-
-  private cancelFrame(): void {
-    if (this.rafId) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = 0;
-    }
-    this.lastTimestamp = 0;
-  }
-
-  private setBuiltInTime(delta: number): void {
-    this.uniformCache.set("u_time", { type: "float", value: [this.elapsed] });
-    this.uniformCache.set("u_delta", { type: "float", value: [delta] });
-  }
-
-  private applyBuiltInUniforms(gl: GLContext): void {
+  private applyBuiltInUniforms(gl: GLContext, state: HostFrameState): void {
     const builtIns: Record<string, UniformInput> = {
-      resolution: [this.width, this.height],
-      viewportSize: [this.viewportWidth, this.viewportHeight],
-      pixelRatio: this.pixelRatio,
-      pointer: [this.pointer.x, this.pointer.y],
-      pointerUv: [this.pointer.uvX, this.pointer.uvY],
-      pointerActive: this.pointer.active,
-      reducedMotion: this.reducedMotionActive ? 1 : 0
+      resolution: [state.width, state.height],
+      viewportSize: [state.viewportWidth, state.viewportHeight],
+      pixelRatio: state.pixelRatio,
+      pointer: [state.pointer.x, state.pointer.y],
+      pointerUv: [state.pointer.uvX, state.pointer.uvY],
+      pointerActive: state.pointer.active,
+      reducedMotion: state.reducedMotion ? 1 : 0
     };
 
     for (const [name, value] of Object.entries(builtIns)) {
       this.uniformCache.set(toUniformName(name), normalizeUniform(value));
     }
     this.applyFeedbackSizeUniform();
-
     this.applyCachedUniforms(gl);
   }
 
@@ -755,7 +430,7 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     };
     this.uniformCache.set(texture.sizeUniformName, uniform);
 
-    const gl = this.context;
+    const gl = this._gl;
     const location = this.uniformLocations.get(texture.sizeUniformName);
     if (gl && this.program && location) {
       applyProgramUniform(gl, this.program, location, uniform);
@@ -807,7 +482,7 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     const loadedTextures = new Map<string, LoadedTexture>();
 
     for (const [name, input] of this.textureInputs) {
-      if (this.destroyed) break;
+      if (this.shaderDestroyed) break;
       const unit = this.resolveTextureUnit(gl, name);
       loadedTextures.set(name, await loadTexture(gl, name, input, unit));
     }
@@ -845,22 +520,20 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     }
   }
 
-  private createRenderState(
-    gl: GLContext
-  ): RenderState<TUniforms> {
+  private createRenderState(state: HostFrameState): RenderState<TUniforms> {
     return {
       instance: this,
-      gl,
-      canvas: this.dom!.canvas,
-      time: this.elapsed,
-      delta: this.uniformCache.get("u_delta")?.value[0] ?? 0,
-      frame: this.frame,
-      width: this.width,
-      height: this.height,
-      viewportWidth: this.viewportWidth,
-      viewportHeight: this.viewportHeight,
-      pixelRatio: this.pixelRatio,
-      reducedMotion: this.reducedMotionActive
+      gl: state.gl,
+      canvas: state.canvas,
+      time: state.time,
+      delta: state.delta,
+      frame: state.frame,
+      width: state.width,
+      height: state.height,
+      viewportWidth: state.viewportWidth,
+      viewportHeight: state.viewportHeight,
+      pixelRatio: state.pixelRatio,
+      reducedMotion: state.reducedMotion
     };
   }
 
@@ -868,25 +541,5 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     if (!this.options.debug || this.warnedUniforms.has(name)) return;
     this.warnedUniforms.add(name);
     console.warn(`[frapx/shader] Uniform not found or optimized out: ${name}`);
-  }
-
-  private failUnsupported(error: Error): void {
-    this.currentStatus = "unsupported";
-    this.debugWarn(error.message);
-    this.options.onError?.(error);
-    this.readyReject?.(error);
-  }
-
-  private fail(error: Error): void {
-    this.currentStatus = "error";
-    this.debugWarn(error.message);
-    this.options.onError?.(error);
-    this.readyReject?.(error);
-  }
-
-  private debugWarn(message: string): void {
-    if (this.options.debug) {
-      console.warn(`[frapx/shader] ${message}`);
-    }
   }
 }

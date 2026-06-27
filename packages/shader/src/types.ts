@@ -2,6 +2,8 @@ export type GLContext = WebGLRenderingContext | WebGL2RenderingContext;
 
 export type ShaderLayer = "background" | "overlay";
 export type RenderMode = "always" | "demand";
+export type DprOption = "auto" | number | (() => number);
+
 export type ShaderStatus =
   | "idle"
   | "loading"
@@ -13,7 +15,17 @@ export type ShaderStatus =
   | "context-lost"
   | "destroyed";
 
-export type DprOption = "auto" | number | (() => number);
+export type TextureSource = string | HTMLImageElement | HTMLCanvasElement;
+
+export type TextureOptions = {
+  source: TextureSource;
+  wrap?: "clamp" | "repeat" | "mirror";
+  filter?: "nearest" | "linear";
+  flipY?: boolean;
+};
+
+export type TextureInput = TextureSource | TextureOptions;
+export type TextureMap = Record<string, TextureInput>;
 
 export type UniformScalar = number;
 export type UniformVec2 = [number, number] | readonly [number, number];
@@ -54,18 +66,6 @@ export type UniformRuntimeValue<T> = T extends ExplicitUniformInput
           : T extends number
             ? number
             : UniformInput;
-
-export type TextureSource = string | HTMLImageElement | HTMLCanvasElement;
-
-export type TextureOptions = {
-  source: TextureSource;
-  wrap?: "clamp" | "repeat" | "mirror";
-  filter?: "nearest" | "linear";
-  flipY?: boolean;
-};
-
-export type TextureInput = TextureSource | TextureOptions;
-export type TextureMap = Record<string, TextureInput>;
 
 export type FeedbackOptions = {
   /**

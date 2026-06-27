@@ -7,6 +7,14 @@ export default defineConfig({
     // without a rebuild. Wildcard avoids per-export drift (e.g. /color, /glsl).
     alias: [
       {
+        find: /^@frapx\/runtime$/,
+        replacement: resolve(__dirname, "../../packages/runtime/src/index.ts")
+      },
+      {
+        find: /^@frapx\/runtime\/(.*)$/,
+        replacement: resolve(__dirname, "../../packages/runtime/src/$1.ts")
+      },
+      {
         find: /^@frapx\/shader$/,
         replacement: resolve(__dirname, "../../packages/shader/src/index.ts")
       },

@@ -1,0 +1,38 @@
+{
+  "name": "@frapx/runtime",
+  "version": "0.1.0",
+  "description": "Shared WebGL runtime host for frapx packages.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./glsl": {
+      "types": "./dist/glsl.d.ts",
+      "import": "./dist/glsl.js"
+    },
+    "./color": {
+      "types": "./dist/color.d.ts",
+      "import": "./dist/color.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "directory": "packages/runtime"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

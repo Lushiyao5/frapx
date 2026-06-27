@@ -4,9 +4,9 @@ import type {
   TextureOptions,
   UniformVec4
 } from "../types";
-import { ShaderCompileError, TextureLoadError } from "./errors";
-import { toUniformName } from "./names";
-import { createFullscreenBuffer, createProgram, isGLSL300 } from "./webgl";
+import { ShaderCompileError, TextureLoadError } from "@frapx/runtime";
+import { toUniformName } from "@frapx/runtime";
+import { createFullscreenBuffer, createProgram, isGLSL300 } from "@frapx/runtime";
 
 export type NormalizedFeedbackOptions = {
   uniform: string;
