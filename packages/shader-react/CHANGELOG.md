@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.0 - 2026-06-22
+
+### Fixed
+
+- `ShaderBackground` component now correctly forwards `respectReducedMotion`,
+  `pauseWhenHidden`, and `canvas` props to the core instance. Previously these
+  options leaked into DOM attributes and were silently ignored by the runtime.
+
+### Added
+
+- `ShaderBackgroundHandle` now exposes `setTextures()` and `setUniforms()` to
+  match the full core `ShaderBackgroundInstance` API.
+
+### Internal
+
+- Option keys in `ShaderBackground` are now managed via a single `OPTION_KEYS`
+  array with compile-time completeness guards, preventing future option-forwarding
+  regressions when core adds new options.
+
 ## 0.2.0 - 2026-06-20
 
 ### Added

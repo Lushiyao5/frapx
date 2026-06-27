@@ -5,11 +5,13 @@ released, tagged, and documented on its own.
 
 ## Packages
 
-| Package | Directory | Tag format |
-| --- | --- | --- |
-| `@frapx/shader` | `packages/shader` | `@frapx/shader@0.3.0` |
-| `@frapx/shader-react` | `packages/shader-react` | `@frapx/shader-react@0.1.0` |
-| `@frapx/shader-noise` | `packages/shader-noise` | `@frapx/shader-noise@0.1.0` |
+| Package | Directory | Tag format | Notes |
+| --- | --- | --- | --- |
+| `@frapx/shader` | `packages/shader` | `@frapx/shader@0.6.1` | |
+| `@frapx/shader-react` | `packages/shader-react` | `@frapx/shader-react@0.3.0` | |
+| `@frapx/shader-noise` | `packages/shader-noise` | `@frapx/shader-noise@0.1.0` | |
+| `@frapx/shader-flowmap` | `packages/shader-flowmap` | `@frapx/shader-flowmap@0.1.0` | |
+| `@frapx/runtime` | `packages/runtime` | `@frapx/runtime@0.1.0` | Shared runtime. Publish before `@frapx/shader`. |
 
 Examples and documentation changes do not require a package release unless they
 also change package metadata or published package contents.
@@ -32,9 +34,11 @@ patch releases.
 
 Each public package owns its changelog:
 
+- `packages/runtime/CHANGELOG.md`
 - `packages/shader/CHANGELOG.md`
 - `packages/shader-react/CHANGELOG.md`
 - `packages/shader-noise/CHANGELOG.md`
+- `packages/shader-flowmap/CHANGELOG.md`
 
 Use this format:
 

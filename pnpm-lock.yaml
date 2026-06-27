@@ -27,11 +27,74 @@ importers:
         specifier: ^3.2.4
         version: 3.2.6(@types/node@24.13.2)(jsdom@27.4.0)
 
+  apps/flowmap-painter:
+    dependencies:
+      '@frapx/shader':
+        specifier: workspace:*
+        version: link:../../packages/shader
+      '@frapx/shader-flowmap':
+        specifier: workspace:*
+        version: link:../../packages/shader-flowmap
+      '@frapx/shader-react':
+        specifier: workspace:*
+        version: link:../../packages/shader-react
+      react:
+        specifier: ^19.2.3
+        version: 19.2.7
+      react-dom:
+        specifier: ^19.2.3
+        version: 19.2.7(react@19.2.7)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.7
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.17)
+      '@vitejs/plugin-react':
+        specifier: ^5.1.2
+        version: 5.2.0(vite@6.4.3(@types/node@24.13.2))
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.3.5
+        version: 6.4.3(@types/node@24.13.2)
+
   examples/vite-basic:
     dependencies:
       '@frapx/shader':
         specifier: workspace:*
         version: link:../../packages/shader
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.3.5
+        version: 6.4.3(@types/node@24.13.2)
+
+  examples/vite-feedback:
+    dependencies:
+      '@frapx/shader':
+        specifier: workspace:*
+        version: link:../../packages/shader
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.3.5
+        version: 6.4.3(@types/node@24.13.2)
+
+  examples/vite-flowmap:
+    dependencies:
+      '@frapx/shader':
+        specifier: workspace:*
+        version: link:../../packages/shader
+      '@frapx/shader-flowmap':
+        specifier: workspace:*
+        version: link:../../packages/shader-flowmap
     devDependencies:
       typescript:
         specifier: ^5.8.3
@@ -71,7 +134,15 @@ importers:
         specifier: ^6.3.5
         version: 6.4.3(@types/node@24.13.2)
 
-  packages/shader: {}
+  packages/runtime: {}
+
+  packages/shader:
+    dependencies:
+      '@frapx/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+
+  packages/shader-flowmap: {}
 
   packages/shader-noise: {}
 
