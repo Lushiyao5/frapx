@@ -1,0 +1,19 @@
+{
+  "name": "@frapx/example-vite-flowmap",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@frapx/shader": "workspace:*",
+    "@frapx/shader-flowmap": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5",
+    "typescript": "^5.8.3"
+  }
+}
