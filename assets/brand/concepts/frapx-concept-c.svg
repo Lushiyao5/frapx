@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" role="img" aria-labelledby="title desc">
+  <title id="title">frapx concept C - Sample Field</title>
+  <desc id="desc">A developer-tool logo concept with contour lines, sampled pixels, a tilted viewport, and a custom lowercase frapx wordmark.</desc>
+  <defs>
+    <clipPath id="c-clip">
+      <rect x="51" y="51" width="218" height="218" rx="22" transform="rotate(-12 160 160)"/>
+    </clipPath>
+    <linearGradient id="c-mark" x1="54" y1="231" x2="266" y2="76" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#FB7185"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="320" rx="28" fill="#05070A"/>
+  <g transform="translate(48 0)">
+    <rect x="51" y="51" width="218" height="218" rx="22" transform="rotate(-12 160 160)" fill="#080E12" stroke="#F8FAFC" stroke-opacity=".17" stroke-width="3"/>
+    <g clip-path="url(#c-clip)">
+      <rect x="24" y="24" width="272" height="272" fill="#080E12"/>
+      <g opacity=".18" fill="#F8FAFC">
+        <rect x="80" y="80" width="7" height="7" rx="1"/>
+        <rect x="118" y="76" width="7" height="7" rx="1"/>
+        <rect x="156" y="72" width="7" height="7" rx="1"/>
+        <rect x="194" y="68" width="7" height="7" rx="1"/>
+        <rect x="84" y="118" width="7" height="7" rx="1"/>
+        <rect x="122" y="114" width="7" height="7" rx="1"/>
+        <rect x="160" y="110" width="7" height="7" rx="1"/>
+        <rect x="198" y="106" width="7" height="7" rx="1"/>
+        <rect x="88" y="156" width="7" height="7" rx="1"/>
+        <rect x="126" y="152" width="7" height="7" rx="1"/>
+        <rect x="164" y="148" width="7" height="7" rx="1"/>
+        <rect x="202" y="144" width="7" height="7" rx="1"/>
+        <rect x="92" y="194" width="7" height="7" rx="1"/>
+        <rect x="130" y="190" width="7" height="7" rx="1"/>
+        <rect x="168" y="186" width="7" height="7" rx="1"/>
+        <rect x="206" y="182" width="7" height="7" rx="1"/>
+      </g>
+      <path d="M22 187 C78 143 120 139 158 165 C202 195 236 184 300 122" fill="none" stroke="#22D3EE" stroke-width="14" stroke-linecap="round" opacity=".95"/>
+      <path d="M5 227 C72 172 132 172 177 211 C217 245 254 244 318 196" fill="none" stroke="#FB7185" stroke-width="8" stroke-linecap="round" opacity=".88"/>
+      <path d="M16 126 C69 97 113 104 154 132 C196 160 239 151 300 95" fill="none" stroke="#F8FAFC" stroke-width="5" stroke-linecap="round" opacity=".34"/>
+      <rect x="231" y="77" width="17" height="17" rx="2" fill="#22D3EE"/>
+      <rect x="252" y="92" width="12" height="12" rx="2" fill="#FB7185"/>
+      <rect x="215" y="61" width="8" height="8" rx="2" fill="#F8FAFC" opacity=".8"/>
+    </g>
+    <rect x="51" y="51" width="218" height="218" rx="22" transform="rotate(-12 160 160)" fill="none" stroke="url(#c-mark)" stroke-width="5"/>
+  </g>
+  <g transform="translate(390 86)" fill="#F8FAFC">
+    <path d="M9 49 H31 V36 C31 12 45 0 72 0 H94 V31 H77 C68 31 64 35 64 43 V49 H94 V79 H64 V148 H31 V79 H9Z"/>
+    <path d="M120 49 H152 V65 C160 54 172 48 188 48 H199 V82 H184 C164 82 154 92 154 113 V148 H120Z"/>
+    <path d="M270 49 H303 V148 H270 V137 C262 146 251 151 236 151 C209 151 188 129 188 99 C188 69 209 47 236 47 C251 47 262 52 270 61ZM222 99 C222 114 232 124 246 124 C260 124 270 114 270 99 C270 84 260 74 246 74 C232 74 222 84 222 99Z"/>
+    <path d="M330 49 H362 V60 C370 52 381 47 395 47 C422 47 443 69 443 99 C443 129 422 151 395 151 C381 151 370 146 362 138 V190 H330ZM361 99 C361 114 371 124 385 124 C399 124 409 114 409 99 C409 84 399 74 385 74 C371 74 361 84 361 99Z"/>
+    <path d="M448 49 H486 L510 80 L534 49 H572 L530 98 L574 148 H536 L510 115 L484 148 H446 L491 98Z"/>
+  </g>
+</svg>
