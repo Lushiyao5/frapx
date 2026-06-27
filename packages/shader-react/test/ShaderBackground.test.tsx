@@ -133,4 +133,65 @@ describe("ShaderBackground", () => {
     expect(shaderMock.instance.stop).toHaveBeenCalledTimes(1);
     expect(shaderMock.instance.setUniform).toHaveBeenCalledWith("intensity", 1);
   });
+
+  it("forwards respectReducedMotion and pauseWhenHidden to core without DOM leakage (B1 regression)", async () => {
+    await act(async () => {
+      root.render(
+        <ShaderBackground
+          fragment="void main() {}"
+          respectReducedMotion
+          pauseWhenHidden={false}
+        />
+      );
+    });
+
+    expect(shaderMock.createShaderBackground).toHaveBeenCalledWith(
+      expect.objectContaining({
+        respectReducedMotion: true,
+        pauseWhenHidden: false
+      })
+    );
+
+    const div = container.firstElementChild!;
+    expect(div.hasAttribute("respectReducedMotion")).toBe(false);
+    expect(div.hasAttribute("respectreducedmotion")).toBe(false);
+    expect(div.hasAttribute("pauseWhenHidden")).toBe(false);
+    expect(div.hasAttribute("pausewhenhidden")).toBe(false);
+  });
+
+  it("exposes setTextures and setUniforms on the imperative handle (B2 regression)", async () => {
+    const ref = { current: null as ShaderBackgroundHandle | null };
+
+    await act(async () => {
+      root.render(<ShaderBackground ref={ref} fragment="void main() {}" />);
+    });
+
+    const textures = { img: "/photo.webp" };
+    const uniforms = { speed: 0.5 };
+
+    ref.current?.setTextures(textures);
+    ref.current?.setUniforms(uniforms);
+
+    expect(shaderMock.instance.setTextures).toHaveBeenCalledWith(textures);
+    expect(shaderMock.instance.setUniforms).toHaveBeenCalledWith(uniforms);
+  });
+
+  it("recreates the instance when a static option changes", async () => {
+    await act(async () => {
+      root.render(
+        <ShaderBackground fragment="void main() {}" respectReducedMotion={false} />
+      );
+    });
+
+    expect(shaderMock.createShaderBackground).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.render(
+        <ShaderBackground fragment="void main() {}" respectReducedMotion={true} />
+      );
+    });
+
+    expect(shaderMock.createShaderBackground).toHaveBeenCalledTimes(2);
+    expect(shaderMock.instance.destroy).toHaveBeenCalledTimes(1);
+  });
 });
