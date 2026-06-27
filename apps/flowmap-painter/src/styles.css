@@ -1,0 +1,387 @@
+/* ── Reset & Tokens ─────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #141518;
+  --bg-panel: #1c1d21;
+  --bg-raised: #242529;
+  --bg-hover: #2c2d32;
+  --border: rgba(255 255 255 / 0.1);
+  --border-active: rgba(255 255 255 / 0.25);
+  --text: #e8eaf0;
+  --text-muted: rgba(232 234 240 / 0.55);
+  --accent: #60a5fa;
+  --accent-dim: rgba(96 165 250 / 0.18);
+  --radius: 6px;
+  --topbar-h: 52px;
+  --tool-w: 188px;
+  --canvas-display: 512px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+button,
+select,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+/* ── App layout ─────────────────────────────────────────────────────────── */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  gap: 1px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+/* ── TopBar ─────────────────────────────────────────────────────────────── */
+
+.topbar {
+  flex-shrink: 0;
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.topbar-logo {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+
+.topbar-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.topbar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.topbar-group--history,
+.topbar-group--actions {
+  margin-left: auto;
+}
+
+.topbar-group--history {
+  margin-left: auto;
+}
+
+.topbar-group--actions {
+  margin-left: 0;
+}
+
+.topbar-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.topbar-select {
+  padding: 4px 8px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  appearance: auto;
+}
+
+.topbar-btn {
+  height: 30px;
+  padding: 0 12px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.topbar-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-active);
+}
+
+.topbar-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.topbar-btn--primary {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.topbar-btn--primary:hover {
+  background: rgba(96 165 250 / 0.28);
+}
+
+.topbar-toggle {
+  height: 30px;
+  padding: 0 12px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.topbar-toggle--active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── ToolPanel ──────────────────────────────────────────────────────────── */
+
+.tool-panel {
+  width: var(--tool-w);
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.tool-section {
+  padding: 12px;
+  background: var(--bg-panel);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tool-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.brush-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.brush-btn {
+  height: 28px;
+  padding: 0 6px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 12px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.1s, border-color 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brush-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-active);
+}
+
+.brush-btn--active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tool-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  cursor: default;
+}
+
+.tool-slider-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.tool-slider-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.tool-slider input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.tool-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tool-checkbox input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* ── PaintStage ─────────────────────────────────────────────────────────── */
+
+.paint-stage {
+  position: relative;
+  width: var(--canvas-display);
+  height: var(--canvas-display);
+  flex-shrink: 0;
+  background: repeating-conic-gradient(
+      #1e2024 0%,
+      #1e2024 25%,
+      #16181b 0%,
+      #16181b 50%
+    )
+    0 0 / 16px 16px;
+  overflow: hidden;
+  align-self: center;
+  margin: auto;
+}
+
+.paint-stage-ref {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+}
+
+.paint-stage-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  display: block;
+}
+
+/* RG visualization: show the canvas as-is with a saturated look */
+.paint-stage-canvas--rgviz {
+  filter: saturate(3) brightness(1.2);
+}
+
+/* ── PreviewPanel ───────────────────────────────────────────────────────── */
+
+.preview-panel {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.preview-viewport-wrap {
+  flex: 1;
+  min-height: 0;
+  container-type: size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.preview-viewport {
+  aspect-ratio: 1 / 1;
+  width: min(100cqw, 100cqh);
+  position: relative;
+  background: #000;
+  overflow: hidden;
+}
+
+/* @frapx/shader injects the canvas as a child; make it fill the viewport */
+.preview-viewport > canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.preview-loading,
+.preview-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.preview-error {
+  color: #f87171;
+}
+
+.preview-controls {
+  flex-shrink: 0;
+  height: 240px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+}
+
+.preview-base-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}

@@ -1,0 +1,89 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: frapx
+      - generic [ref=e7]: Flowmap Painter
+    - generic [ref=e8]:
+      - generic [ref=e9]: Size
+      - combobox "Size" [ref=e10] [cursor=pointer]:
+        - option "512"
+        - option "1024" [selected]
+        - option "2048"
+    - button "Seamless" [ref=e12] [cursor=pointer]
+    - generic [ref=e13]:
+      - button "Undo" [disabled] [ref=e14]
+      - button "Redo" [disabled] [ref=e15]
+    - generic [ref=e16]:
+      - button "Open" [ref=e17] [cursor=pointer]
+      - button "Export PNG" [ref=e18] [cursor=pointer]
+  - main [ref=e19]:
+    - complementary [ref=e20]:
+      - generic [ref=e21]:
+        - heading "Brush" [level=2] [ref=e22]
+        - generic [ref=e23]:
+          - button "Stroke" [ref=e24] [cursor=pointer]
+          - button "Fixed" [ref=e25] [cursor=pointer]
+          - button "Vortex ↻" [ref=e26] [cursor=pointer]
+          - button "Vortex ↺" [ref=e27] [cursor=pointer]
+          - button "Radial ↗" [ref=e28] [cursor=pointer]
+          - button "Radial ↙" [ref=e29] [cursor=pointer]
+          - button "Smooth" [ref=e30] [cursor=pointer]
+          - button "Erase" [ref=e31] [cursor=pointer]
+      - generic [ref=e32]:
+        - heading "Settings" [level=2] [ref=e33]
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - text: Size
+            - generic [ref=e36]: "60"
+          - slider "Size 60" [ref=e37] [cursor=pointer]: "60"
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - text: Strength
+            - generic [ref=e40]: "0.80"
+          - slider "Strength 0.80" [ref=e41] [cursor=pointer]: "0.8"
+        - generic [ref=e42]:
+          - generic [ref=e43]:
+            - text: Hardness
+            - generic [ref=e44]: "0.30"
+          - slider "Hardness 0.30" [ref=e45] [cursor=pointer]: "0.3"
+      - generic [ref=e46]:
+        - heading "Pressure" [level=2] [ref=e47]
+        - generic [ref=e48] [cursor=pointer]:
+          - checkbox "Size" [checked] [ref=e49]
+          - text: Size
+        - generic [ref=e50] [cursor=pointer]:
+          - checkbox "Strength" [checked] [ref=e51]
+          - text: Strength
+    - generic "Flowmap paint canvas" [ref=e53]
+    - generic [ref=e54]:
+      - generic "Flow preview (running)" [ref=e55]
+      - generic [ref=e56]:
+        - generic [ref=e57]:
+          - heading "Preview" [level=2] [ref=e58]
+          - generic [ref=e59]:
+            - generic [ref=e60]:
+              - text: Speed
+              - generic [ref=e61]: "0.50"
+            - slider "Speed 0.50" [ref=e62] [cursor=pointer]: "0.5"
+          - generic [ref=e63]:
+            - generic [ref=e64]:
+              - text: Strength
+              - generic [ref=e65]: "0.20"
+            - slider "Strength 0.20" [ref=e66] [cursor=pointer]: "0.2"
+          - generic [ref=e67]:
+            - generic [ref=e68]:
+              - text: Tiling
+              - generic [ref=e69]: "2.00"
+            - slider "Tiling 2.00" [ref=e70] [cursor=pointer]: "2"
+        - generic [ref=e71]:
+          - heading "Base Texture" [level=2] [ref=e72]
+          - generic [ref=e73]:
+            - button "Water" [ref=e74] [cursor=pointer]
+            - button "Noise" [ref=e75] [cursor=pointer]
+            - generic "Upload custom base texture" [ref=e76] [cursor=pointer]: Upload
+        - generic [ref=e77]:
+          - heading "Reference Image" [level=2] [ref=e78]
+          - generic "Load reference image" [ref=e80] [cursor=pointer]: Load
+        - generic [ref=e81]:
+          - heading "Visualize" [level=2] [ref=e82]
+          - button "RG viz" [ref=e83] [cursor=pointer]
