@@ -1,6 +1,7 @@
 import { createShaderBackground, glsl } from "@frapx/shader";
 import type { ShaderBackgroundInstance } from "@frapx/shader";
 import { flowDecode, flowDistort } from "@frapx/shader-flowmap";
+import checkerUrl from "./assets/background.webp";
 import "./styles.css";
 
 declare global {
@@ -13,8 +14,8 @@ declare global {
 window.__frapxFlowmapSample = { frames: 0, pixel: null };
 
 // ---------------------------------------------------------------------------
-// Procedurally generate a vortex flowmap and a base striped texture on CPU.
-// Using canvas avoids committing binary assets to the repo.
+// Procedurally generate a vortex flowmap on CPU.
+// The base texture is loaded from a static image asset (checkerboard.png).
 // ---------------------------------------------------------------------------
 
 /** Create an RG-encoded vortex flowmap in a canvas element.
@@ -33,7 +34,10 @@ function makeVortexFlowCanvas(size: number): HTMLCanvasElement {
       const len = Math.sqrt(nx * nx + ny * ny);
 
       // Clockwise tangent scaled by vortex strength, falloff near center/edge
-      const strength = Math.exp(-len * 2.5) * (1 - Math.exp(-(len * 6)));
+      // Keep a small exact-neutral core so the example also exercises byte 128.
+      const strength = len < 0.03
+        ? 0
+        : Math.exp(-len * 2.5) * (1 - Math.exp(-(len * 6)));
       const dx = ny / Math.max(len, 0.001) * strength;
       const dy = -nx / Math.max(len, 0.001) * strength;
 
@@ -42,32 +46,6 @@ function makeVortexFlowCanvas(size: number): HTMLCanvasElement {
       img.data[idx]     = Math.round((0.5 + dx * 0.5) * 255);
       img.data[idx + 1] = Math.round((0.5 - dy * 0.5) * 255);
       img.data[idx + 2] = 0;
-      img.data[idx + 3] = 255;
-    }
-  }
-
-  ctx.putImageData(img, 0, 0);
-  return canvas;
-}
-
-/** Create a base texture — horizontal stripes with slight color variation. */
-function makeBaseCanvas(size: number): HTMLCanvasElement {
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-  const img = ctx.createImageData(size, size);
-
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const t = (y / size + x / size * 0.2 + Math.sin(y / size * Math.PI * 8) * 0.05);
-      const r = Math.round(10 + 60 * (0.5 + Math.sin(t * Math.PI * 2) * 0.5));
-      const g = Math.round(30 + 100 * (0.5 + Math.sin(t * Math.PI * 2 + 1.0) * 0.5));
-      const b = Math.round(80 + 120 * (0.5 + Math.sin(t * Math.PI * 2 + 2.0) * 0.5));
-      const idx = (y * size + x) * 4;
-      img.data[idx]     = r;
-      img.data[idx + 1] = g;
-      img.data[idx + 2] = b;
       img.data[idx + 3] = 255;
     }
   }
@@ -99,7 +77,10 @@ ${flowDistort}
 void main() {
   vec2 flow = frapx_flowDecode(u_flow, v_uv);
   vec2 uv   = v_uv * u_tiling;
-  fragColor = frapx_flowDistort(u_base, flow, uv, u_time, u_flowSpeed, u_flowStrength);
+  fragColor = frapx_flowDistort(
+    u_base, flow, uv, v_uv,
+    u_time, u_flowSpeed, u_flowStrength
+  );
 }
 `;
 
@@ -108,15 +89,13 @@ void main() {
 // ---------------------------------------------------------------------------
 
 const flowCanvas = makeVortexFlowCanvas(512);
-const baseCanvas = makeBaseCanvas(512);
 
 const fx = createShaderBackground({
   target: "[data-hero]",
   fragment,
   textures: {
-    // Canvas sources are uploaded with flipY:true by default — matches frapx encoding
-    flow: { source: flowCanvas, filter: "nearest", wrap: "clamp" },
-    base: { source: baseCanvas, filter: "linear", wrap: "repeat" }
+    flow: { source: flowCanvas, filter: "linear", wrap: "clamp" },
+    base: { source: checkerUrl, filter: "linear", wrap: "repeat" }
   },
   uniforms: {
     flowSpeed: 0.3,
