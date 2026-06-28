@@ -22,14 +22,12 @@ uniform float u_ambient;
 ${flowLibGLSL}
 
 void main() {
-  float dither = screenDither();
-  float t = u_time * u_flowSpeed + dither * 0.1;
+  float t = u_time * u_flowSpeed;
   vec4 baseColor = sampleFlowAdvect(u_base, u_flow, v_uv, u_tiling, t, u_flowStrength);
 
   // Reconstruct surface normal from flow direction
-  vec2 flowRaw = decodeFlow(texture(u_flow, v_uv).rg);
-  float w = flowEdgeWeight(length(flowRaw));
-  vec2 n2 = flowRaw * w * 0.7;
+  vec2 flowRaw = frapx_flowDecode(u_flow, v_uv);
+  vec2 n2 = flowRaw * 0.7;
   float nz = sqrt(max(0.001, 1.0 - dot(n2, n2)));
   vec3 N = normalize(vec3(n2.x, n2.y, nz));
 

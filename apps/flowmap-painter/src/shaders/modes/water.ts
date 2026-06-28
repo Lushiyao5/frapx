@@ -33,22 +33,13 @@ void main() {
   // Perturb sample UV for surface shimmer
   vec2 sampleUV = v_uv + noiseVec * u_wobble * 0.05;
 
-  // Add noise contribution to decoded flow direction
-  vec2 f = decodeFlow(texture(u_flow, sampleUV).rg) + noiseVec;
-  float w = flowEdgeWeight(length(f));
-  vec2 fd = f * w;
-
-  float dither = screenDither();
-  float t = u_time * u_flowSpeed + dither * 0.1;
-  float p0 = fract(t);
-  float p1 = fract(t + 0.5);
-
-  vec2 buv = sampleUV * u_tiling;
-  vec4 c0 = texture(u_base, buv - fd * p0 * u_flowStrength);
-  vec4 c1 = texture(u_base, buv - fd * p1 * u_flowStrength);
-
-  float blend = smoothstep(0.3, 0.7, abs(p0 - 0.5) * 2.0);
-  fragColor = mix(c0, c1, blend);
+  // Blend decoded flow with noise contribution, clamped to [-1,1] so
+  // flowDistort's strength parameter stays in its intended range.
+  vec2 flow = clamp(frapx_flowDecode(u_flow, sampleUV) + noiseVec, -1.0, 1.0);
+  fragColor = frapx_flowDistort(
+    u_base, flow, sampleUV * u_tiling, sampleUV,
+    u_time, u_flowSpeed, u_flowStrength
+  );
 }
 `;
 

@@ -21,14 +21,12 @@ uniform float u_blend;
 ${flowLibGLSL}
 
 void main() {
-  float dither = screenDither();
-
   // Layer 1: primary tiling and speed
-  float t1 = u_time * u_flowSpeed + dither * 0.1;
+  float t1 = u_time * u_flowSpeed;
   vec4 layer1 = sampleFlowAdvect(u_base, u_flow, v_uv, u_tiling, t1, u_flowStrength);
 
   // Layer 2: finer scale, independent speed, quarter-cycle phase offset for variety
-  float t2 = u_time * u_speed2 + dither * 0.1 + 0.25;
+  float t2 = u_time * u_speed2 + 0.25;
   vec4 layer2 = sampleFlowAdvect(u_base, u_flow, v_uv, u_tiling * u_scale2, t2, u_flowStrength * 0.5);
 
   // Multiply-style composite: deepens detail where both layers are bright

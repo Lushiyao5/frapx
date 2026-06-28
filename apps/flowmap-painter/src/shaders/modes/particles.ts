@@ -21,8 +21,7 @@ uniform float u_particleSpeed;
 ${flowLibGLSL}
 
 void main() {
-  float dither = screenDither();
-  float t = u_time * u_flowSpeed + dither * 0.1;
+  float t = u_time * u_flowSpeed;
   // Subtle advected background at reduced strength
   vec4 bg = sampleFlowAdvect(u_base, u_flow, v_uv, u_tiling, t, u_flowStrength * 0.35);
 
@@ -34,22 +33,31 @@ void main() {
     for (int dy = -1; dy <= 1; dy++) {
       vec2 cellId = floor(v_uv * u_density) + vec2(float(dx), float(dy));
 
-      // Per-cell random position and time-phase offset
-      float h1 = fract(sin(dot(cellId, vec2(127.1, 311.7))) * 43758.5453);
-      float h2 = fract(sin(dot(cellId, vec2(269.5, 183.3))) * 85734.2);
+      // Per-cell random position and time-phase offset.
+      // Uses the same arithmetic hash as the package to avoid sin-precision
+      // banding on mobile / older GPUs.
+      float h1 = frapx_flowHash3(vec3(cellId, 0.0));
+      float h2 = frapx_flowHash3(vec3(cellId, 1.0));
 
       vec2 origin = clamp((cellId + vec2(h1, h2)) * cellSize, 0.0, 1.0);
 
-      // Animate particle along the local flow direction
+      // Animate particle along the local flow direction.
       float phase = fract(u_time * u_particleSpeed + h1);
-      vec2 flowDir = decodeFlow(texture(u_flow, origin).rg);
-      float w = flowEdgeWeight(length(flowDir));
-      vec2 particlePos = origin + flowDir * w * phase * u_trailLength * 0.3;
+      vec2 flowDir = frapx_flowDecode(u_flow, origin);
 
-      // Smooth radial falloff
-      float dist = length(v_uv - particlePos);
+      // Comet streak: head slides from origin to origin+flowDir*trailLen as
+      // phase goes 0→1, then resets. The tail (length = trailLen) trails behind
+      // the head along the flow direction. Point-to-segment distance keeps the
+      // streak thin and crisp; multiplying by h fades the tail to zero.
+      float trailLen = u_trailLength * 0.3;
+      vec2 headPos = origin + flowDir * phase * trailLen;
+      vec2 seg = flowDir * trailLen;            // tail-to-head direction vector
+      vec2 tailPos = headPos - seg;             // tail is behind the head
+      float h  = clamp(dot(v_uv - tailPos, seg) / max(dot(seg, seg), 1e-6), 0.0, 1.0);
+      vec2 closest = tailPos + seg * h;
+      float dist = length(v_uv - closest);
       float r = cellSize * 0.15;
-      brightness += 1.0 - smoothstep(0.0, r, dist);
+      brightness += (1.0 - smoothstep(0.0, r, dist)) * h;
     }
   }
 

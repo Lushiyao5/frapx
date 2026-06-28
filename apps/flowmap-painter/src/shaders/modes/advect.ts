@@ -18,8 +18,7 @@ uniform float u_tiling;
 ${flowLibGLSL}
 
 void main() {
-  float dither = screenDither();
-  float t = u_time * u_flowSpeed + dither * 0.1;
+  float t = u_time * u_flowSpeed;
   fragColor = sampleFlowAdvect(u_base, u_flow, v_uv, u_tiling, t, u_flowStrength);
 }
 `;
