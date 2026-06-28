@@ -4,13 +4,16 @@
 
 ### Changed
 
+- `flowDecode` — simplified to `centered / 127.5` (clamp to [-1, 1]).
+  Same contract as before (byte 128 → exactly 0, strictly monotonic), but
+  fewer GPU instructions and no slope discontinuity at zero.
 - `flowDistort` — upgraded from two-phase to three-phase normalised tent blend:
   - Phases are spaced 1/3 apart (was 1/2). Tent weights are zero at each
     phase boundary, so a resetting sample contributes nothing (no pop).
   - Reduces the visible double-image (ghost) smear by ~33 % in high-flow regions.
   - Requires three texture fetches per fragment (was two).
   - Phase decorrelation amplitude increased from ±0.1 to ±0.2, giving
-    neighbouring pixels more independent timing for a more organic look.
+    neighbouring regions more independent timing for a more organic look.
   - Behaviour change: output is no longer bit-identical to 0.2.x.
 
 ## 0.2.0 - 2026-06-27

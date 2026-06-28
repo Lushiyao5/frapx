@@ -7,11 +7,17 @@ import "./styles.css";
 declare global {
   interface Window {
     __frapxFlowmap?: ShaderBackgroundInstance;
-    __frapxFlowmapSample?: { frames: number; pixel: number[] | null };
+    __frapxFlowmapSample?: {
+      frames: number;
+      // Center pixel sits inside the exact-neutral vortex core (always static).
+      centerPixel: number[] | null;
+      // Off-center pixel sampled from the active flow region (should animate).
+      flowPixel: number[] | null;
+    };
   }
 }
 
-window.__frapxFlowmapSample = { frames: 0, pixel: null };
+window.__frapxFlowmapSample = { frames: 0, centerPixel: null, flowPixel: null };
 
 // ---------------------------------------------------------------------------
 // Procedurally generate a vortex flowmap on CPU.
@@ -55,10 +61,10 @@ function makeVortexFlowCanvas(size: number): HTMLCanvasElement {
 }
 
 // ---------------------------------------------------------------------------
-// Flowmap fragment shader using @frapx/shader-flowmap snippets
+// Flowmap fragment shaders — 7-arg (default) and 6-arg (compatibility API)
 // ---------------------------------------------------------------------------
 
-const fragment = glsl`#version 300 es
+const fragment7 = glsl`#version 300 es
 precision highp float;
 
 in vec2 v_uv;
@@ -84,15 +90,40 @@ void main() {
 }
 `;
 
+// Exercises the six-argument compatibility overload (used with ?variant=6arg).
+const fragment6 = glsl`#version 300 es
+precision highp float;
+
+in vec2 v_uv;
+out vec4 fragColor;
+
+uniform sampler2D u_flow;
+uniform sampler2D u_base;
+uniform float u_time;
+uniform float u_flowSpeed;
+uniform float u_flowStrength;
+uniform float u_tiling;
+
+${flowDecode}
+${flowDistort}
+
+void main() {
+  vec2 flow = frapx_flowDecode(u_flow, v_uv);
+  vec2 uv   = v_uv * u_tiling;
+  fragColor = frapx_flowDistort(u_base, flow, uv, u_time, u_flowSpeed, u_flowStrength);
+}
+`;
+
 // ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------
 
+const use6arg = new URLSearchParams(location.search).get("variant") === "6arg";
 const flowCanvas = makeVortexFlowCanvas(512);
 
 const fx = createShaderBackground({
   target: "[data-hero]",
-  fragment,
+  fragment: use6arg ? fragment6 : fragment7,
   textures: {
     flow: { source: flowCanvas, filter: "linear", wrap: "clamp" },
     base: { source: checkerUrl, filter: "linear", wrap: "repeat" }
@@ -104,17 +135,23 @@ const fx = createShaderBackground({
   },
   debug: true,
   onAfterRender({ gl, width, height }) {
-    const pixel = new Uint8Array(4);
+    const center = new Uint8Array(4);
     gl.readPixels(
       Math.floor(width / 2),
       Math.floor(height / 2),
-      1, 1,
-      gl.RGBA, gl.UNSIGNED_BYTE,
-      pixel
+      1, 1, gl.RGBA, gl.UNSIGNED_BYTE, center
+    );
+    // Sample from ~32 % of width — inside the active vortex flow region.
+    const flow = new Uint8Array(4);
+    gl.readPixels(
+      Math.floor(width * 0.32),
+      Math.floor(height / 2),
+      1, 1, gl.RGBA, gl.UNSIGNED_BYTE, flow
     );
     window.__frapxFlowmapSample = {
       frames: (window.__frapxFlowmapSample?.frames ?? 0) + 1,
-      pixel: Array.from(pixel)
+      centerPixel: Array.from(center),
+      flowPixel: Array.from(flow)
     };
   }
 });

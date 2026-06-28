@@ -1,6 +1,6 @@
 // GLSL ES 3.00 (WebGL2) flowmap helpers.
 // Assumes flow textures are uploaded with flipY:true (the default in @frapx/shader).
-// Encoding convention: 8-bit R/G centered at byte value 128.
+// Encoding convention: R/G byte = round(127.5 + d * 127.5); neutral byte = 128.
 // Neutral (no flow) = rgb(128, 128, 0).
 
 const glsl = String.raw;
@@ -9,9 +9,12 @@ const glsl = String.raw;
  * Unpack an RG-encoded flow texture into a signed velocity vector.
  *
  * Decodes the frapx flowmap convention:
- *   R = round(127.5 + dx*127.5)
- *   G = round(127.5 - dy*127.5)  (canvas Y negated to match WebGL Y-up)
+ *   R = round(127.5 + dx * 127.5)
+ *   G = round(127.5 - dy * 127.5)  (canvas Y negated to match WebGL Y-up)
  *
+ * Byte 128 decodes to exactly 0 (neutral). Byte 0 decodes to exactly −1
+ * (clamped from −128/127.5). Byte 255 decodes to ≈ +0.996 (127/127.5).
+ * The Painter never emits byte 0 or 255 in practice.
  * Assumes the texture is uploaded with flipY:true.
  * Returns a vec2 in [-1, 1] x [-1, 1] representing the flow direction/speed.
  *
@@ -20,8 +23,7 @@ const glsl = String.raw;
 export const flowDecode = glsl`
 vec2 frapx_flowDecode(sampler2D flowTex, vec2 uv) {
   vec2 centered = texture(flowTex, uv).rg * 255.0 - 128.0;
-  vec2 scale = mix(vec2(128.0), vec2(127.0), step(vec2(0.0), centered));
-  return clamp(centered / scale, -1.0, 1.0);
+  return clamp(centered / 127.5, -1.0, 1.0);
 }`;
 
 /**

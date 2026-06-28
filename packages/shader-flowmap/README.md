@@ -100,7 +100,7 @@ GLSL ES 3.00 function that applies three-phase advection of a base texture along
 precomputed flow vector. Self-contained — no other frapx_ snippet required.
 
 Quality improvements over a naive scroll (as of 0.3.0):
-- **Spatio-temporal phase decorrelation** — bounded 3D value noise offsets each pixel's
+- **Spatio-temporal phase decorrelation** — bounded 3D value noise offsets each region's
   animation phase without allowing local phase reversal, so the exact 1/speed loop never
   recurs; intended for real-time playback (not clean-loop export)
 - **Stable phase domain** — separate base and phase UVs keep the noise scale independent
