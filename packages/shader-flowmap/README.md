@@ -2,8 +2,8 @@
 
 GLSL flowmap helpers for [`@frapx/shader`](https://github.com/kramhash/frapx).
 
-Provides two GLSL ES 3.00 snippet strings that decode frapx-convention RG flowmap
-textures and apply two-phase advection distortion to a base texture.
+Provides GLSL ES 3.00 snippet strings that decode frapx-convention RG flowmap
+textures and apply three-phase advection distortion to a base texture.
 
 **Requires WebGL2** (`#version 300 es`).
 
@@ -52,8 +52,11 @@ const fx = createShaderBackground({
 
     void main() {
       vec2 flow = frapx_flowDecode(u_flow, v_uv);
-      vec2 uv   = v_uv * u_tiling;
-      fragColor = frapx_flowDistort(u_base, flow, uv, u_time, u_flowSpeed, u_flowStrength);
+      vec2 baseUv = v_uv * u_tiling;
+      fragColor = frapx_flowDistort(
+        u_base, flow, baseUv, v_uv,
+        u_time, u_flowSpeed, u_flowStrength
+      );
     }
   `,
 });
@@ -67,8 +70,8 @@ Flowmap textures must follow the frapx RG convention:
 
 | Channel | Value |
 |---------|-------|
-| R | `0.5 + dx * 0.5` |
-| G | `0.5 - dy * 0.5` (canvas Y negated to match WebGL Y-up) |
+| R byte | `round(127.5 + dx * 127.5)` |
+| G byte | `round(127.5 - dy * 127.5)` (canvas Y negated to match WebGL Y-up) |
 | Neutral (no flow) | `rgb(128, 128, 0)` |
 
 Textures produced by [frapx flowmap-painter](../../apps/flowmap-painter) follow this convention.
@@ -93,17 +96,35 @@ vec2 frapx_flowDecode(sampler2D flowTex, vec2 uv) → vec2 in [-1, 1]²
 
 ### `flowDistort` — `string`
 
-GLSL ES 3.00 function that applies two-phase advection of a base texture along a
-precomputed flow vector. Uses two interleaved scroll phases offset by 0.5 in the
-animation cycle to avoid the infinite-stretching artifact of single-phase scrolling:
+GLSL ES 3.00 function that applies three-phase advection of a base texture along a
+precomputed flow vector. Self-contained — no other frapx_ snippet required.
+
+Quality improvements over a naive scroll (as of 0.3.0):
+- **Spatio-temporal phase decorrelation** — bounded 3D value noise offsets each pixel's
+  animation phase without allowing local phase reversal, so the exact 1/speed loop never
+  recurs; intended for real-time playback (not clean-loop export)
+- **Stable phase domain** — separate base and phase UVs keep the noise scale independent
+  from base-texture tiling
+- **Three-phase normalised tent blend** — phases spaced 1/3 apart with tent weights that
+  are zero at each reset boundary. Reduces the double-image (ghost) smear by ~33 %
+  compared to the two-phase design. Requires three texture fetches per fragment.
 
 ```glsl
 vec4 frapx_flowDistort(
   sampler2D base,
   vec2 flow,      // signed flow vector from frapx_flowDecode
-  vec2 uv,        // texture coords (apply tiling before calling)
+  vec2 baseUv,    // base texture coords (apply tiling before calling)
+  vec2 phaseUv,   // untiled coords used for phase decorrelation
   float time,     // elapsed time (e.g. u_time)
   float speed,    // animation speed multiplier
   float strength  // distortion magnitude
 ) → vec4
+```
+
+The previous six-argument signature remains available for compatibility. It uses
+`baseUv` as the phase coordinate; new code should use the seven-argument signature
+above when applying tiling:
+
+```glsl
+frapx_flowDistort(base, flow, baseUv, time, speed, strength)
 ```

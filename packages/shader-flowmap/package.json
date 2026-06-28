@@ -1,7 +1,7 @@
 {
   "name": "@frapx/shader-flowmap",
-  "version": "0.1.0",
-  "description": "GLSL flowmap helpers for @frapx/shader — decode RG-encoded flow textures and apply two-phase advection.",
+  "version": "0.3.0",
+  "description": "GLSL flowmap helpers for @frapx/shader — decode RG-encoded flow textures and apply three-phase advection.",
   "keywords": [
     "webgl",
     "shader",
@@ -26,7 +26,8 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "license": "MIT",
   "repository": {
