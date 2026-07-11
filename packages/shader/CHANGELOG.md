@@ -5,6 +5,7 @@
 ### Changed
 
 - Extracted shared WebGL utilities into `@frapx/runtime`. No public API or behavior changes. `@frapx/runtime` is added as a runtime dependency and will be installed automatically.
+- Pinned the `@frapx/runtime` dependency to `^0.1.0` (was published as an unresolved `workspace:*` range).
 
 ## 0.6.0 - 2026-06-20
 

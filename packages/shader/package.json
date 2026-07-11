@@ -39,7 +39,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@frapx/runtime": "workspace:*"
+    "@frapx/runtime": "workspace:^"
   },
   "license": "MIT",
   "repository": {

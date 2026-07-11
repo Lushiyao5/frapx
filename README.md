@@ -7,6 +7,8 @@ Web graphics utilities for building lightweight visual effects on the web.
 - [`@frapx/shader`](./packages/shader) - Create lightweight WebGL shader backgrounds for websites.
 - [`@frapx/shader-react`](./packages/shader-react) - React bindings for shader backgrounds.
 - [`@frapx/shader-noise`](./packages/shader-noise) - Lightweight GLSL 3D noise helpers for shader backgrounds.
+- [`@frapx/shader-flowmap`](./packages/shader-flowmap) - GLSL flowmap decode/distortion helpers for shader backgrounds.
+- [`@frapx/runtime`](./packages/runtime) - Shared WebGL runtime host used internally by `@frapx/shader`.
 
 ## Architecture
 

@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- Pinned the `@frapx/shader` dependency to `^0.6.1`. The previously published `0.2.0` shipped with an unresolved `workspace:*` range, which broke `npm install` for consumers; this release corrects it.
 - `ShaderBackground` component now correctly forwards `respectReducedMotion`,
   `pauseWhenHidden`, and `canvas` props to the core instance. Previously these
   options leaked into DOM attributes and were silently ignored by the runtime.

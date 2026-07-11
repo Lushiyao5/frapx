@@ -7,14 +7,33 @@ released, tagged, and documented on its own.
 
 | Package | Directory | Tag format | Notes |
 | --- | --- | --- | --- |
-| `@frapx/shader` | `packages/shader` | `@frapx/shader@0.6.1` | |
-| `@frapx/shader-react` | `packages/shader-react` | `@frapx/shader-react@0.3.0` | |
+| `@frapx/shader` | `packages/shader` | `@frapx/shader@0.6.1` | Depends on `@frapx/runtime`. Publish after it. |
+| `@frapx/shader-react` | `packages/shader-react` | `@frapx/shader-react@0.3.0` | Depends on `@frapx/shader`. Publish after it. |
 | `@frapx/shader-noise` | `packages/shader-noise` | `@frapx/shader-noise@0.1.0` | |
-| `@frapx/shader-flowmap` | `packages/shader-flowmap` | `@frapx/shader-flowmap@0.1.0` | |
+| `@frapx/shader-flowmap` | `packages/shader-flowmap` | `@frapx/shader-flowmap@0.3.0` | |
 | `@frapx/runtime` | `packages/runtime` | `@frapx/runtime@0.1.0` | Shared runtime. Publish before `@frapx/shader`. |
 
 Examples and documentation changes do not require a package release unless they
 also change package metadata or published package contents.
+
+### Internal (workspace) dependencies
+
+Packages that depend on another package in this repo (`@frapx/shader` on
+`@frapx/runtime`, `@frapx/shader-react` on `@frapx/shader`) declare that
+dependency as `workspace:^` in `package.json`. Publish with `pnpm publish`,
+which rewrites `workspace:^` to the caret range of the dependency's current
+published version (e.g. `^0.6.1`) at pack time. Do **not** use `npm publish`
+for these packages: `npm` does not understand the `workspace:` protocol and
+will publish the literal string `workspace:^` as the dependency range, which
+breaks `npm install` for consumers. (This happened to `@frapx/shader-react@0.2.0`;
+it shipped with an unresolved `"@frapx/shader": "workspace:*"` dependency and
+was fixed in `0.3.0`.) Packages with no internal dependencies (`@frapx/runtime`,
+`@frapx/shader-noise`, `@frapx/shader-flowmap`) are unaffected, but use
+`pnpm publish` throughout for consistency.
+
+Always publish internal dependencies in dependency order (e.g. `@frapx/runtime`
+before `@frapx/shader`, `@frapx/shader` before `@frapx/shader-react`) so the
+caret range resolves to an already-published version.
 
 ## Versioning
 
@@ -114,16 +133,17 @@ Push the release commit before publishing:
 git push origin main
 ```
 
-Dry-run and publish from the package directory:
+Dry-run and publish from the package directory using `pnpm publish` (not
+`npm publish` — see "Internal (workspace) dependencies" above for why):
 
 ```sh
 cd "$PACKAGE_DIR"
-npm publish --dry-run --access public
-npm publish --access public
+pnpm publish --dry-run --access public
+pnpm publish --access public
 cd -
 ```
 
-After npm publish succeeds, create and push an annotated package tag:
+After the publish succeeds, create and push an annotated package tag:
 
 ```sh
 git tag -a "$TAG" -m "$TAG"
@@ -136,7 +156,7 @@ Create a published GitHub Release for the package tag. Use the GitHub UI or:
 gh release create "$TAG" --title "$TAG" --notes-file /tmp/release-notes.md
 ```
 
-Do not create or push release tags before npm publish succeeds.
+Do not create or push release tags before the publish succeeds.
 
 ## Retroactive Tags
 
