@@ -1,0 +1,95 @@
+name: Publish Package
+
+on:
+  push:
+    tags:
+      - "@frapx/*@*"
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Parse tag
+        id: parse
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          NAME="${TAG%@*}"
+          VERSION="${TAG##*@}"
+          DIR="packages/${NAME#@frapx/}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Verify package matches tag
+        run: |
+          PKG_NAME=$(node -p "require('./${{ steps.parse.outputs.dir }}/package.json').name")
+          PKG_VERSION=$(node -p "require('./${{ steps.parse.outputs.dir }}/package.json').version")
+          if [ "$PKG_NAME" != "${{ steps.parse.outputs.name }}" ]; then
+            echo "::error::${{ steps.parse.outputs.dir }}/package.json name ($PKG_NAME) does not match tag-derived name (${{ steps.parse.outputs.name }})"
+            exit 1
+          fi
+          if [ "$PKG_VERSION" != "${{ steps.parse.outputs.version }}" ]; then
+            echo "::error::${{ steps.parse.outputs.dir }}/package.json version ($PKG_VERSION) does not match tag-derived version (${{ steps.parse.outputs.version }})"
+            exit 1
+          fi
+
+      - name: Build
+        run: pnpm build
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Publish to npm
+        working-directory: ${{ steps.parse.outputs.dir }}
+        run: pnpm publish --provenance --no-git-checks
+
+      - name: Extract changelog section
+        id: notes
+        run: |
+          VERSION_RE=$(printf '%s' "${{ steps.parse.outputs.version }}" | sed 's/[.[\*^$/]/\\&/g')
+          awk -v ver_re="^## ${VERSION_RE}( |\$)" '
+            $0 ~ ver_re { found=1; next }
+            found && /^## / { exit }
+            found { print }
+          ' "${{ steps.parse.outputs.dir }}/CHANGELOG.md" > /tmp/release-notes.md
+          if [ ! -s /tmp/release-notes.md ]; then
+            echo "::error::No changelog section found for version ${{ steps.parse.outputs.version }} in ${{ steps.parse.outputs.dir }}/CHANGELOG.md"
+            exit 1
+          fi
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.parse.outputs.tag }}" \
+            --title "${{ steps.parse.outputs.tag }}" \
+            --notes-file /tmp/release-notes.md \
+            --verify-tag

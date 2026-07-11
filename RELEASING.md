@@ -100,7 +100,59 @@ Release @frapx/shader-react@0.1.0
 If multiple packages are released together, one release commit is acceptable, but
 tags and GitHub Releases still remain package-specific.
 
+## Automated Release Procedure
+
+Publishing runs via `.github/workflows/publish.yml`, triggered by pushing a
+package tag (`@frapx/<pkg>@<version>`, e.g. `@frapx/shader@0.6.2`). The
+workflow:
+
+1. Parses the package name, version, and directory from the tag.
+2. Verifies the target `package.json` `name`/`version` match the tag (fails
+   the run if they don't, to prevent tagging the wrong commit).
+3. Runs `pnpm build`, `pnpm typecheck`, and `pnpm test` across the workspace.
+4. Publishes with `pnpm publish --provenance --no-git-checks` from the
+   package directory, using npm
+   [Trusted Publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC) —
+   no npm token is stored in the repository.
+5. Extracts the matching `## <version>` section from the package's
+   `CHANGELOG.md` and creates a GitHub Release from it.
+
+To release a package:
+
+1. Update `package.json` version and `CHANGELOG.md` as described above,
+   respecting internal dependency publish order (`@frapx/runtime` before
+   `@frapx/shader`, `@frapx/shader` before `@frapx/shader-react`).
+2. Commit the release metadata and push to `main`.
+3. Tag and push:
+
+   ```sh
+   git tag -a "@frapx/shader@0.6.2" -m "@frapx/shader@0.6.2"
+   git push origin "@frapx/shader@0.6.2"
+   ```
+
+4. Watch the `Publish Package` run in GitHub Actions. If it fails before the
+   publish step, no npm package or GitHub Release is created — fix the issue,
+   delete the tag (`git push origin :refs/tags/<tag>` and
+   `git tag -d <tag>`), and re-tag once the commit is corrected.
+
+### Trusted Publisher Setup (one-time, per package)
+
+Each package must have a Trusted Publisher registered on npmjs.com before its
+first automated publish (Settings → Trusted Publisher on the package page):
+
+- Owner: `kramhash`, Repository: `frapx`, Workflow file: `publish.yml`
+
+npm does not allow registering a Trusted Publisher for a package that has
+never been published. For a package with no prior npm release, publish it
+once manually (see "Manual Release Procedure" below) to create the package,
+then register the Trusted Publisher before relying on the automated
+workflow for subsequent releases.
+
 ## Manual Release Procedure
+
+Use this procedure only for a package's first-ever publish (before a Trusted
+Publisher can be registered) or as a fallback if the automated workflow is
+unavailable.
 
 Set the package details:
 
@@ -178,8 +230,12 @@ Use trunk-based development:
 - Do not create release branches unless parallel maintenance lines are needed.
 - Hotfixes go through `main` and receive package-specific patch releases.
 
-## Future Automation
+## Notes on Bootstrapping a New Package
 
-If release automation is added, start with a manual `workflow_dispatch` GitHub
-Actions workflow that requires explicit package and version inputs. Avoid tag
-push triggered publishing until the manual process has been proven.
+When manually publishing a package for the first time (see "Trusted
+Publisher Setup" above), pushing the release tag afterward will still
+trigger `.github/workflows/publish.yml`. That run will pass build/typecheck/
+test and the tag/package-metadata check, then fail at the `pnpm publish` step
+because the version is already on npm — this is expected and harmless. Once
+the Trusted Publisher is registered, subsequent tags for that package publish
+normally through the workflow.

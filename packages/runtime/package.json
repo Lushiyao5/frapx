@@ -30,6 +30,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
+    "url": "git+https://github.com/kramhash/frapx.git",
     "directory": "packages/runtime"
   },
   "publishConfig": {
