@@ -110,10 +110,19 @@ workflow:
 2. Verifies the target `package.json` `name`/`version` match the tag (fails
    the run if they don't, to prevent tagging the wrong commit).
 3. Runs `pnpm build`, `pnpm typecheck`, and `pnpm test` across the workspace.
-4. Publishes with `pnpm publish --provenance --no-git-checks` from the
-   package directory, using npm
+4. Publishes using npm
    [Trusted Publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC) —
-   no npm token is stored in the repository.
+   no npm token is stored in the repository. The workflow drives the OIDC
+   exchange itself (fetch a GitHub ID token, exchange it for a short-lived
+   per-package npm token, publish with `pnpm publish --access public
+   --no-git-checks --provenance`, then remove the token) rather than relying
+   on `pnpm publish`'s built-in OIDC support, which has been unreliable in
+   practice (the exchange silently never completes and the request falls
+   through to an unauthenticated call — see `.github/workflows/publish.yml`
+   for the exact mechanism). For the same reason, `actions/setup-node`'s
+   `registry-url` input must **not** be set in this workflow: it writes an
+   `_authToken` line into `.npmrc` even when empty, which makes `pnpm
+   publish` skip OIDC entirely.
 5. Extracts the matching `## <version>` section from the package's
    `CHANGELOG.md` and creates a GitHub Release from it.
 

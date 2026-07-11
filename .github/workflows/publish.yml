@@ -19,7 +19,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           run_install: false
 
@@ -27,7 +27,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: "https://registry.npmjs.org"
           cache: pnpm
 
       - name: Install dependencies
@@ -69,7 +68,38 @@ jobs:
 
       - name: Publish to npm
         working-directory: ${{ steps.parse.outputs.dir }}
-        run: pnpm publish --provenance --no-git-checks
+        env:
+          PKG_NAME: ${{ steps.parse.outputs.name }}
+        run: |
+          set -euo pipefail
+
+          # pnpm's own OIDC trusted-publishing exchange has been found unreliable in
+          # practice (the exchange silently never completes and the request falls
+          # through to an unauthenticated call). Drive the exchange ourselves instead:
+          # fetch one GitHub OIDC ID token, exchange it for a short-lived npm token
+          # scoped to this package, publish, then remove the token.
+          id_token=$(curl -sf \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=npm:registry.npmjs.org" | jq -r '.value')
+          if [ -z "$id_token" ] || [ "$id_token" = "null" ]; then
+            echo "::error::Failed to obtain a GitHub Actions OIDC ID token" >&2
+            exit 1
+          fi
+
+          escaped_name=$(node -e 'console.log(encodeURIComponent(process.argv[1]))' "$PKG_NAME")
+          npm_token=$(curl -sf -X POST \
+            -H "Authorization: Bearer $id_token" \
+            -H "Content-Length: 0" \
+            "https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/$escaped_name" | jq -r '.token')
+          if [ -z "$npm_token" ] || [ "$npm_token" = "null" ]; then
+            echo "::error::Failed to exchange OIDC token for $PKG_NAME" >&2
+            exit 1
+          fi
+
+          npm config set --location=user "//registry.npmjs.org/:_authToken" "$npm_token"
+          trap 'npm config delete --location=user "//registry.npmjs.org/:_authToken"' EXIT
+
+          pnpm publish --access public --no-git-checks --provenance
 
       - name: Extract changelog section
         id: notes
