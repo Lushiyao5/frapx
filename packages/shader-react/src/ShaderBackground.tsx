@@ -69,6 +69,7 @@ const OPTION_KEYS = [
   "canvasStyle",
   "onBeforeRender",
   "onAfterRender",
+  "onResize",
   "onShaderReady",
   "onShaderError",
 ] as const satisfies readonly (keyof UseShaderBackgroundOptions)[];
@@ -87,6 +88,7 @@ const RUNTIME_KEYS = new Set([
   "onShaderError",
   "onBeforeRender",
   "onAfterRender",
+  "onResize",
 ]);
 
 // Derived once at module scope so recreateDeps always has a stable length.

@@ -77,6 +77,8 @@ export type RuntimeHostOptions = {
   createContext: (canvas: HTMLCanvasElement) => GLContext | null;
   onInit: (gl: GLContext, width: number, height: number) => Promise<void> | void;
   onDraw: (state: HostFrameState) => void;
+  /** Called whenever the observed size actually changes (not every frame). */
+  onResize?: (state: HostFrameState) => void;
   onContextLost?: () => void;
   onContextRestored?: (
     gl: GLContext,

@@ -2,6 +2,8 @@ export { createShaderBackground } from "./createShaderBackground";
 export { hexToRgb, hexToRgba } from "./color";
 export type { Rgb, Rgba } from "./color";
 export { glsl, glslUtils } from "./glsl";
+export { createBlitter } from "./blit";
+export type { Blitter } from "./blit";
 export type {
   CreateShaderBackgroundOptions,
   DprOption,

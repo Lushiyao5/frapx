@@ -108,7 +108,37 @@ class RuntimeHost implements RuntimeHostInstance {
 
   resize(): void {
     if (this.destroyed || !this.dom) return;
+
+    const prevWidth = this.width;
+    const prevHeight = this.height;
+    const prevViewportWidth = this.viewportWidth;
+    const prevViewportHeight = this.viewportHeight;
+
     this.measureSize();
+
+    const sizeChanged =
+      this.width !== prevWidth ||
+      this.height !== prevHeight ||
+      this.viewportWidth !== prevViewportWidth ||
+      this.viewportHeight !== prevViewportHeight;
+
+    if (sizeChanged && this.context) {
+      this.options.onResize?.({
+        gl: this.context,
+        canvas: this.dom.canvas,
+        time: this.elapsed,
+        delta: 0,
+        frame: this.frame,
+        width: this.width,
+        height: this.height,
+        viewportWidth: this.viewportWidth,
+        viewportHeight: this.viewportHeight,
+        pixelRatio: this.pixelRatio,
+        reducedMotion: this.reducedMotionActive,
+        pointer: { ...this.pointer }
+      });
+    }
+
     if (this.options.renderMode === "demand" && !this.inRender) {
       this.render();
     }

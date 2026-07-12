@@ -135,6 +135,11 @@ class ShaderBackground<TUniforms extends UniformInputMap>
         this.drawFrame(state);
       },
 
+      onResize: (state) => {
+        if (this.shaderDestroyed) return;
+        this.options.onResize?.(this.createRenderState(state));
+      },
+
       onContextLost: () => {
         this.feedbackState = null;
       },

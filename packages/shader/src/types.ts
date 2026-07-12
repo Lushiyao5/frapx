@@ -130,6 +130,8 @@ export type CreateShaderBackgroundOptions<
   onError?: (error: Error) => void;
   onBeforeRender?: (state: RenderState<TUniforms>) => void;
   onAfterRender?: (state: RenderState<TUniforms>) => void;
+  /** Called whenever the observed size actually changes (not every frame). */
+  onResize?: (state: RenderState<TUniforms>) => void;
 };
 
 export type ShaderBackgroundInstance<

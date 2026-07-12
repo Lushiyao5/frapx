@@ -27,6 +27,8 @@ export {
   defaultVertexShader,
   defaultVertexShader300
 } from "./internal/webgl";
+export { createBlitter } from "./internal/blit";
+export type { Blitter } from "./internal/blit";
 export type {
   GLContext,
   ShaderLayer,

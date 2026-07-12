@@ -65,6 +65,7 @@ export const useShaderBackground = <
       onShaderError,
       onBeforeRender,
       onAfterRender,
+      onResize,
       uniforms,
       textures,
       ...rest
@@ -91,6 +92,9 @@ export const useShaderBackground = <
       },
       onAfterRender(state: RenderState<TUniforms>) {
         latestOptionsRef.current.onAfterRender?.(state);
+      },
+      onResize(state: RenderState<TUniforms>) {
+        latestOptionsRef.current.onResize?.(state);
       }
     } as Record<string, unknown>) as CreateShaderBackgroundOptions<TUniforms>;
 
