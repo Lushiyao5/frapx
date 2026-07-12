@@ -1,6 +1,6 @@
-import { createShaderBackground, glsl } from "@frapx/shader";
-import type { ShaderBackgroundInstance } from "@frapx/shader";
-import { flowDecode, flowDistort } from "@frapx/shader-flowmap";
+import { createShaderBackground, glsl } from "@frapx/fx-canvas";
+import type { ShaderBackgroundInstance } from "@frapx/fx-canvas";
+import { flowDecode, flowDistort } from "@frapx/glsl-flowmap";
 import checkerUrl from "./assets/background.webp";
 import "./styles.css";
 

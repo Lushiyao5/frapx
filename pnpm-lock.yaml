@@ -29,15 +29,15 @@ importers:
 
   apps/flowmap-painter:
     dependencies:
-      '@frapx/shader':
+      '@frapx/fx-canvas':
         specifier: workspace:*
-        version: link:../../packages/shader
-      '@frapx/shader-flowmap':
+        version: link:../../packages/fx-canvas
+      '@frapx/glsl-flowmap':
         specifier: workspace:*
-        version: link:../../packages/shader-flowmap
-      '@frapx/shader-react':
+        version: link:../../packages/glsl-flowmap
+      '@frapx/react-canvas':
         specifier: workspace:*
-        version: link:../../packages/shader-react
+        version: link:../../packages/react-canvas
       react:
         specifier: ^19.2.3
         version: 19.2.7
@@ -63,9 +63,9 @@ importers:
 
   examples/vite-basic:
     dependencies:
-      '@frapx/shader':
+      '@frapx/fx-canvas':
         specifier: workspace:*
-        version: link:../../packages/shader
+        version: link:../../packages/fx-canvas
     devDependencies:
       typescript:
         specifier: ^5.8.3
@@ -76,9 +76,9 @@ importers:
 
   examples/vite-feedback:
     dependencies:
-      '@frapx/shader':
+      '@frapx/fx-canvas':
         specifier: workspace:*
-        version: link:../../packages/shader
+        version: link:../../packages/fx-canvas
     devDependencies:
       typescript:
         specifier: ^5.8.3
@@ -89,12 +89,12 @@ importers:
 
   examples/vite-flowmap:
     dependencies:
-      '@frapx/shader':
+      '@frapx/fx-canvas':
         specifier: workspace:*
-        version: link:../../packages/shader
-      '@frapx/shader-flowmap':
+        version: link:../../packages/fx-canvas
+      '@frapx/glsl-flowmap':
         specifier: workspace:*
-        version: link:../../packages/shader-flowmap
+        version: link:../../packages/glsl-flowmap
     devDependencies:
       typescript:
         specifier: ^5.8.3
@@ -105,12 +105,12 @@ importers:
 
   examples/vite-react:
     dependencies:
-      '@frapx/shader':
+      '@frapx/fx-canvas':
         specifier: workspace:*
-        version: link:../../packages/shader
-      '@frapx/shader-react':
+        version: link:../../packages/fx-canvas
+      '@frapx/react-canvas':
         specifier: workspace:*
-        version: link:../../packages/shader-react
+        version: link:../../packages/react-canvas
       react:
         specifier: ^19.2.3
         version: 19.2.7
@@ -134,27 +134,27 @@ importers:
         specifier: ^6.3.5
         version: 6.4.3(@types/node@24.13.2)
 
-  packages/runtime:
+  packages/core:
     devDependencies:
       vitest:
         specifier: ^3.2.4
         version: 3.2.6(@types/node@24.13.2)(jsdom@27.4.0)
 
-  packages/shader:
+  packages/fx-canvas:
     dependencies:
-      '@frapx/runtime':
+      '@frapx/core':
         specifier: workspace:^
-        version: link:../runtime
+        version: link:../core
 
-  packages/shader-flowmap: {}
+  packages/glsl-flowmap: {}
 
-  packages/shader-noise: {}
+  packages/glsl-noise: {}
 
-  packages/shader-react:
+  packages/react-canvas:
     dependencies:
-      '@frapx/shader':
+      '@frapx/fx-canvas':
         specifier: workspace:^
-        version: link:../shader
+        version: link:../fx-canvas
     devDependencies:
       '@types/react':
         specifier: ^19.2.7

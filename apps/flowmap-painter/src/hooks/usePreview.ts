@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ShaderBackgroundInstance } from "@frapx/shader";
-import { useShaderBackground } from "@frapx/shader-react";
+import type { ShaderBackgroundInstance } from "@frapx/fx-canvas";
+import { useShaderBackground } from "@frapx/react-canvas";
 import type { BuiltinBaseId } from "../lib/builtinBase";
 import { getBuiltinBase } from "../lib/builtinBase";
-import type { ShaderStatus } from "@frapx/shader";
+import type { ShaderStatus } from "@frapx/fx-canvas";
 import checkerUrl from "../../assets/chekcerboard.png";
 import { getMode } from "../shaders/modes/index";
 import type { PreviewModeId } from "../shaders/modes/index";

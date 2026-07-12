@@ -1,0 +1,44 @@
+# Changelog
+
+## 0.4.0 - 2026-07-12
+
+### Changed
+
+- **Breaking: package renamed from `@frapx/shader-react` to `@frapx/react-canvas`**, following the `@frapx/shader` → `@frapx/fx-canvas` rename. No API changes. `@frapx/shader-react` is deprecated on npm and will not receive further updates.
+
+## 0.3.0 - 2026-06-22
+
+### Fixed
+
+- Pinned the `@frapx/fx-canvas` dependency to `^0.6.1`. The previously published `0.2.0` shipped with an unresolved `workspace:*` range, which broke `npm install` for consumers; this release corrects it.
+- `ShaderBackground` component now correctly forwards `respectReducedMotion`,
+  `pauseWhenHidden`, and `canvas` props to the core instance. Previously these
+  options leaked into DOM attributes and were silently ignored by the runtime.
+
+### Added
+
+- `ShaderBackgroundHandle` now exposes `setTextures()` and `setUniforms()` to
+  match the full core `ShaderBackgroundInstance` API.
+
+### Internal
+
+- Option keys in `ShaderBackground` are now managed via a single `OPTION_KEYS`
+  array with compile-time completeness guards, preventing future option-forwarding
+  regressions when core adds new options.
+
+## 0.2.0 - 2026-06-20
+
+### Added
+
+- Added `feedback` prop passthrough for the core `@frapx/fx-canvas` previous-frame feedback option.
+
+## 0.1.0 - 2026-06-15
+
+### Added
+
+- Added the initial `@frapx/react-canvas` package.
+- Added the `ShaderBackground` component.
+- Added the `useShaderBackground()` hook.
+- Added imperative control through `ShaderBackgroundHandle`.
+- Added runtime `uniforms` and `textures` updates through the core shader
+  instance.

@@ -5,12 +5,12 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: /^@frapx\/shader$/,
-        replacement: resolve(__dirname, "../../packages/shader/src/index.ts")
+        find: /^@frapx\/fx-canvas$/,
+        replacement: resolve(__dirname, "../../packages/fx-canvas/src/index.ts")
       },
       {
-        find: /^@frapx\/shader\/(.*)$/,
-        replacement: resolve(__dirname, "../../packages/shader/src/$1.ts")
+        find: /^@frapx\/fx-canvas\/(.*)$/,
+        replacement: resolve(__dirname, "../../packages/fx-canvas/src/$1.ts")
       }
     ]
   }

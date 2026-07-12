@@ -13,12 +13,13 @@
     "exactOptionalPropertyTypes": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "paths": {
-      "@frapx/runtime": ["./packages/runtime/src/index.ts"],
-      "@frapx/runtime/*": ["./packages/runtime/src/*.ts"],
-      "@frapx/shader": ["./packages/shader/src/index.ts"],
-      "@frapx/shader/*": ["./packages/shader/src/*.ts"],
-      "@frapx/shader-react": ["./packages/shader-react/src/index.ts"],
-      "@frapx/shader-flowmap": ["./packages/shader-flowmap/src/index.ts"]
+      "@frapx/core": ["./packages/core/src/index.ts"],
+      "@frapx/core/*": ["./packages/core/src/*.ts"],
+      "@frapx/fx-canvas": ["./packages/fx-canvas/src/index.ts"],
+      "@frapx/fx-canvas/*": ["./packages/fx-canvas/src/*.ts"],
+      "@frapx/react-canvas": ["./packages/react-canvas/src/index.ts"],
+      "@frapx/glsl-noise": ["./packages/glsl-noise/src/index.ts"],
+      "@frapx/glsl-flowmap": ["./packages/glsl-flowmap/src/index.ts"]
     }
   }
 }

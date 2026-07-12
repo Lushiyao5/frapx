@@ -1,4 +1,4 @@
-import { glsl } from "@frapx/shader";
+import { glsl } from "@frapx/fx-canvas";
 import { flowLibGLSL } from "../lib";
 import type { PreviewMode } from "./types";
 

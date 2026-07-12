@@ -3,7 +3,7 @@
 // Provides frapx_flowDecode and frapx_flowDistort (from package)
 // plus a painter-specific sampleFlowAdvect convenience wrapper.
 
-import { flowDecode, flowDistort } from "@frapx/shader-flowmap";
+import { flowDecode, flowDistort } from "@frapx/glsl-flowmap";
 
 export const flowLibGLSL = `
 ${flowDecode}

@@ -9,9 +9,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@frapx/shader": "workspace:*",
-    "@frapx/shader-flowmap": "workspace:*",
-    "@frapx/shader-react": "workspace:*",
+    "@frapx/fx-canvas": "workspace:*",
+    "@frapx/glsl-flowmap": "workspace:*",
+    "@frapx/react-canvas": "workspace:*",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
   },

@@ -6,8 +6,8 @@ on:
       - main
     paths:
       - "apps/flowmap-painter/**"
-      - "packages/shader/**"
-      - "packages/shader-react/**"
+      - "packages/fx-canvas/**"
+      - "packages/react-canvas/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 

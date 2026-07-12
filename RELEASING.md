@@ -7,32 +7,36 @@ released, tagged, and documented on its own.
 
 | Package | Directory | Tag format | Notes |
 | --- | --- | --- | --- |
-| `@frapx/shader` | `packages/shader` | `@frapx/shader@0.6.1` | Depends on `@frapx/runtime`. Publish after it. |
-| `@frapx/shader-react` | `packages/shader-react` | `@frapx/shader-react@0.3.0` | Depends on `@frapx/shader`. Publish after it. |
-| `@frapx/shader-noise` | `packages/shader-noise` | `@frapx/shader-noise@0.1.0` | |
-| `@frapx/shader-flowmap` | `packages/shader-flowmap` | `@frapx/shader-flowmap@0.3.0` | |
-| `@frapx/runtime` | `packages/runtime` | `@frapx/runtime@0.1.0` | Shared runtime. Publish before `@frapx/shader`. |
+| `@frapx/fx-canvas` | `packages/fx-canvas` | `@frapx/fx-canvas@0.7.0` | Depends on `@frapx/core`. Publish after it. |
+| `@frapx/react-canvas` | `packages/react-canvas` | `@frapx/react-canvas@0.4.0` | Depends on `@frapx/fx-canvas`. Publish after it. |
+| `@frapx/glsl-noise` | `packages/glsl-noise` | `@frapx/glsl-noise@0.2.0` | |
+| `@frapx/glsl-flowmap` | `packages/glsl-flowmap` | `@frapx/glsl-flowmap@0.4.0` | |
+| `@frapx/core` | `packages/core` | `@frapx/core@0.2.0` | Shared runtime. Publish before `@frapx/fx-canvas`. |
+
+These packages were renamed on 2026-07-12 (formerly `@frapx/runtime`, `@frapx/shader`,
+`@frapx/shader-react`, `@frapx/shader-noise`, `@frapx/shader-flowmap`). The old npm
+packages are deprecated — see "Deprecating a Renamed Package" below.
 
 Examples and documentation changes do not require a package release unless they
 also change package metadata or published package contents.
 
 ### Internal (workspace) dependencies
 
-Packages that depend on another package in this repo (`@frapx/shader` on
-`@frapx/runtime`, `@frapx/shader-react` on `@frapx/shader`) declare that
+Packages that depend on another package in this repo (`@frapx/fx-canvas` on
+`@frapx/core`, `@frapx/react-canvas` on `@frapx/fx-canvas`) declare that
 dependency as `workspace:^` in `package.json`. Publish with `pnpm publish`,
 which rewrites `workspace:^` to the caret range of the dependency's current
 published version (e.g. `^0.6.1`) at pack time. Do **not** use `npm publish`
 for these packages: `npm` does not understand the `workspace:` protocol and
 will publish the literal string `workspace:^` as the dependency range, which
-breaks `npm install` for consumers. (This happened to `@frapx/shader-react@0.2.0`;
-it shipped with an unresolved `"@frapx/shader": "workspace:*"` dependency and
-was fixed in `0.3.0`.) Packages with no internal dependencies (`@frapx/runtime`,
-`@frapx/shader-noise`, `@frapx/shader-flowmap`) are unaffected, but use
+breaks `npm install` for consumers. (This happened to `@frapx/react-canvas@0.2.0`;
+it shipped with an unresolved `"@frapx/fx-canvas": "workspace:*"` dependency and
+was fixed in `0.3.0`.) Packages with no internal dependencies (`@frapx/core`,
+`@frapx/glsl-noise`, `@frapx/glsl-flowmap`) are unaffected, but use
 `pnpm publish` throughout for consistency.
 
-Always publish internal dependencies in dependency order (e.g. `@frapx/runtime`
-before `@frapx/shader`, `@frapx/shader` before `@frapx/shader-react`) so the
+Always publish internal dependencies in dependency order (e.g. `@frapx/core`
+before `@frapx/fx-canvas`, `@frapx/fx-canvas` before `@frapx/react-canvas`) so the
 caret range resolves to an already-published version.
 
 ## Versioning
@@ -53,11 +57,11 @@ patch releases.
 
 Each public package owns its changelog:
 
-- `packages/runtime/CHANGELOG.md`
-- `packages/shader/CHANGELOG.md`
-- `packages/shader-react/CHANGELOG.md`
-- `packages/shader-noise/CHANGELOG.md`
-- `packages/shader-flowmap/CHANGELOG.md`
+- `packages/core/CHANGELOG.md`
+- `packages/fx-canvas/CHANGELOG.md`
+- `packages/react-canvas/CHANGELOG.md`
+- `packages/glsl-noise/CHANGELOG.md`
+- `packages/glsl-flowmap/CHANGELOG.md`
 
 Use this format:
 
@@ -91,10 +95,10 @@ Examples:
 
 ```txt
 Add runtime texture updates
-Release @frapx/shader@0.3.0
+Release @frapx/fx-canvas@0.3.0
 
 Add React shader bindings
-Release @frapx/shader-react@0.1.0
+Release @frapx/react-canvas@0.1.0
 ```
 
 If multiple packages are released together, one release commit is acceptable, but
@@ -103,7 +107,7 @@ tags and GitHub Releases still remain package-specific.
 ## Automated Release Procedure
 
 Publishing runs via `.github/workflows/publish.yml`, triggered by pushing a
-package tag (`@frapx/<pkg>@<version>`, e.g. `@frapx/shader@0.6.2`). The
+package tag (`@frapx/<pkg>@<version>`, e.g. `@frapx/fx-canvas@0.6.2`). The
 workflow:
 
 1. Parses the package name, version, and directory from the tag.
@@ -129,14 +133,14 @@ workflow:
 To release a package:
 
 1. Update `package.json` version and `CHANGELOG.md` as described above,
-   respecting internal dependency publish order (`@frapx/runtime` before
-   `@frapx/shader`, `@frapx/shader` before `@frapx/shader-react`).
+   respecting internal dependency publish order (`@frapx/core` before
+   `@frapx/fx-canvas`, `@frapx/fx-canvas` before `@frapx/react-canvas`).
 2. Commit the release metadata and push to `main`.
 3. Tag and push:
 
    ```sh
-   git tag -a "@frapx/shader@0.6.2" -m "@frapx/shader@0.6.2"
-   git push origin "@frapx/shader@0.6.2"
+   git tag -a "@frapx/fx-canvas@0.6.2" -m "@frapx/fx-canvas@0.6.2"
+   git push origin "@frapx/fx-canvas@0.6.2"
    ```
 
 4. Watch the `Publish Package` run in GitHub Actions. If it fails before the
@@ -166,8 +170,8 @@ unavailable.
 Set the package details:
 
 ```sh
-PACKAGE_DIR=packages/shader-react
-PACKAGE_NAME=@frapx/shader-react
+PACKAGE_DIR=packages/react-canvas
+PACKAGE_NAME=@frapx/react-canvas
 VERSION=0.1.0
 TAG="$PACKAGE_NAME@$VERSION"
 ```
@@ -219,6 +223,24 @@ gh release create "$TAG" --title "$TAG" --notes-file /tmp/release-notes.md
 
 Do not create or push release tags before the publish succeeds.
 
+## Deprecating a Renamed Package
+
+When a package is renamed (clean break, no re-export shim — see the 2026-07-12
+rename of `@frapx/runtime` / `@frapx/shader` / `@frapx/shader-react` /
+`@frapx/shader-noise` / `@frapx/shader-flowmap` to `@frapx/core` /
+`@frapx/fx-canvas` / `@frapx/react-canvas` / `@frapx/glsl-noise` /
+`@frapx/glsl-flowmap`), deprecate the old npm package **after** the new one has
+published successfully:
+
+```sh
+npm deprecate @frapx/shader "Renamed to @frapx/fx-canvas. Run: pnpm remove @frapx/shader && pnpm add @frapx/fx-canvas"
+```
+
+This does not unpublish or break existing installs; it only surfaces a warning
+pointing consumers at the new name. Do not add a re-export shim to the old
+package — pre-1.0 adoption is low enough that the deprecation notice is
+sufficient.
+
 ## Retroactive Tags
 
 For releases that were published before this policy, create retroactive package
@@ -227,7 +249,7 @@ tags only when the exact release commit is known. Do not tag approximate commits
 Example:
 
 ```sh
-git tag -a @frapx/shader@0.3.0 533ed40 -m "@frapx/shader@0.3.0"
+git tag -a @frapx/fx-canvas@0.3.0 533ed40 -m "@frapx/fx-canvas@0.3.0"
 ```
 
 ## Branch Strategy

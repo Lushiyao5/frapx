@@ -11,9 +11,9 @@
 ## Repository Context
 
 - This is a pnpm monorepo.
-- The npm package is `@frapx/shader` in `packages/shader`.
-- The React binding package is `@frapx/shader-react` in `packages/shader-react`.
-- The optional 3D noise helper package is `@frapx/shader-noise` in `packages/shader-noise`.
+- The npm package is `@frapx/fx-canvas` in `packages/fx-canvas`.
+- The React binding package is `@frapx/react-canvas` in `packages/react-canvas`.
+- The optional 3D noise helper package is `@frapx/glsl-noise` in `packages/glsl-noise`.
 - The example app is `@frapx/example-vite-basic` in `examples/vite-basic`.
 - Prefer the repository's established patterns over adding new abstractions.
 
@@ -28,7 +28,7 @@
 
 ## Package Design
 
-- `@frapx/shader` is a lightweight WebGL shader background runtime for websites.
+- `@frapx/fx-canvas` is a lightweight WebGL shader background runtime for websites.
 - It should remain safe to import during SSR.
 - Keep the current v1 behavior compatible with WebGL1 / GLSL ES 1.00.
 - Future WebGL2 support should be additive, capability-detected, and should not break existing WebGL1 users or public APIs.
@@ -37,18 +37,22 @@
 
 ## Extension Architecture
 
-- Keep `packages/shader` as the lightweight core runtime.
+- Keep `packages/fx-canvas` as the lightweight core runtime.
 - Add optional capabilities such as SDF helpers, noise libraries, presets, or larger GLSL utility sets as separate packages by default.
-- Prefer package names like `@frapx/shader-sdf`, `@frapx/shader-noise`, and `@frapx/shader-presets` for extensions.
+- Naming follows a category-prefix scheme (renamed 2026-07-12, see `RELEASING.md`):
+  - `core` — the shared internal WebGL runtime host (`@frapx/core`). Not installed directly by end users.
+  - `fx-<name>` — an effect runtime users instantiate directly, e.g. `@frapx/fx-canvas`, future `@frapx/fx-particles`.
+  - `react-<name>` — the React binding for an `fx-<name>` package, e.g. `@frapx/react-canvas`, future `@frapx/react-particles`.
+  - `glsl-<name>` — a GLSL snippet package meant to be concatenated into a fragment shader string, e.g. `@frapx/glsl-noise`, `@frapx/glsl-flowmap`, future `@frapx/glsl-sdf`.
 - Core must not depend on extension packages.
-- Extension packages may depend on or peer with `@frapx/shader` when they need shared helpers or types.
-- Small, broadly useful GLSL helpers may be added to `@frapx/shader/glsl`, but avoid turning core into a large shader snippet library.
+- Extension packages may depend on or peer with `@frapx/fx-canvas` when they need shared helpers or types.
+- Small, broadly useful GLSL helpers may be added to `@frapx/fx-canvas/glsl`, but avoid turning core into a large shader snippet library.
 - Add dedicated examples such as `examples/vite-sdf` when introducing new extension packages.
 
 ## Public API
 
-- Treat exports from `packages/shader/src/index.ts` and `packages/shader/src/glsl.ts` as public API.
-- Before changing public API behavior, check `packages/shader/README.md`, tests, and examples for consistency.
+- Treat exports from `packages/fx-canvas/src/index.ts` and `packages/fx-canvas/src/glsl.ts` as public API.
+- Before changing public API behavior, check `packages/fx-canvas/README.md`, tests, and examples for consistency.
 - Avoid breaking changes unless the user explicitly asks for them.
 
 ## Build Output
@@ -60,14 +64,14 @@
 
 ## Examples
 
-- Treat `examples/vite-basic` as an integration check and real usage example for `@frapx/shader`.
+- Treat `examples/vite-basic` as an integration check and real usage example for `@frapx/fx-canvas`.
 - If an example reveals an API problem, consider whether the package source, README, and tests also need updates.
 
 ## Publishing Notes
 
 - Use independent package versioning.
 - Keep package changelogs in `packages/*/CHANGELOG.md`.
-- Use annotated package tags like `@frapx/shader@0.3.0`.
+- Use annotated package tags like `@frapx/fx-canvas@0.3.0`.
 - Publish package changes from the package directory, not the repository root.
 - Scoped public packages should use `npm publish --access public` unless `publishConfig.access` covers it.
 - Run `pnpm -w build`, `pnpm -w typecheck`, and `pnpm -w test` before publishing when feasible.

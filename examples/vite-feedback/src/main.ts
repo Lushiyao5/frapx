@@ -1,4 +1,4 @@
-import { createShaderBackground, glsl, hexToRgb } from "@frapx/shader";
+import { createShaderBackground, glsl, hexToRgb } from "@frapx/fx-canvas";
 import "./styles.css";
 
 const fragment = glsl`

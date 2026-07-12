@@ -1,0 +1,185 @@
+import {
+  type ShaderBackgroundInstance,
+  type TextureInput,
+  type TextureMap,
+  type UniformInput,
+  type UniformInputMap,
+  type UniformRuntimeValue
+} from "@frapx/fx-canvas";
+import {
+  forwardRef,
+  useImperativeHandle,
+  useMemo,
+  type CSSProperties,
+  type ForwardedRef,
+  type HTMLAttributes
+} from "react";
+import { omitUndefined } from "./internal/omitUndefined";
+import {
+  useShaderBackground,
+  type UseShaderBackgroundOptions
+} from "./useShaderBackground";
+
+export type ShaderBackgroundHandle<
+  TUniforms extends UniformInputMap = UniformInputMap
+> = {
+  getInstance(): ShaderBackgroundInstance<TUniforms> | null;
+  start(): void;
+  stop(): void;
+  render(): void;
+  resize(): void;
+  destroy(): void;
+  setTexture(name: string, input: TextureInput): Promise<void>;
+  setTextures(values: TextureMap): Promise<void>;
+  setUniform<K extends keyof TUniforms & string>(
+    name: K,
+    value: UniformRuntimeValue<TUniforms[K]>
+  ): void;
+  setUniform(name: string, value: UniformInput): void;
+  setUniforms(values: Record<string, UniformInput>): void;
+};
+
+export type ShaderBackgroundProps<
+  TUniforms extends UniformInputMap = UniformInputMap
+> = UseShaderBackgroundOptions<TUniforms> &
+  Omit<HTMLAttributes<HTMLDivElement>, keyof UseShaderBackgroundOptions<TUniforms> | "children"> & {
+    recreateKey?: unknown;
+  };
+
+// All keys of UseShaderBackgroundOptions. The `satisfies` check prevents typos;
+// _assertComplete below catches omissions. Add here whenever core adds options.
+const OPTION_KEYS = [
+  "canvas",
+  "fragment",
+  "vertex",
+  "uniforms",
+  "textures",
+  "feedback",
+  "layer",
+  "autoStart",
+  "pauseWhenOffscreen",
+  "pauseWhenHidden",
+  "respectReducedMotion",
+  "renderMode",
+  "dpr",
+  "maxDpr",
+  "autoResize",
+  "debug",
+  "canvasClass",
+  "canvasStyle",
+  "onBeforeRender",
+  "onAfterRender",
+  "onResize",
+  "onShaderReady",
+  "onShaderError",
+] as const satisfies readonly (keyof UseShaderBackgroundOptions)[];
+
+// Fails to compile if any UseShaderBackgroundOptions key is absent from OPTION_KEYS.
+type _MissingOptionKey = Exclude<keyof UseShaderBackgroundOptions, (typeof OPTION_KEYS)[number]>;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _assertComplete: _MissingOptionKey extends never ? true : never = true;
+
+// Keys that are runtime-updated (ref-identity diffed inside the hook). Changing
+// them does NOT recreate the underlying instance.
+const RUNTIME_KEYS = new Set([
+  "uniforms",
+  "textures",
+  "onShaderReady",
+  "onShaderError",
+  "onBeforeRender",
+  "onAfterRender",
+  "onResize",
+]);
+
+// Derived once at module scope so recreateDeps always has a stable length.
+const STATIC_KEYS = OPTION_KEYS.filter(k => !RUNTIME_KEYS.has(k));
+
+const OPTION_KEY_SET = new Set<string>(OPTION_KEYS);
+
+const defaultStyle: CSSProperties = {
+  position: "relative",
+  overflow: "hidden"
+};
+
+const ShaderBackgroundInner = <
+  TUniforms extends UniformInputMap = UniformInputMap
+>(
+  props: ShaderBackgroundProps<TUniforms>,
+  forwardedRef: ForwardedRef<ShaderBackgroundHandle<TUniforms>>
+) => {
+  // Cast to record for key-based picking; correctness is enforced structurally
+  // by OPTION_KEYS (satisfies) + _assertComplete above.
+  const propsRecord = props as Record<string, unknown>;
+
+  const { recreateKey, className, style } = props;
+
+  // Pick shader options by OPTION_KEYS — prevents option values from leaking
+  // as unknown DOM attributes on the wrapper div.
+  const optionEntries: Record<string, unknown> = {};
+  for (const key of OPTION_KEYS) {
+    if (key in propsRecord) optionEntries[key] = propsRecord[key];
+  }
+  const options = omitUndefined(optionEntries) as UseShaderBackgroundOptions<TUniforms>;
+
+  // DOM-safe attributes: everything that is not a shader option or component key.
+  const domEntries: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(propsRecord)) {
+    if (!OPTION_KEY_SET.has(k) && k !== "recreateKey" && k !== "className" && k !== "style") {
+      domEntries[k] = v;
+    }
+  }
+
+  // Recreate deps: static option values + recreateKey (constant length).
+  const recreateDeps: unknown[] = [...STATIC_KEYS.map(k => propsRecord[k]), recreateKey];
+
+  const { ref, instance } = useShaderBackground(options, recreateDeps);
+
+  useImperativeHandle(
+    forwardedRef,
+    () => ({
+      getInstance: () => instance,
+      start: () => instance?.start(),
+      stop: () => instance?.stop(),
+      render: () => instance?.render(),
+      resize: () => instance?.resize(),
+      destroy: () => instance?.destroy(),
+      setTexture: (name, input) =>
+        instance?.setTexture(name, input) ?? Promise.resolve(),
+      setTextures: (values) =>
+        instance?.setTextures(values) ?? Promise.resolve(),
+      setUniform: (name: string, value: UniformInput) => {
+        instance?.setUniform(name, value);
+      },
+      setUniforms: (values) => {
+        instance?.setUniforms(values);
+      }
+    }),
+    [instance]
+  );
+
+  const mergedStyle = useMemo(
+    () => ({
+      ...(className ? undefined : defaultStyle),
+      ...style
+    }),
+    [className, style]
+  );
+
+  return (
+    <div
+      aria-hidden="true"
+      {...(domEntries as HTMLAttributes<HTMLDivElement>)}
+      ref={ref}
+      className={className}
+      style={mergedStyle}
+    />
+  );
+};
+
+export const ShaderBackground = forwardRef(ShaderBackgroundInner) as <
+  TUniforms extends UniformInputMap = UniformInputMap
+>(
+  props: ShaderBackgroundProps<TUniforms> & {
+    ref?: ForwardedRef<ShaderBackgroundHandle<TUniforms>>;
+  }
+) => import("react").ReactElement | null;

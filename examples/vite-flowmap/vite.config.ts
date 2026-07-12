@@ -7,24 +7,24 @@ export default defineConfig({
     // without a rebuild. Wildcard avoids per-export drift.
     alias: [
       {
-        find: /^@frapx\/runtime$/,
-        replacement: resolve(__dirname, "../../packages/runtime/src/index.ts")
+        find: /^@frapx\/core$/,
+        replacement: resolve(__dirname, "../../packages/core/src/index.ts")
       },
       {
-        find: /^@frapx\/runtime\/(.*)$/,
-        replacement: resolve(__dirname, "../../packages/runtime/src/$1.ts")
+        find: /^@frapx\/core\/(.*)$/,
+        replacement: resolve(__dirname, "../../packages/core/src/$1.ts")
       },
       {
-        find: /^@frapx\/shader$/,
-        replacement: resolve(__dirname, "../../packages/shader/src/index.ts")
+        find: /^@frapx\/fx-canvas$/,
+        replacement: resolve(__dirname, "../../packages/fx-canvas/src/index.ts")
       },
       {
-        find: /^@frapx\/shader\/(.*)$/,
-        replacement: resolve(__dirname, "../../packages/shader/src/$1.ts")
+        find: /^@frapx\/fx-canvas\/(.*)$/,
+        replacement: resolve(__dirname, "../../packages/fx-canvas/src/$1.ts")
       },
       {
-        find: /^@frapx\/shader-flowmap$/,
-        replacement: resolve(__dirname, "../../packages/shader-flowmap/src/index.ts")
+        find: /^@frapx\/glsl-flowmap$/,
+        replacement: resolve(__dirname, "../../packages/glsl-flowmap/src/index.ts")
       }
     ]
   }

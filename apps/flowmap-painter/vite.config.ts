@@ -8,33 +8,33 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: /^@frapx\/runtime$/,
-        replacement: resolve(__dirname, "../../packages/runtime/src/index.ts")
+        find: /^@frapx\/core$/,
+        replacement: resolve(__dirname, "../../packages/core/src/index.ts")
       },
       {
-        find: /^@frapx\/runtime\/(.*)$/,
-        replacement: resolve(__dirname, "../../packages/runtime/src/$1.ts")
+        find: /^@frapx\/core\/(.*)$/,
+        replacement: resolve(__dirname, "../../packages/core/src/$1.ts")
       },
       {
-        find: /^@frapx\/shader$/,
-        replacement: resolve(__dirname, "../../packages/shader/src/index.ts")
+        find: /^@frapx\/fx-canvas$/,
+        replacement: resolve(__dirname, "../../packages/fx-canvas/src/index.ts")
       },
       {
-        find: /^@frapx\/shader\/(.*)$/,
-        replacement: resolve(__dirname, "../../packages/shader/src/$1.ts")
+        find: /^@frapx\/fx-canvas\/(.*)$/,
+        replacement: resolve(__dirname, "../../packages/fx-canvas/src/$1.ts")
       },
       {
-        find: /^@frapx\/shader-flowmap$/,
+        find: /^@frapx\/glsl-flowmap$/,
         replacement: resolve(
           __dirname,
-          "../../packages/shader-flowmap/src/index.ts"
+          "../../packages/glsl-flowmap/src/index.ts"
         )
       },
       {
-        find: /^@frapx\/shader-react$/,
+        find: /^@frapx\/react-canvas$/,
         replacement: resolve(
           __dirname,
-          "../../packages/shader-react/src/index.ts"
+          "../../packages/react-canvas/src/index.ts"
         )
       }
     ]

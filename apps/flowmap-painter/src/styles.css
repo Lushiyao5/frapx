@@ -350,7 +350,7 @@ input {
   overflow: hidden;
 }
 
-/* @frapx/shader injects the canvas as a child; make it fill the viewport */
+/* @frapx/fx-canvas injects the canvas as a child; make it fill the viewport */
 .preview-viewport > canvas {
   position: absolute !important;
   inset: 0 !important;

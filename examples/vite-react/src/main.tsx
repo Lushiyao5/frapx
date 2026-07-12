@@ -3,8 +3,8 @@ import { createRoot } from "react-dom/client";
 import {
   ShaderBackground,
   type ShaderBackgroundHandle
-} from "@frapx/shader-react";
-import { glsl, hexToRgb } from "@frapx/shader";
+} from "@frapx/react-canvas";
+import { glsl, hexToRgb } from "@frapx/fx-canvas";
 import "./styles.css";
 
 const fragment = glsl`
@@ -49,7 +49,7 @@ const App = () => {
       <section className="panel" aria-label="Shader controls">
         <div>
           <p className="eyebrow">React binding</p>
-          <h1>@frapx/shader-react</h1>
+          <h1>@frapx/react-canvas</h1>
         </div>
         <label className="control">
           <span>Intensity</span>

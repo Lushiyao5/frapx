@@ -1,0 +1,41 @@
+{
+  "name": "@frapx/glsl-flowmap",
+  "version": "0.4.0",
+  "description": "GLSL flowmap helpers for @frapx/fx-canvas — decode RG-encoded flow textures and apply three-phase advection.",
+  "keywords": [
+    "webgl",
+    "shader",
+    "glsl",
+    "flowmap",
+    "distortion",
+    "advection"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kramhash/frapx.git",
+    "directory": "packages/glsl-flowmap"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

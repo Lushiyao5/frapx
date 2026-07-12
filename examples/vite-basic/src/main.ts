@@ -1,5 +1,5 @@
-import { createShaderBackground, glsl } from "@frapx/shader";
-import type { ShaderBackgroundInstance } from "@frapx/shader";
+import { createShaderBackground, glsl } from "@frapx/fx-canvas";
+import type { ShaderBackgroundInstance } from "@frapx/fx-canvas";
 import "./styles.css";
 
 declare global {

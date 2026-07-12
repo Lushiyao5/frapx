@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@frapx/shader": "workspace:*"
+    "@frapx/fx-canvas": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.8.3",
