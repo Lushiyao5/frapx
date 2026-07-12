@@ -41,9 +41,11 @@ into it, sizes it to match, and starts a render loop that supplies built-in
 uniforms — `u_time`, `u_resolution`, `u_pointerUv`, and more (see the
 [`@frapx/fx-canvas` reference](/frapx/packages/fx-canvas/)).
 
-The render loop pauses automatically when the target scrolls offscreen, the
-tab is hidden, or the OS requests reduced motion — you don't need to wire
-that up yourself.
+The render loop pauses automatically when the target scrolls offscreen or the
+tab is hidden — you don't need to wire that up yourself. It can also hold a
+static frame under the OS "prefers reduced motion" setting when you opt in
+with `respectReducedMotion: true`; either way the `u_reducedMotion` uniform
+is always supplied, so you can respond to it inside the shader too.
 
 ## Using React?
 
