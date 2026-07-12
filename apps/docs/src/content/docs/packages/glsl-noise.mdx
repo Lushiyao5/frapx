@@ -1,0 +1,60 @@
+---
+title: "@frapx/glsl-noise"
+description: Lightweight GLSL 3D noise helpers for shader backgrounds.
+---
+
+import { Badge } from "@astrojs/starlight/components";
+
+<Badge text="glsl-* — GLSL snippet" variant="note" /> Not a runtime — plain GLSL strings you concatenate into your own `fragment`.
+
+Lightweight GLSL 3D noise helpers, kept as a separate package so
+[`@frapx/fx-canvas`](/frapx/packages/fx-canvas/) stays small. It exports GLSL
+source strings meant to be interpolated straight into a fragment shader
+written with the [`glsl`](/frapx/packages/fx-canvas/) template tag.
+
+```sh
+pnpm add @frapx/fx-canvas @frapx/glsl-noise
+```
+
+```ts
+import { createShaderBackground, glsl } from "@frapx/fx-canvas";
+import { fbm3d } from "@frapx/glsl-noise";
+
+createShaderBackground({
+  target: ".hero",
+  fragment: glsl`
+    precision highp float;
+    uniform vec2 u_resolution;
+    uniform float u_time;
+
+    ${fbm3d}
+
+    void main() {
+      vec2 uv = gl_FragCoord.xy / u_resolution;
+      float n = frapx_fbm3d(vec3(uv * 4.0, u_time * 0.1));
+      gl_FragColor = vec4(vec3(n * 0.5 + 0.5), 1.0);
+    }
+  `
+});
+```
+
+## Exports
+
+| Export | GLSL function |
+| --- | --- |
+| `simplex3d` | `frapx_simplex3d(vec3)` — self-contained |
+| `perlin3d` | `frapx_perlin3d(vec3)` — self-contained |
+| `periodicPerlin3d` | `frapx_periodicPerlin3d(vec3, vec3)` — self-contained |
+| `fbm3d` | `frapx_fbm3d(vec3)` — self-contained, built on simplex noise |
+| `noise3d` | combined snippet exposing all of the above |
+| `noise3dCommon`, `simplex3dBody`, `perlin3dBody`, `periodicPerlin3dBody`, `fbm3dBody` | composable building blocks, for when you need several functions without duplicating shared helpers |
+
+Function names are prefixed with `frapx_` to avoid GLSL global-scope
+collisions when combined with other snippets. Targets WebGL1 / GLSL ES 1.00 —
+use `precision highp float;` in shaders that include these.
+
+## License
+
+The simplex and classic Perlin implementations are derived from `webgl-noise`
+by Ashima Arts and Stefan Gustavson (MIT). License text ships in the package
+at `LICENSES/webgl-noise-MIT.txt`.

@@ -1,0 +1,76 @@
+---
+title: "@frapx/fx-canvas"
+description: Lightweight WebGL shader background runtime for websites.
+---
+
+import { Badge } from "@astrojs/starlight/components";
+
+<Badge text="fx-* — effect runtime" variant="success" /> The flagship package. Install this directly.
+
+Lightweight WebGL shader background runtime for websites. It is **not** a
+scene, camera, mesh, or full rendering-engine abstraction — it creates and
+manages a WebGL canvas for an existing DOM region, then lets you drive a
+fragment shader with built-in uniforms, custom uniforms, textures, and an
+optional previous-frame feedback pass.
+
+```sh
+pnpm add @frapx/fx-canvas
+```
+
+```ts
+import { createShaderBackground, glsl } from "@frapx/fx-canvas";
+
+createShaderBackground({
+  target: ".hero",
+  fragment: glsl`
+    precision highp float;
+    uniform vec2 u_resolution;
+    uniform float u_time;
+
+    void main() {
+      vec2 uv = gl_FragCoord.xy / u_resolution;
+      gl_FragColor = vec4(uv, 0.5 + 0.5 * sin(u_time), 1.0);
+    }
+  `
+});
+```
+
+## What it handles for you
+
+- **Canvas setup & resize** — inserts and sizes a canvas over `target`, tracks `ResizeObserver`.
+- **Lifecycle & a11y** — pauses the render loop offscreen, on hidden tabs, and (opt-in) under `prefers-reduced-motion`. Always supplies `u_reducedMotion` so you can react in-shader too.
+- **Built-in uniforms** — `u_time`, `u_delta`, `u_resolution`, `u_viewportSize`, `u_pixelRatio`, `u_pointer`, `u_pointerUv`, `u_pointerActive`, `u_reducedMotion`.
+- **WebGL1 and WebGL2** — start your fragment with `#version 300 es` to opt into GLSL ES 3.00; everything else stays WebGL1 by default.
+- **Textures** — image URL / `HTMLImageElement` / `HTMLCanvasElement` sources, with runtime updates via `setTexture()` / `setTextures()`.
+- **Feedback** — `feedback: true` gives you a managed ping-pong framebuffer exposed as `u_previousFrame` for effects that need to read the previous frame.
+
+## Instance API
+
+```ts
+fx.ready;
+fx.start();
+fx.stop();
+fx.render();
+fx.resize();
+fx.destroy();
+fx.setUniform("progress", 0.5);
+fx.setUniforms({ progress: 0.5, color: [1, 0, 0] });
+await fx.setTexture("image", "/next-hero.webp");
+await fx.setTextures({ image: "/next-hero.webp" });
+```
+
+For the full option list, GLSL helpers, color-uniform helpers, and feedback
+details, see the [package README](https://github.com/kramhash/frapx/blob/main/packages/fx-canvas/README.md)
+and [CHANGELOG](https://github.com/kramhash/frapx/blob/main/packages/fx-canvas/CHANGELOG.md)
+on GitHub — or try it live on the [Live Demo](/frapx/live-demo/) page.
+
+## Depends on
+
+`@frapx/fx-canvas` depends on [`@frapx/core`](/frapx/packages/core/), the
+internal WebGL lifecycle engine. You never import `@frapx/core` yourself —
+it's pulled in automatically.
+
+## Pairs with
+
+- [`@frapx/react-canvas`](/frapx/packages/react-canvas/) if you're in React.
+- [`@frapx/glsl-noise`](/frapx/packages/glsl-noise/) / [`@frapx/glsl-flowmap`](/frapx/packages/glsl-flowmap/) for ready-made GLSL snippets inside your `fragment`.

@@ -1,0 +1,94 @@
+---
+// Same wave + pointer shader as examples/vite-basic, minus its E2E test
+// instrumentation, so this page shows the real @frapx/fx-canvas effect
+// running rather than a docs-only mockup.
+---
+
+<div class="frapx-live-demo" data-frapx-demo>
+  <div class="frapx-live-demo__canvas" data-frapx-demo-target></div>
+  <label class="frapx-live-demo__control">
+    Progress
+    <input
+      type="range"
+      min="0"
+      max="1"
+      step="0.01"
+      value="0"
+      data-frapx-demo-progress
+    />
+  </label>
+</div>
+
+<style>
+  .frapx-live-demo {
+    position: relative;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    border: 1px solid var(--sl-color-gray-5);
+  }
+  .frapx-live-demo__canvas {
+    position: relative;
+    height: 20rem;
+  }
+  .frapx-live-demo__control {
+    position: absolute;
+    left: 0.75rem;
+    bottom: 0.75rem;
+    right: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  }
+  .frapx-live-demo__control input {
+    flex: 1;
+  }
+</style>
+
+<script>
+  // Module scripts execute once per page even if this component is used
+  // more than once, so initialize every instance found rather than
+  // assuming there's exactly one (Astro's client <script> tags compile to
+  // type="module", where document.currentScript is always null — there is
+  // no "the element this script belongs to" to grab).
+  import { createShaderBackground, glsl } from "@frapx/fx-canvas";
+
+  const fragment = glsl`
+    precision highp float;
+
+    uniform vec2 u_resolution;
+    uniform vec2 u_pointerUv;
+    uniform float u_pointerActive;
+    uniform float u_time;
+    uniform float u_progress;
+
+    void main() {
+      vec2 uv = gl_FragCoord.xy / u_resolution;
+      float wave = sin((uv.x + u_progress) * 12.0 + u_time * 1.5) * 0.5 + 0.5;
+      float pointer = smoothstep(0.35, 0.0, distance(uv, u_pointerUv)) * u_pointerActive;
+      vec3 base = mix(vec3(0.03, 0.05, 0.08), vec3(0.1, 0.35, 0.5), uv.y);
+      vec3 color = base + vec3(0.15, 0.45, 0.55) * wave + vec3(0.7, 0.9, 1.0) * pointer;
+      gl_FragColor = vec4(color, 1.0);
+    }
+  `;
+
+  document.querySelectorAll<HTMLElement>("[data-frapx-demo]").forEach((root) => {
+    const target = root.querySelector<HTMLElement>("[data-frapx-demo-target]");
+    const progressInput = root.querySelector<HTMLInputElement>(
+      "[data-frapx-demo-progress]"
+    );
+    if (!target) return;
+
+    const fx = createShaderBackground({
+      target,
+      fragment,
+      uniforms: { progress: 0 }
+    });
+
+    progressInput?.addEventListener("input", () => {
+      fx.setUniform("progress", Number(progressInput.value));
+    });
+  });
+</script>

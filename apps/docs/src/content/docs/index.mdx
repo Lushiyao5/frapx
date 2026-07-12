@@ -1,0 +1,66 @@
+---
+title: Home
+description: Web graphics utilities for building lightweight visual effects on the web.
+template: splash
+hero:
+  tagline: Web graphics utilities for building lightweight visual effects on the web.
+  actions:
+    - text: Getting Started
+      link: /frapx/getting-started/
+      icon: right-arrow
+    - text: Live Demo
+      link: /frapx/live-demo/
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+## Which package do I need?
+
+frapx is split into several small packages instead of one big one. The
+prefix in the package name tells you what kind of package it is — you
+never need to guess:
+
+<CardGrid stagger>
+	<Card title="fx-* — effect runtimes" icon="rocket">
+		Instantiate directly in your app. **[`@frapx/fx-canvas`](/frapx/packages/fx-canvas/)**
+		drives a full-screen WebGL fragment shader as a background or overlay.
+		This is what most people install first.
+	</Card>
+	<Card title="react-* — framework bindings" icon="puzzle">
+		A thin React wrapper around an `fx-*` package. **[`@frapx/react-canvas`](/frapx/packages/react-canvas/)**
+		wraps `@frapx/fx-canvas` as a `<ShaderBackground />` component and a
+		`useShaderBackground()` hook.
+	</Card>
+	<Card title="glsl-* — GLSL snippets" icon="seti:shader">
+		Plain GLSL source strings you concatenate into your **own** fragment
+		shader — not a runtime, no instantiation. **[`@frapx/glsl-noise`](/frapx/packages/glsl-noise/)**
+		(3D noise) and **[`@frapx/glsl-flowmap`](/frapx/packages/glsl-flowmap/)**
+		(flowmap decode/advection) are the two available today.
+	</Card>
+	<Card title="core — internal engine" icon="setting">
+		**[`@frapx/core`](/frapx/packages/core/)** is the shared WebGL lifecycle
+		host every `fx-*` package is built on. You install it transitively — as
+		an `fx-*` package's dependency — and never import it directly.
+	</Card>
+</CardGrid>
+
+## Quick decision table
+
+| I want to... | Install |
+| --- | --- |
+| Add an animated WebGL background to a plain website | `@frapx/fx-canvas` |
+| Add the same, but I'm in a React app | `@frapx/fx-canvas` + `@frapx/react-canvas` |
+| Add turbulence/grain to my own fragment shader | `@frapx/glsl-noise` (needs `@frapx/fx-canvas` or your own GL setup) |
+| Distort a texture with a painted flowmap | `@frapx/glsl-flowmap` (WebGL2 / GLSL ES 3.00) |
+| Build a *different* effect runtime (not a background shader) | Nothing yet — see the [roadmap](https://github.com/kramhash/frapx) for `@frapx/fx-particles` |
+
+Still not sure? Start with [Getting Started](/frapx/getting-started/) — it
+walks through the one package (`@frapx/fx-canvas`) that covers the common case.
+
+## Coming from `@frapx/shader` or `@frapx/runtime`?
+
+All five packages were renamed on 2026-07-12 to this prefix scheme. No public
+API changed — only package names and import paths. See the
+[migration guide](/frapx/migration/) for the full old → new mapping.

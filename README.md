@@ -2,6 +2,9 @@
 
 Web graphics utilities for building lightweight visual effects on the web.
 
+📖 Full documentation, a live shader demo, and per-package guides:
+**https://kramhash.github.io/frapx/**
+
 ## Packages
 
 Packages are named by category, so the prefix tells you what kind of package it is:
@@ -54,3 +57,13 @@ pnpm --filter @frapx/example-vite-basic dev
 pnpm --filter @frapx/example-vite-feedback dev
 pnpm --filter @frapx/example-vite-react dev
 ```
+
+## Documentation Site
+
+```sh
+pnpm dev:docs
+```
+
+The docs site ([`apps/docs`](./apps/docs), Astro + Starlight) requires
+`pnpm build` to have run first, since its Live Demo page imports the real
+built `@frapx/fx-canvas` package rather than an aliased source path.

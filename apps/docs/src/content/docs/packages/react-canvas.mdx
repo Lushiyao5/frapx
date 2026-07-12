@@ -1,0 +1,87 @@
+---
+title: "@frapx/react-canvas"
+description: React bindings for @frapx/fx-canvas.
+---
+
+import { Badge } from "@astrojs/starlight/components";
+
+<Badge text="react-* — framework binding" variant="tip" /> Wraps [`@frapx/fx-canvas`](/frapx/packages/fx-canvas/) for React.
+
+A thin lifecycle adapter around `@frapx/fx-canvas` — it does not replace the
+core render loop with React state, and it does not ship any CSS.
+
+```sh
+pnpm add @frapx/fx-canvas @frapx/react-canvas
+```
+
+## Component
+
+```tsx
+import { ShaderBackground } from "@frapx/react-canvas";
+import { glsl } from "@frapx/fx-canvas";
+
+const fragment = glsl`
+  precision highp float;
+  uniform vec2 u_resolution;
+  uniform float u_time;
+
+  void main() {
+    vec2 uv = gl_FragCoord.xy / u_resolution;
+    gl_FragColor = vec4(uv, 0.5 + 0.5 * sin(u_time), 1.0);
+  }
+`;
+
+export function HeroBackground() {
+  return <ShaderBackground fragment={fragment} className="hero-bg" />;
+}
+```
+
+The component renders a wrapper `div` (`position: relative`, `overflow: hidden`
+by default) and mounts the shader canvas into it. Most `createShaderBackground`
+options — including `feedback` — pass straight through as props, and changing
+them recreates the underlying instance. `uniforms` and `textures` update the
+existing instance instead of recreating it.
+
+## Hook
+
+```tsx
+import { useMemo } from "react";
+import { useShaderBackground } from "@frapx/react-canvas";
+
+export function ShaderPanel({ intensity }: { intensity: number }) {
+  const uniforms = useMemo(() => ({ intensity }), [intensity]);
+  const { ref, instance, error } = useShaderBackground(
+    { fragment, uniforms, feedback: true },
+    [fragment, true]
+  );
+
+  return <div ref={ref} />;
+}
+```
+
+The second argument is the recreation dependency array — include anything
+that should tear down and rebuild the shader instance (source, `feedback`,
+etc.).
+
+## Imperative handle
+
+```tsx
+import { useRef } from "react";
+import { ShaderBackground, type ShaderBackgroundHandle } from "@frapx/react-canvas";
+
+const ref = useRef<ShaderBackgroundHandle>(null);
+
+<ShaderBackground ref={ref} fragment={fragment} />;
+
+ref.current?.stop();
+ref.current?.setUniform("intensity", 1);
+```
+
+## Notes
+
+- React 18+ is supported.
+- Safe to import during SSR — WebGL work starts only after mount.
+- StrictMode double-mounting is handled by destroying the previous instance in effect cleanup.
+- Use `onShaderReady` / `onShaderError` instead of core `onReady` / `onError` (avoids a DOM prop naming conflict).
+
+Full prop and hook reference: [package README](https://github.com/kramhash/frapx/blob/main/packages/react-canvas/README.md) on GitHub.

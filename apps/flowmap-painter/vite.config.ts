@@ -3,7 +3,10 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  base: "/frapx/",
+  // Deployed under the docs site's base path — see .github/workflows/pages.yml,
+  // which builds @frapx/docs and this app separately and merges this app's
+  // dist/ into the docs dist/playground/ before uploading the Pages artifact.
+  base: "/frapx/playground/",
   plugins: [react()],
   resolve: {
     alias: [

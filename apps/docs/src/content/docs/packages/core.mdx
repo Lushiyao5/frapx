@@ -1,0 +1,35 @@
+---
+title: "@frapx/core"
+description: Shared WebGL runtime host used internally by frapx effect packages.
+---
+
+import { Badge } from "@astrojs/starlight/components";
+
+<Badge text="internal engine" variant="caution" /> You don't install this directly — it comes in as a dependency of an `fx-*` package.
+
+The shared WebGL lifecycle engine underneath [`@frapx/fx-canvas`](/frapx/packages/fx-canvas/)
+(and future `fx-*` effect runtimes): canvas setup, context management, the
+animation loop, resize handling, and the accessibility gate model (pause
+offscreen / hidden / reduced-motion).
+
+It knows nothing about shaders, programs, or uniforms — that layer is added
+by the `fx-*` package built on top of it.
+
+## Why it's a separate package
+
+`@frapx/core` was extracted so multiple effect runtimes can share the same
+lifecycle host instead of reimplementing canvas setup and pause/resume
+gating each time. `@frapx/fx-canvas` is the only consumer today; a future
+`@frapx/fx-particles` package is expected to build on the same host.
+
+## Should I install it?
+
+Not directly. If you're building a WebGL experience, install
+[`@frapx/fx-canvas`](/frapx/packages/fx-canvas/) — `@frapx/core` comes along
+as its dependency automatically. Its API may still shift between `0.x`
+minor versions.
+
+Low-level primitives it exposes — `createRuntimeHost`, `createBlitter`,
+GLSL compile helpers, texture loading, the shared error hierarchy — are
+documented in the [package README](https://github.com/kramhash/frapx/blob/main/packages/core/README.md)
+for anyone building a new `fx-*` package on top of it.

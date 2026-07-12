@@ -9,7 +9,8 @@
     "test": "pnpm -r --filter \"./packages/*\" test",
     "test:e2e": "pnpm --filter @frapx/fx-canvas test:e2e && pnpm --filter @frapx/glsl-flowmap test:e2e",
     "dev": "pnpm --filter @frapx/example-vite-basic dev",
-    "dev:flowmap": "pnpm --filter @frapx/flowmap-painter dev"
+    "dev:flowmap": "pnpm --filter @frapx/flowmap-painter dev",
+    "dev:docs": "pnpm --filter @frapx/docs dev"
   },
   "devDependencies": {
     "@playwright/test": "^1.54.0",

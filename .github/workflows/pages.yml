@@ -1,13 +1,16 @@
-name: Deploy Flowmap Painter to GitHub Pages
+name: Deploy Docs Site to GitHub Pages
 
 on:
   push:
     branches:
       - main
     paths:
+      - "apps/docs/**"
       - "apps/flowmap-painter/**"
+      - "packages/core/**"
       - "packages/fx-canvas/**"
       - "packages/react-canvas/**"
+      - "packages/glsl-flowmap/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -41,8 +44,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
+      # @frapx/docs (Live Demo page) and @frapx/flowmap-painter both depend
+      # on published packages' dist/ output, not their source.
+      - name: Build packages
+        run: pnpm build
+
+      - name: Build docs site
+        run: pnpm --filter @frapx/docs build
+
+      - name: Build flowmap-painter
         run: pnpm --filter @frapx/flowmap-painter build
+
+      # The docs site is the Pages root (base "/frapx/"); flowmap-painter is
+      # nested under it at "/frapx/playground/" (see its vite.config.ts base).
+      - name: Merge flowmap-painter into docs under /playground
+        run: |
+          mkdir -p apps/docs/dist/playground
+          cp -r apps/flowmap-painter/dist/. apps/docs/dist/playground/
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -50,7 +68,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: apps/flowmap-painter/dist
+          path: apps/docs/dist
 
   deploy:
     environment:
