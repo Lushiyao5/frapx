@@ -11,6 +11,7 @@ on:
       - "packages/fx-canvas/**"
       - "packages/react-canvas/**"
       - "packages/glsl-flowmap/**"
+      - "packages/glsl-noise/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 

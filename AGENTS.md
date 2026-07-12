@@ -11,9 +11,11 @@
 ## Repository Context
 
 - This is a pnpm monorepo.
+- The shared internal WebGL runtime host is `@frapx/core` in `packages/core`.
 - The npm package is `@frapx/fx-canvas` in `packages/fx-canvas`.
 - The React binding package is `@frapx/react-canvas` in `packages/react-canvas`.
 - The optional 3D noise helper package is `@frapx/glsl-noise` in `packages/glsl-noise`.
+- The optional flowmap helper package is `@frapx/glsl-flowmap` in `packages/glsl-flowmap`.
 - The example app is `@frapx/example-vite-basic` in `examples/vite-basic`.
 - Prefer the repository's established patterns over adding new abstractions.
 
