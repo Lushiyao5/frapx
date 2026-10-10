@@ -61,6 +61,7 @@ Uniforms set before `ready` are cached and applied on the first render.
 
 - `examples/vite-basic` - minimal Vite usage and integration checks.
 - `examples/vite-feedback` - interactive previous-frame feedback demo.
+- `examples/vite-capture` - raymarched scene exported as a 4K PNG sequence with `clock: "manual"` and `captureFrame()`.
 - `examples/vite-react` - React binding example.
 
 ## Color Uniforms
@@ -189,6 +190,23 @@ The suffix must be a valid GLSL identifier without the `u_` prefix. For example,
 
 The feedback texture always follows the canvas drawing-buffer size, and `u_previousFrameSize` reports that size in pixels. The first frame and any resize reset the texture to `clearColor` (transparent black by default). Alpha is preserved from the fragment output; the texture represents shader output before DOM compositing.
 
+### Float feedback
+
+8-bit feedback rounds away small increments (anything under 1/255 per frame) and clamps to 0–1. Request half-float buffers for accumulation or HDR history:
+
+```ts
+createShaderBackground({
+  target: ".hero",
+  fragment,
+  feedback: { format: "rgba16f" } // default "rgba8"; `feedback: true` stays rgba8
+});
+```
+
+- `rgba16f` needs WebGL2 with `EXT_color_buffer_float`. It requests a WebGL2 context even for GLSL ES 1.00 shaders (WebGL2 accepts them) and falls back to WebGL1 when unavailable.
+- When float buffers are unsupported, the default warns and allocates `rgba8`. Pass `formatFallback: false` to fail initialization with `UnsupportedError` instead. `fx.feedbackFormat` reports the format actually allocated.
+- The visible canvas is still 8-bit; the float history lives in the feedback buffers and can be read with `captureFrame({ format: "rgba16f" })`.
+- `fx.resetFeedback()` clears both buffers to `clearColor` so the next frame starts from an empty history (it re-renders in demand mode, otherwise it does not draw).
+
 In `renderMode: "demand"`, `u_previousFrame` is the result of the previous demand render. Enabling feedback does not start a continuous render loop by itself.
 
 When feedback is enabled, `onBeforeRender` and `onAfterRender` wrap the main shader draw into the internal framebuffer. The copy to the visible canvas happens after `onAfterRender`.
@@ -243,8 +261,8 @@ await fx.ready;
 
 for (let frame = 0; frame < 120; frame += 1) {
   fx.setTime(frame / 60); // u_time; u_delta = difference from the previous call
-  fx.render();            // draws now, even offscreen or in a hidden tab
-  // Read the canvas in this same task, e.g. fx.canvas.toDataURL()
+  const png = await fx.captureFrame(); // draws this frame and encodes it
+  // save png (a Blob) somewhere
 }
 ```
 
@@ -252,7 +270,22 @@ for (let frame = 0; frame < 120; frame += 1) {
 - `setClock("manual" | "realtime")` switches clocks after creation — preview in realtime, then switch to manual to render. Returning to realtime resumes the loop if the instance was started. In realtime, `setTime()` seeks the running clock.
 - `resolution` decouples the drawing buffer from the target size. The canvas uses `object-fit: contain`, `u_viewportSize` stays the displayed CSS size and `u_pixelRatio` becomes internal px per CSS px; `dpr` / `maxDpr` are ignored. `setResolution([w, h])` changes it at runtime and `setResolution(null)` follows the target again (both reset feedback buffers, like any resize). Sizes above the GPU's limits throw / fail with `UnsupportedError`.
 - Omit both `target` and `canvas` while passing `resolution` to render into a detached canvas that is never inserted into the page (`fx.canvas` gives you the element).
-- The drawing buffer is not preserved between frames, so read pixels in the same task as `render()` (or in `onAfterRender`).
+- The drawing buffer is not preserved between frames, so read pixels in the same task as `render()` (or in `onAfterRender`) — or use `captureFrame()`, which does that for you.
+
+### Capturing frames
+
+`captureFrame()` draws a frame and reads it back in the same task, so it never depends on `preserveDrawingBuffer`:
+
+```ts
+const png = await fx.captureFrame();                        // Blob (default "png")
+const rgba = await fx.captureFrame({ format: "rgba8" });    // Uint8Array
+const hdr = await fx.captureFrame({ format: "rgba16f" });   // Float32Array
+```
+
+- Raw formats are RGBA, top row first (WebGL's bottom-up rows are flipped), at the drawing-buffer size.
+- Each call draws one frame like `render()` — it advances feedback — but it also draws while paused, offscreen or hidden. It waits for `ready` first.
+- `"rgba16f"` reads the float feedback buffer and rejects with `UnsupportedError` unless `fx.feedbackFormat === "rgba16f"`.
+- `"png"` encodes what the canvas shows (`canvas.toBlob`); `"rgba8"` returns the raw shader output, which differs from the PNG only where alpha is below 1.
 
 ## Built-In Uniforms
 
@@ -352,6 +385,9 @@ fx.destroy();
 fx.setTime(2.5);
 fx.setClock("manual");
 fx.setResolution([1920, 1080]); // or null to follow the target
+await fx.captureFrame({ format: "png" });
+fx.feedbackFormat; // "rgba8" | "rgba16f" | null
+fx.resetFeedback();
 await fx.setTexture("image", "/next-hero.webp");
 await fx.setTextures({ image: "/next-hero.webp" });
 fx.setUniform("progress", 0.5);

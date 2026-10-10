@@ -75,6 +75,30 @@ export type UniformRuntimeValue<T> = T extends ExplicitUniformInput
             ? number
             : UniformInput;
 
+/**
+ * Storage format of the feedback buffers. `rgba16f` (half float) keeps values
+ * outside 0–1 and fine increments that 8-bit storage would round away; it needs
+ * WebGL2 with `EXT_color_buffer_float`.
+ */
+export type FeedbackFormat = "rgba8" | "rgba16f";
+
+/**
+ * `"png"` resolves to a `Blob`, `"rgba8"` to a `Uint8Array` and `"rgba16f"` to
+ * a `Float32Array`. Raw formats are RGBA, top row first.
+ */
+export type CaptureFormat = "png" | "rgba8" | "rgba16f";
+
+export type CaptureOptions<F extends CaptureFormat = CaptureFormat> = {
+  /** Defaults to `"png"`. */
+  format?: F;
+};
+
+export type CaptureResult<F extends CaptureFormat> = F extends "rgba16f"
+  ? Float32Array
+  : F extends "rgba8"
+    ? Uint8Array
+    : Blob;
+
 export type FeedbackOptions = {
   /**
    * Suffix name for the generated sampler uniform. Defaults to
@@ -85,6 +109,17 @@ export type FeedbackOptions = {
   filter?: "nearest" | "linear";
   wrap?: "clamp" | "repeat" | "mirror";
   clearColor?: UniformVec4;
+  /**
+   * Defaults to `"rgba8"`. `"rgba16f"` requests a WebGL2 context even for
+   * GLSL ES 1.00 shaders and falls back to WebGL1 when unavailable.
+   */
+  format?: FeedbackFormat;
+  /**
+   * When `format` is unsupported, `true` (default) warns and uses `"rgba8"`;
+   * `false` fails initialization with `UnsupportedError`. Read the allocated
+   * format from `instance.feedbackFormat`.
+   */
+  formatFallback?: boolean;
 };
 
 export type RenderState<TUniforms extends UniformInputMap = UniformInputMap> = {
@@ -169,6 +204,11 @@ export type ShaderBackgroundInstance<
   readonly ready: Promise<void>;
   /** The active clock mode. */
   readonly clock: ClockMode;
+  /**
+   * The feedback format actually allocated (after any fallback), or `null`
+   * without feedback or before initialization.
+   */
+  readonly feedbackFormat: FeedbackFormat | null;
   start(): void;
   stop(): void;
   render(): void;
@@ -192,6 +232,21 @@ export type ShaderBackgroundInstance<
    * when passing `null` to an instance created without a target.
    */
   setResolution(resolution: Resolution | null): void;
+  /**
+   * Draws a frame and reads it back in the same task, so it does not depend on
+   * `preserveDrawingBuffer`. Like `render()` it advances feedback, but it draws
+   * even while paused, offscreen or hidden. Waits for `ready` first.
+   * `"rgba16f"` reads the float feedback buffer and rejects with
+   * `UnsupportedError` unless `feedbackFormat` is `"rgba16f"`.
+   */
+  captureFrame<F extends CaptureFormat = "png">(
+    options?: CaptureOptions<F>
+  ): Promise<CaptureResult<F>>;
+  /**
+   * Clears both feedback buffers to `clearColor`, so the next frame starts
+   * from an empty history. Re-renders in demand mode; otherwise does not draw.
+   */
+  resetFeedback(): void;
   setTexture(name: string, input: TextureInput): Promise<void>;
   setTextures(values: TextureMap): Promise<void>;
   setUniform<K extends keyof TUniforms & string>(

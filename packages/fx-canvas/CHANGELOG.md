@@ -7,6 +7,15 @@
 - `clock: "manual"` option, `setClock()` and `setTime()` for deterministic rendering: no animation loop runs, `render()` draws even while offscreen or hidden, and `u_pointer*` / `u_reducedMotion` stay at 0. In demand mode, uniform and texture changes do not trigger a redraw under a manual clock.
 - `resolution` option and `setResolution([w, h] | null)` to render at a fixed internal size (`u_resolution`) while `u_viewportSize` keeps the displayed size and `u_pixelRatio` is derived from both. Without `target` or `canvas`, a detached canvas is created.
 - `clock` getter on the instance, and exported `ClockMode` / `Resolution` types.
+- `captureFrame({ format: "png" | "rgba8" | "rgba16f" })`: draws a frame and reads it back in the same task, independent of `preserveDrawingBuffer`, with rows top first. Draws even while paused, offscreen or hidden.
+- `feedback: { format: "rgba16f" }` for half-float feedback buffers on WebGL2 with `EXT_color_buffer_float`. Requesting it tries a WebGL2 context even for GLSL ES 1.00 shaders. Unsupported environments warn and use `rgba8`, or fail with `UnsupportedError` when `formatFallback: false`. `feedbackFormat` reports the allocated format.
+- `resetFeedback()` clears the feedback history.
+- Re-exported `createRenderTarget`, `createPingPong`, `supportsRenderTargetFormat` and their types from `@frapx/core`, next to `createBlitter`.
+- `examples/vite-capture`: a raymarched scene exported as a 4K PNG sequence.
+
+### Changed
+
+- Feedback buffers are now built on `@frapx/core`'s `createPingPong`, and the copy to the canvas uses `createBlitter` instead of a private copy shader. Output is unchanged.
 
 ## 0.7.0 - 2026-07-12
 

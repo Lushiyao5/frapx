@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createShaderBackground } from "../src";
 import { normalizeFeedbackOptions } from "../src/internal/feedback";
-import { TextureLoadError } from "../src/internal/errors";
+import { TextureLoadError, UnsupportedError } from "../src/internal/errors";
 
 const FRAGMENT = `precision highp float;
 uniform sampler2D u_previousFrame;
@@ -11,7 +11,10 @@ void main() {
   gl_FragColor = texture2D(u_previousFrame, uv) + vec4(0.1);
 }`;
 
-const createMockGl = (maxTextureUnits = 8) => {
+const createMockGl = (
+  maxTextureUnits = 8,
+  { webgl2 = false, colorBufferFloat = false } = {}
+) => {
   let programId = 0;
   let textureId = 0;
   let framebufferId = 0;
@@ -44,7 +47,9 @@ const createMockGl = (maxTextureUnits = 8) => {
     LINEAR: 9729,
     NEAREST: 9728,
     RGBA: 6408,
+    RGBA16F: 34842,
     UNSIGNED_BYTE: 5121,
+    HALF_FLOAT: 5131,
     MAX_TEXTURE_IMAGE_UNITS: 34930,
     createShader: vi.fn(() => ({ id: "shader" })),
     shaderSource: vi.fn(),
@@ -100,7 +105,12 @@ const createMockGl = (maxTextureUnits = 8) => {
     clearColor: vi.fn(),
     viewport: vi.fn(),
     clear: vi.fn(),
-    drawArrays: vi.fn()
+    drawArrays: vi.fn(),
+    readPixels: vi.fn(),
+    getExtension: vi.fn((name: string) =>
+      name === "EXT_color_buffer_float" && colorBufferFloat ? {} : null
+    ),
+    ...(webgl2 && { createVertexArray: vi.fn() })
   };
 
   return gl;
@@ -117,7 +127,7 @@ class Canvas {
 
   constructor(readonly gl = createMockGl()) {}
 
-  getContext(): unknown {
+  getContext(_type?: string): unknown {
     return this.gl;
   }
 
@@ -219,7 +229,8 @@ describe("feedback rendering", () => {
     expect(gl.createFramebuffer).toHaveBeenCalledTimes(2);
     expect(gl.framebufferTexture2D).toHaveBeenCalledTimes(2);
     expect(gl.uniform1i).toHaveBeenCalledWith({ name: "u_previousFrame" }, 0);
-    expect(gl.uniform1i).toHaveBeenCalledWith({ name: "u_source" }, 0);
+    // The canvas copy goes through createBlitter, whose sampler is u_texture.
+    expect(gl.uniform1i).toHaveBeenCalledWith({ name: "u_texture" }, 0);
     expect(gl.drawArrays).toHaveBeenCalledTimes(2);
     expect(gl.bindFramebuffer).toHaveBeenCalledWith(gl.FRAMEBUFFER, null);
   });
@@ -288,5 +299,162 @@ describe("feedback rendering", () => {
 
     await expect(fx.ready).rejects.toThrow(TextureLoadError);
     expect(fx.status).toBe("error");
+  });
+});
+
+describe("feedback format", () => {
+  it("allocates half-float buffers when WebGL2 supports them", async () => {
+    const gl = createMockGl(8, { webgl2: true, colorBufferFloat: true });
+    const canvas = new Canvas(gl);
+    const getContext = vi.spyOn(canvas, "getContext");
+    const fx = createShaderBackground({
+      canvas: canvas as unknown as HTMLCanvasElement,
+      fragment: FRAGMENT,
+      feedback: { format: "rgba16f" }
+    });
+
+    await fx.ready;
+
+    // GLSL ES 1.00 shaders still get a WebGL2 context for float feedback.
+    expect(getContext.mock.calls[0]![0]).toBe("webgl2");
+    expect(fx.feedbackFormat).toBe("rgba16f");
+    expect(gl.texImage2D).toHaveBeenCalledWith(
+      gl.TEXTURE_2D, 0, gl.RGBA16F, 32, 16, 0, gl.RGBA, gl.HALF_FLOAT, null
+    );
+  });
+
+  it("keeps a WebGL1 context and rgba8 buffers by default", async () => {
+    const gl = createMockGl();
+    const canvas = new Canvas(gl);
+    const getContext = vi.spyOn(canvas, "getContext");
+    const fx = createShaderBackground({
+      canvas: canvas as unknown as HTMLCanvasElement,
+      fragment: FRAGMENT,
+      feedback: true
+    });
+
+    await fx.ready;
+
+    expect(getContext.mock.calls.map((call) => call[0])).toEqual(["webgl"]);
+    expect(fx.feedbackFormat).toBe("rgba8");
+    expect(gl.getExtension).not.toHaveBeenCalled();
+  });
+
+  it("warns and falls back to rgba8 when float buffers are unsupported", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const gl = createMockGl();
+    const fx = createShaderBackground({
+      canvas: new Canvas(gl) as unknown as HTMLCanvasElement,
+      fragment: FRAGMENT,
+      feedback: { format: "rgba16f" }
+    });
+
+    await fx.ready;
+
+    expect(fx.feedbackFormat).toBe("rgba8");
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]![0]).toMatch(/rgba16f/);
+  });
+
+  it("fails as unsupported with formatFallback: false", async () => {
+    const gl = createMockGl(8, { webgl2: true });
+    const onError = vi.fn();
+    const fx = createShaderBackground({
+      canvas: new Canvas(gl) as unknown as HTMLCanvasElement,
+      fragment: FRAGMENT,
+      feedback: { format: "rgba16f", formatFallback: false },
+      onError
+    });
+
+    await expect(fx.ready).rejects.toBeInstanceOf(UnsupportedError);
+    expect(fx.status).toBe("unsupported");
+    expect(onError).toHaveBeenCalledWith(expect.any(UnsupportedError));
+  });
+
+  it("reports no feedback format without feedback", async () => {
+    const fx = createShaderBackground({
+      canvas: new Canvas() as unknown as HTMLCanvasElement,
+      fragment: FRAGMENT
+    });
+    await fx.ready;
+    expect(fx.feedbackFormat).toBeNull();
+  });
+});
+
+describe("resetFeedback", () => {
+  it("clears both buffers without drawing", async () => {
+    const gl = createMockGl();
+    const fx = createShaderBackground({
+      canvas: new Canvas(gl) as unknown as HTMLCanvasElement,
+      fragment: FRAGMENT,
+      feedback: { clearColor: [0, 0, 1, 1] }
+    });
+    await fx.ready;
+    gl.clear.mockClear();
+    gl.clearColor.mockClear();
+
+    fx.resetFeedback();
+
+    expect(gl.clear).toHaveBeenCalledTimes(2);
+    expect(gl.clearColor).toHaveBeenCalledWith(0, 0, 1, 1);
+    expect(gl.drawArrays).not.toHaveBeenCalled();
+  });
+
+  it("re-renders in demand mode", async () => {
+    const gl = createMockGl();
+    const fx = createShaderBackground({
+      canvas: new Canvas(gl) as unknown as HTMLCanvasElement,
+      fragment: FRAGMENT,
+      feedback: true,
+      renderMode: "demand"
+    });
+    await fx.ready;
+    gl.drawArrays.mockClear();
+
+    fx.resetFeedback();
+
+    expect(gl.drawArrays).toHaveBeenCalled();
+  });
+});
+
+describe("captureFrame with feedback", () => {
+  it("reads rgba16f from the buffer that was just drawn", async () => {
+    const gl = createMockGl(8, { webgl2: true, colorBufferFloat: true });
+    const fx = createShaderBackground({
+      canvas: new Canvas(gl) as unknown as HTMLCanvasElement,
+      fragment: FRAGMENT,
+      feedback: { format: "rgba16f" },
+      clock: "manual"
+    });
+    await fx.ready;
+    gl.bindFramebuffer.mockClear();
+
+    const data = await fx.captureFrame({ format: "rgba16f" });
+
+    const drawnInto = gl.bindFramebuffer.mock.calls[0]![1];
+    expect(data).toBeInstanceOf(Float32Array);
+    expect(data).toHaveLength(32 * 16 * 4);
+    expect(gl.readPixels).toHaveBeenCalledTimes(1);
+    expect(gl.readPixels.mock.calls[0]![5]).toBe(gl.FLOAT);
+    // The read happens on the framebuffer the main pass just wrote.
+    const calls = gl.bindFramebuffer.mock.calls;
+    const readFrom = calls[calls.length - 2]![1];
+    expect(readFrom).toBe(drawnInto);
+  });
+
+  it("rejects rgba16f when the feedback buffers are 8-bit", async () => {
+    const gl = createMockGl();
+    const fx = createShaderBackground({
+      canvas: new Canvas(gl) as unknown as HTMLCanvasElement,
+      fragment: FRAGMENT,
+      feedback: true,
+      clock: "manual"
+    });
+    await fx.ready;
+
+    await expect(fx.captureFrame({ format: "rgba16f" })).rejects.toBeInstanceOf(
+      UnsupportedError
+    );
+    expect(gl.drawArrays).not.toHaveBeenCalled();
   });
 });
