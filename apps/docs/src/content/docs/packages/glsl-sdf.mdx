@@ -9,8 +9,8 @@ import { Badge } from "@astrojs/starlight/components";
 
 Signed distance functions for 2D shapes and 3D raymarching, kept separate so
 [`@frapx/fx-canvas`](/frapx/packages/fx-canvas/) stays small. It provides the
-distance functions only; bring your own raymarching loop (a dedicated
-`@frapx/glsl-raymarch` package is planned).
+distance functions only; for the raymarching loop, shadows and camera rays use
+[`@frapx/glsl-raymarch`](/frapx/packages/glsl-raymarch/).
 
 ```sh
 pnpm add @frapx/fx-canvas @frapx/glsl-sdf

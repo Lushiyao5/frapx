@@ -19,6 +19,7 @@ Packages are named by category, so the prefix tells you what kind of package it 
 - [`@frapx/glsl-noise`](./packages/glsl-noise) - Lightweight GLSL 3D noise helpers.
 - [`@frapx/glsl-flowmap`](./packages/glsl-flowmap) - GLSL flowmap decode/distortion helpers.
 - [`@frapx/glsl-sdf`](./packages/glsl-sdf) - GLSL 2D/3D signed distance functions and operators.
+- [`@frapx/glsl-raymarch`](./packages/glsl-raymarch) - GLSL raymarching loop, normals, soft shadows, ambient occlusion and camera rays.
 
 **Internal engine** — not installed directly; pulled in automatically as a dependency:
 - [`@frapx/core`](./packages/core) - Shared WebGL runtime host used internally by `@frapx/fx-canvas`.
@@ -75,7 +76,7 @@ built `@frapx/fx-canvas` package rather than an aliased source path.
 
 MIT © 2026 kramhash. See [LICENSE](./LICENSE).
 
-`@frapx/glsl-noise` and `@frapx/glsl-sdf` include third-party code under the
+`@frapx/glsl-noise`, `@frapx/glsl-sdf` and `@frapx/glsl-raymarch` include third-party code under the
 MIT License; its notices ship in each package's `LICENSES/` directory.
 
 The frapx name and the logos in [`assets/brand`](./assets/brand) are not

@@ -1,0 +1,45 @@
+{
+  "name": "@frapx/glsl-raymarch",
+  "version": "0.1.0",
+  "description": "GLSL raymarching for @frapx/fx-canvas — sphere tracing, normals, soft shadows, ambient occlusion and camera rays around your own frapx_map().",
+  "keywords": [
+    "webgl",
+    "shader",
+    "glsl",
+    "raymarching",
+    "sphere-tracing",
+    "sdf"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSES"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@frapx/glsl-sdf": "workspace:*"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kramhash/frapx.git",
+    "directory": "packages/glsl-raymarch"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -15,7 +15,11 @@ export default defineConfig({
       description:
         "Web graphics utilities for building lightweight visual effects on the web.",
       social: [
-        { icon: "github", label: "GitHub", href: "https://github.com/kramhash/frapx" }
+        {
+          icon: "github",
+          label: "GitHub",
+          href: "https://github.com/kramhash/frapx",
+        },
       ],
       sidebar: [
         { label: "Getting Started", slug: "getting-started" },
@@ -27,12 +31,13 @@ export default defineConfig({
             { label: "@frapx/glsl-noise", slug: "packages/glsl-noise" },
             { label: "@frapx/glsl-flowmap", slug: "packages/glsl-flowmap" },
             { label: "@frapx/glsl-sdf", slug: "packages/glsl-sdf" },
-            { label: "@frapx/core", slug: "packages/core" }
-          ]
+            { label: "@frapx/glsl-raymarch", slug: "packages/glsl-raymarch" },
+            { label: "@frapx/core", slug: "packages/core" },
+          ],
         },
         { label: "Live Demo", slug: "live-demo" },
-        { label: "Migrating from old package names", slug: "migration" }
-      ]
-    })
-  ]
+        { label: "Migrating from old package names", slug: "migration" },
+      ],
+    }),
+  ],
 });

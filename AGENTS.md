@@ -17,6 +17,7 @@
 - The optional 3D noise helper package is `@frapx/glsl-noise` in `packages/glsl-noise`.
 - The optional flowmap helper package is `@frapx/glsl-flowmap` in `packages/glsl-flowmap`.
 - The optional signed distance function package is `@frapx/glsl-sdf` in `packages/glsl-sdf`.
+- The optional raymarching package is `@frapx/glsl-raymarch` in `packages/glsl-raymarch`.
 - The example app is `@frapx/example-vite-basic` in `examples/vite-basic`.
 - Prefer the repository's established patterns over adding new abstractions.
 
@@ -46,7 +47,7 @@
   - `core` — the shared internal WebGL runtime host (`@frapx/core`). Not installed directly by end users.
   - `fx-<name>` — an effect runtime users instantiate directly, e.g. `@frapx/fx-canvas`, future `@frapx/fx-passes`, `@frapx/fx-particles`.
   - `react-<name>` — the React binding for an `fx-<name>` package, e.g. `@frapx/react-canvas`, future `@frapx/react-particles`.
-  - `glsl-<name>` — a GLSL snippet package meant to be concatenated into a fragment shader string, e.g. `@frapx/glsl-noise`, `@frapx/glsl-flowmap`, `@frapx/glsl-sdf`, future `@frapx/glsl-raymarch`.
+  - `glsl-<name>` — a GLSL snippet package meant to be concatenated into a fragment shader string, e.g. `@frapx/glsl-noise`, `@frapx/glsl-flowmap`, `@frapx/glsl-sdf`, `@frapx/glsl-raymarch`.
   - `tool-<name>` — a non-effect tool built on the runtimes, such as offline frame/video export (added 2026-10-10), e.g. future `@frapx/tool-capture` (browser) and `@frapx/tool-render` (Node CLI). Keep browser and Node tools in separate packages so browser users never install Node-only dependencies.
 - The offline video export roadmap and its design decisions live in `docs/frapx_export_addon.md`; its "2026-10-10 決定事項" section takes precedence over the body.
 - Core must not depend on extension packages.
