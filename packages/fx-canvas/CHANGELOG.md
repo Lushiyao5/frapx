@@ -1,10 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `clock: "manual"` option, `setClock()` and `setTime()` for deterministic rendering: no animation loop runs, `render()` draws even while offscreen or hidden, and `u_pointer*` / `u_reducedMotion` stay at 0. In demand mode, uniform and texture changes do not trigger a redraw under a manual clock.
+- `resolution` option and `setResolution([w, h] | null)` to render at a fixed internal size (`u_resolution`) while `u_viewportSize` keeps the displayed size and `u_pixelRatio` is derived from both. Without `target` or `canvas`, a detached canvas is created.
+- `clock` getter on the instance, and exported `ClockMode` / `Resolution` types.
+
 ## 0.7.0 - 2026-07-12
 
 ### Changed
 
 - **Breaking: package renamed from `@frapx/shader` to `@frapx/fx-canvas`.** No API changes — `createShaderBackground` and all other exports are unchanged; only the npm package name and import path change. `@frapx/shader` is deprecated on npm and will not receive further updates.
+
+### Added
+
+- _Correction (noted after release):_ this version also shipped the `onResize` option (called with a `RenderState` whenever the size actually changes) and re-exported `createBlitter` / `Blitter` from `@frapx/core`, which the entry above omitted.
 
 ## 0.6.1 - 2026-06-27
 

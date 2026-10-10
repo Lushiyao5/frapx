@@ -1,8 +1,10 @@
 import type {
+  ClockMode,
   CreateShaderBackgroundOptions,
   GLContext,
   RenderState,
   ShaderBackgroundInstance,
+  Resolution,
   ShaderStatus,
   TextureInput,
   TextureMap,
@@ -96,6 +98,8 @@ class ShaderBackground<TUniforms extends UniformInputMap>
       ...(options.pauseWhenHidden !== undefined && { pauseWhenHidden: options.pauseWhenHidden }),
       ...(options.respectReducedMotion !== undefined && { respectReducedMotion: options.respectReducedMotion }),
       ...(options.renderMode !== undefined && { renderMode: options.renderMode }),
+      ...(options.clock !== undefined && { clock: options.clock }),
+      ...(options.resolution !== undefined && { resolution: options.resolution }),
       ...(options.debug !== undefined && { debug: options.debug }),
 
       createContext: (canvas) => {
@@ -176,6 +180,10 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     return this.host.supported;
   }
 
+  get clock(): ClockMode {
+    return this.host.clock;
+  }
+
   start(): void {
     this.host.start();
   }
@@ -190,6 +198,21 @@ class ShaderBackground<TUniforms extends UniformInputMap>
 
   resize(): void {
     this.host.resize();
+  }
+
+  setTime(seconds: number): void {
+    if (this.shaderDestroyed) return;
+    this.host.setTime(seconds);
+  }
+
+  setClock(clock: ClockMode): void {
+    if (this.shaderDestroyed) return;
+    this.host.setClock(clock);
+  }
+
+  setResolution(resolution: Resolution | null): void {
+    if (this.shaderDestroyed) return;
+    this.host.setResolution(resolution);
   }
 
   destroy(): void {
@@ -233,7 +256,7 @@ class ShaderBackground<TUniforms extends UniformInputMap>
       this.warnUnknownUniform(uniformName);
     }
 
-    if (this.options.renderMode === "demand" && !this.shaderDestroyed) {
+    if (this.shouldRenderOnDemand) {
       this.host.render();
     }
   }
@@ -287,7 +310,7 @@ class ShaderBackground<TUniforms extends UniformInputMap>
       if (previous) gl.deleteTexture(previous.texture);
       this.applyTextureSizeUniform(loaded);
 
-      if (this.options.renderMode === "demand" && !this.shaderDestroyed) {
+      if (this.shouldRenderOnDemand) {
         this.host.render();
       }
     } catch (error) {
@@ -338,6 +361,16 @@ class ShaderBackground<TUniforms extends UniformInputMap>
       copyFeedbackToCanvas(gl, this.feedbackState, state.width, state.height);
       swapFeedbackTargets(this.feedbackState);
     }
+  }
+
+  // Demand mode re-renders on input changes, except under a manual clock where
+  // only explicit render() calls draw.
+  private get shouldRenderOnDemand(): boolean {
+    return (
+      this.options.renderMode === "demand" &&
+      this.host.clock !== "manual" &&
+      !this.shaderDestroyed
+    );
   }
 
   private initProgram(gl: GLContext): void {

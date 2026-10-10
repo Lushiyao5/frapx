@@ -228,14 +228,40 @@ createShaderBackground({
 
 `"demand"` renders when uniforms, pointer state, texture load, or resize changes. `fx.render()` is also available.
 
+## Deterministic Rendering
+
+For frame-accurate output (for example rendering a sequence for video), switch to a manual clock and, if needed, a fixed resolution:
+
+```ts
+const fx = createShaderBackground({
+  target: ".stage",
+  fragment,
+  clock: "manual",          // no animation loop; default "realtime"
+  resolution: [3840, 2160]  // fixed u_resolution; letterboxed into .stage
+});
+await fx.ready;
+
+for (let frame = 0; frame < 120; frame += 1) {
+  fx.setTime(frame / 60); // u_time; u_delta = difference from the previous call
+  fx.render();            // draws now, even offscreen or in a hidden tab
+  // Read the canvas in this same task, e.g. fx.canvas.toDataURL()
+}
+```
+
+- With `clock: "manual"`, nothing renders on its own: `setTime()` only sets the time and `render()` draws. Offscreen / hidden / reduced-motion pausing is bypassed, and `u_pointer*` and `u_reducedMotion` stay at 0, so the same time and uniforms always produce the same pixels. Pass any interactive values explicitly with `setUniform()`.
+- `setClock("manual" | "realtime")` switches clocks after creation — preview in realtime, then switch to manual to render. Returning to realtime resumes the loop if the instance was started. In realtime, `setTime()` seeks the running clock.
+- `resolution` decouples the drawing buffer from the target size. The canvas uses `object-fit: contain`, `u_viewportSize` stays the displayed CSS size and `u_pixelRatio` becomes internal px per CSS px; `dpr` / `maxDpr` are ignored. `setResolution([w, h])` changes it at runtime and `setResolution(null)` follows the target again (both reset feedback buffers, like any resize). Sizes above the GPU's limits throw / fail with `UnsupportedError`.
+- Omit both `target` and `canvas` while passing `resolution` to render into a detached canvas that is never inserted into the page (`fx.canvas` gives you the element).
+- The drawing buffer is not preserved between frames, so read pixels in the same task as `render()` (or in `onAfterRender`).
+
 ## Built-In Uniforms
 
 ```glsl
 uniform vec2 u_resolution;     // drawing buffer px
 uniform vec2 u_viewportSize;   // CSS px
 uniform float u_pixelRatio;
-uniform float u_time;          // seconds, paused offscreen/hidden
-uniform float u_delta;         // seconds, clamped to 0.1
+uniform float u_time;          // seconds, paused offscreen/hidden (manual clock: set by setTime)
+uniform float u_delta;         // seconds, clamped to 0.1 (manual clock: not clamped)
 uniform vec2 u_pointer;        // drawing buffer px, bottom-left origin
 uniform vec2 u_pointerUv;      // 0..1, bottom-left origin
 uniform float u_pointerActive; // 0 or 1
@@ -261,6 +287,8 @@ createShaderBackground({
   pauseWhenHidden: true,
   respectReducedMotion: false,
   renderMode: "always",
+  clock: "realtime",
+  // resolution: [1920, 1080],
   dpr: "auto",
   maxDpr: 2,
   autoResize: true,
@@ -315,11 +343,15 @@ Shaders without `#version 300 es` continue to use WebGL1 exactly as before.
 
 ```ts
 fx.ready;
+fx.clock; // "realtime" | "manual"
 fx.start();
 fx.stop();
 fx.render();
 fx.resize();
 fx.destroy();
+fx.setTime(2.5);
+fx.setClock("manual");
+fx.setResolution([1920, 1080]); // or null to follow the target
 await fx.setTexture("image", "/next-hero.webp");
 await fx.setTextures({ image: "/next-hero.webp" });
 fx.setUniform("progress", 0.5);

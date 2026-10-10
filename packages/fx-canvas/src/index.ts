@@ -5,6 +5,7 @@ export { glsl, glslUtils } from "./glsl";
 export { createBlitter } from "./blit";
 export type { Blitter } from "./blit";
 export type {
+  ClockMode,
   CreateShaderBackgroundOptions,
   DprOption,
   ExplicitUniformInput,
@@ -12,6 +13,7 @@ export type {
   GLContext,
   RenderMode,
   RenderState,
+  Resolution,
   ShaderBackgroundInstance,
   ShaderLayer,
   ShaderStatus,

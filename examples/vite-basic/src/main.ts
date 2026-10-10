@@ -114,10 +114,18 @@ const fragment = useFeedback
     ? fragment300
     : fragment100;
 
+// `?clock=manual&res=640x360` exercises deterministic rendering.
+const clock = params.get("clock") === "manual" ? "manual" : "realtime";
+const resolutionMatch = /^(\d+)x(\d+)$/.exec(params.get("res") ?? "");
+
 const fx = createShaderBackground({
   target: "[data-hero]",
   fragment,
   feedback: useFeedback,
+  clock,
+  ...(resolutionMatch && {
+    resolution: [Number(resolutionMatch[1]), Number(resolutionMatch[2])] as const
+  }),
   uniforms: {
     progress: 0
   },
