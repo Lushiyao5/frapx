@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added the MIT `LICENSE` file to the published package.
+
 ## 0.2.0 - 2026-07-12
 
 ### Changed

@@ -57,6 +57,9 @@ jobs:
             exit 1
           fi
 
+      - name: Check licenses
+        run: pnpm check:licenses
+
       - name: Build
         run: pnpm build
 

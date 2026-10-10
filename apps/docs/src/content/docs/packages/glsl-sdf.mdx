@@ -1,0 +1,70 @@
+---
+title: "@frapx/glsl-sdf"
+description: GLSL signed distance functions — 2D and 3D primitives, smooth booleans and domain operators.
+---
+
+import { Badge } from "@astrojs/starlight/components";
+
+<Badge text="glsl-* — GLSL snippet" variant="note" /> Not a runtime — plain GLSL strings you concatenate into your own `fragment`.
+
+Signed distance functions for 2D shapes and 3D raymarching, kept separate so
+[`@frapx/fx-canvas`](/frapx/packages/fx-canvas/) stays small. It provides the
+distance functions only; bring your own raymarching loop (a dedicated
+`@frapx/glsl-raymarch` package is planned).
+
+```sh
+pnpm add @frapx/fx-canvas @frapx/glsl-sdf
+```
+
+```ts
+import { createShaderBackground, glsl } from "@frapx/fx-canvas";
+import { sdf2d, sdfOps } from "@frapx/glsl-sdf";
+
+createShaderBackground({
+  target: ".hero",
+  fragment: glsl`
+    precision highp float;
+    uniform vec2 u_resolution;
+    uniform float u_time;
+
+    ${sdf2d}
+    ${sdfOps}
+
+    void main() {
+      vec2 p = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
+      float circle = frapx_sdCircle(p - vec2(0.2 * sin(u_time), 0.0), 0.15);
+      float box = frapx_sdBox(p, vec2(0.2));
+      float d = frapx_opSmoothUnion(circle, box, 0.08);
+      gl_FragColor = vec4(vec3(smoothstep(0.004, 0.0, d)), 1.0);
+    }
+  `
+});
+```
+
+## Exports
+
+| Export | Contents |
+| --- | --- |
+| `sdf2d` | circle, box, round box (uniform or per-corner radii), segment, triangle, equilateral triangle, hexagon, rhombus, pie, arc |
+| `sdf3d` | sphere, box, round box, box frame, torus, cylinder, capped cone, capsule, plane, ellipsoid, octahedron, hexagonal prism |
+| `sdfOps` | union, subtraction, intersection and their smooth variants, `frapx_opRound`, `frapx_opOnion` |
+| `sdfDomain` | `frapx_rotate`, `frapx_opRepeat`, `frapx_opRepeatLimited`, `frapx_opTwist`, `frapx_opBend` |
+| `sdf` | all of the above |
+
+The groups never define the same signature twice, so any combination can be
+included in one shader. Every function is prefixed with `frapx_` and works in
+both GLSL ES 1.00 and 3.00. 2D and 3D versions share a name and differ by
+argument type (`frapx_sdBox(vec2, vec2)` / `frapx_sdBox(vec3, vec3)`).
+
+Distances are negative inside. Box sizes are half extents, and
+`frapx_opSubtract(a, b)` removes `b` from `a`. Twist and bend distort space,
+so shorten raymarching steps when using them.
+
+Full function list and conventions: [README](https://github.com/kramhash/frapx/blob/main/packages/glsl-sdf/README.md) on GitHub.
+
+## License
+
+The distance functions are adapted from Inigo Quilez's Shadertoy shaders,
+each published under the MIT License. The package ships
+`LICENSES/iq-distfunctions-MIT.txt`, which lists the source shader for each
+function and includes the license text.
