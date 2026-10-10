@@ -24,7 +24,9 @@ const shaderMock = vi.hoisted(() => {
     setUniforms: vi.fn(),
     setTime: vi.fn(),
     setClock: vi.fn(),
-    setResolution: vi.fn()
+    setResolution: vi.fn(),
+    captureFrame: vi.fn(() => Promise.resolve(new Uint8Array(4))),
+    resetFeedback: vi.fn()
   };
 
   return {
@@ -254,5 +256,21 @@ describe("ShaderBackground", () => {
     expect(shaderMock.instance.setTime).toHaveBeenCalledWith(1.5);
     expect(shaderMock.instance.setClock).toHaveBeenCalledWith("manual");
     expect(shaderMock.instance.setResolution).toHaveBeenCalledWith([800, 600]);
+  });
+
+  it("forwards captureFrame and resetFeedback on the imperative handle", async () => {
+    const ref = { current: null as ShaderBackgroundHandle | null };
+
+    await act(async () => {
+      root.render(<ShaderBackground ref={ref} fragment="void main() {}" />);
+    });
+
+    await expect(ref.current?.captureFrame({ format: "rgba8" })).resolves.toEqual(
+      new Uint8Array(4)
+    );
+    ref.current?.resetFeedback();
+
+    expect(shaderMock.instance.captureFrame).toHaveBeenCalledWith({ format: "rgba8" });
+    expect(shaderMock.instance.resetFeedback).toHaveBeenCalledTimes(1);
   });
 });

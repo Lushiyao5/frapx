@@ -6,6 +6,7 @@
 
 - `clock` and `resolution` props / hook options. Changing either switches the existing instance in place (`setClock` / `setResolution`) instead of recreating it; `resolution` is compared by value.
 - `setTime`, `setClock` and `setResolution` on the `ShaderBackground` imperative handle.
+- `captureFrame` and `resetFeedback` on the imperative handle. `captureFrame` rejects while no instance is mounted.
 
 ## 0.4.0 - 2026-07-12
 

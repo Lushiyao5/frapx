@@ -112,10 +112,10 @@ is fine. The handle also exposes `setTime`, `setClock` and `setResolution`:
 />;
 
 ref.current?.setTime(2);
-ref.current?.render();
+const png = await ref.current?.captureFrame(); // rejects while nothing is mounted
 ```
 
-See the `@frapx/fx-canvas` README ("Deterministic Rendering") for the
+The handle also forwards `resetFeedback()`. See the `@frapx/fx-canvas` README ("Deterministic Rendering") for the
 semantics.
 
 ## Notes
