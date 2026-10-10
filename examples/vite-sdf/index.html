@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Frapx SDF Example</title>
+  </head>
+  <body>
+    <main class="app">
+      <header class="bar">
+        <div>
+          <p class="eyebrow">Example</p>
+          <h1>Signed distance fields</h1>
+        </div>
+        <div class="controls">
+          <label class="control">
+            <span>
+              <span>Blend</span>
+              <output data-blend-output>0.12</output>
+            </span>
+            <input data-blend type="range" min="0.01" max="0.4" step="0.01" value="0.12" />
+          </label>
+          <label class="control">
+            <span>
+              <span>Twist</span>
+              <output data-twist-output>1.20</output>
+            </span>
+            <input data-twist type="range" min="0" max="3" step="0.01" value="1.2" />
+          </label>
+        </div>
+      </header>
+      <section class="panel" data-panel-2d>
+        <span class="tag">2D · move the pointer</span>
+      </section>
+      <section class="panel" data-panel-3d>
+        <span class="tag">3D</span>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
