@@ -1,0 +1,42 @@
+{
+  "name": "@frapx/glsl-sdf",
+  "version": "0.1.0",
+  "description": "GLSL signed distance functions for @frapx/fx-canvas — 2D and 3D primitives, smooth booleans and domain operators.",
+  "keywords": [
+    "webgl",
+    "shader",
+    "glsl",
+    "sdf",
+    "signed-distance-field",
+    "raymarching"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSES"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kramhash/frapx.git",
+    "directory": "packages/glsl-sdf"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

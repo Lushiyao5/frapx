@@ -12,6 +12,7 @@
 - `resetFeedback()` clears the feedback history.
 - Re-exported `createRenderTarget`, `createPingPong`, `supportsRenderTargetFormat` and their types from `@frapx/core`, next to `createBlitter`.
 - `examples/vite-capture`: a raymarched scene exported as a 4K PNG sequence.
+- Added the MIT `LICENSE` file to the published package.
 
 ### Changed
 

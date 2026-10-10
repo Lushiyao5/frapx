@@ -423,3 +423,7 @@ The package is safe to import during SSR. Calling `createShaderBackground()` wit
 ## Browser Support
 
 Shaders without `#version 300 es` use WebGL1 / GLSL ES 1.00. Shaders that start with `#version 300 es` request WebGL2 / GLSL ES 3.00 automatically. WebGL2 support is additive and does not change the WebGL1 default path.
+
+## License
+
+MIT © 2026 kramhash. See [LICENSE](./LICENSE).

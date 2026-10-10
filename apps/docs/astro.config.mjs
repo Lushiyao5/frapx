@@ -26,6 +26,7 @@ export default defineConfig({
             { label: "@frapx/react-canvas", slug: "packages/react-canvas" },
             { label: "@frapx/glsl-noise", slug: "packages/glsl-noise" },
             { label: "@frapx/glsl-flowmap", slug: "packages/glsl-flowmap" },
+            { label: "@frapx/glsl-sdf", slug: "packages/glsl-sdf" },
             { label: "@frapx/core", slug: "packages/core" }
           ]
         },

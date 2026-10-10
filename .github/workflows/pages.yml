@@ -12,6 +12,7 @@ on:
       - "packages/react-canvas/**"
       - "packages/glsl-flowmap/**"
       - "packages/glsl-noise/**"
+      - "packages/glsl-sdf/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 

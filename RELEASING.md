@@ -11,6 +11,7 @@ released, tagged, and documented on its own.
 | `@frapx/react-canvas` | `packages/react-canvas` | `@frapx/react-canvas@0.4.0` | Depends on `@frapx/fx-canvas`. Publish after it. |
 | `@frapx/glsl-noise` | `packages/glsl-noise` | `@frapx/glsl-noise@0.2.0` | |
 | `@frapx/glsl-flowmap` | `packages/glsl-flowmap` | `@frapx/glsl-flowmap@0.4.0` | |
+| `@frapx/glsl-sdf` | `packages/glsl-sdf` | `@frapx/glsl-sdf@0.1.0` | Not yet published. |
 | `@frapx/core` | `packages/core` | `@frapx/core@0.2.0` | Shared runtime. Publish before `@frapx/fx-canvas`. |
 
 These packages were renamed on 2026-07-12 (formerly `@frapx/runtime`, `@frapx/shader`,
@@ -66,6 +67,7 @@ Each public package owns its changelog:
 - `packages/react-canvas/CHANGELOG.md`
 - `packages/glsl-noise/CHANGELOG.md`
 - `packages/glsl-flowmap/CHANGELOG.md`
+- `packages/glsl-sdf/CHANGELOG.md`
 
 Use this format:
 
@@ -266,6 +268,10 @@ Use trunk-based development:
 - Hotfixes go through `main` and receive package-specific patch releases.
 
 ## Notes on Bootstrapping a New Package
+
+Copy the root `LICENSE` into the new package directory. npm includes it in
+the tarball automatically, and `pnpm check:licenses` (run in CI and before
+publishing) fails if it is missing or differs from the root copy.
 
 When manually publishing a package for the first time (see "Trusted
 Publisher Setup" above), pushing the release tag afterward will still

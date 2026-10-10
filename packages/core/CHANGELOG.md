@@ -10,6 +10,7 @@
 - `ClockMode` and `Resolution` types, and `SetupCanvasOptions.detached` / `DomSetup.detached`.
 - `createRenderTarget(gl, width, height, options)` and `createPingPong(...)`: texture-backed framebuffers with an explicit `format` (`"rgba8"` or `"rgba16f"`). `rgba16f` needs WebGL2 with `EXT_color_buffer_float`; otherwise it warns and allocates `rgba8`, or throws `UnsupportedError` with `formatFallback: false`. `supportsRenderTargetFormat` / `resolveRenderTargetFormat` expose the detection, and `isWebGL2Context` is now exported.
 - `captureFrame({ format })` on the host: draws a frame (bypassing pause gates) and reads it back in the same task as a PNG `Blob`, `Uint8Array` (`rgba8`) or `Float32Array` (`rgba16f`, from the new `captureSource` option), with rows top first.
+- Added the MIT `LICENSE` file to the published package.
 
 ### Changed
 

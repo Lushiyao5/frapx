@@ -128,3 +128,7 @@ semantics.
   from React state.
 - `onShaderReady` and `onShaderError` are used instead of core `onReady` and
   `onError` to avoid DOM prop naming conflicts.
+
+## License
+
+MIT © 2026 kramhash. See [LICENSE](./LICENSE).

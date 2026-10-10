@@ -16,6 +16,7 @@
 - The React binding package is `@frapx/react-canvas` in `packages/react-canvas`.
 - The optional 3D noise helper package is `@frapx/glsl-noise` in `packages/glsl-noise`.
 - The optional flowmap helper package is `@frapx/glsl-flowmap` in `packages/glsl-flowmap`.
+- The optional signed distance function package is `@frapx/glsl-sdf` in `packages/glsl-sdf`.
 - The example app is `@frapx/example-vite-basic` in `examples/vite-basic`.
 - Prefer the repository's established patterns over adding new abstractions.
 
@@ -45,7 +46,7 @@
   - `core` — the shared internal WebGL runtime host (`@frapx/core`). Not installed directly by end users.
   - `fx-<name>` — an effect runtime users instantiate directly, e.g. `@frapx/fx-canvas`, future `@frapx/fx-passes`, `@frapx/fx-particles`.
   - `react-<name>` — the React binding for an `fx-<name>` package, e.g. `@frapx/react-canvas`, future `@frapx/react-particles`.
-  - `glsl-<name>` — a GLSL snippet package meant to be concatenated into a fragment shader string, e.g. `@frapx/glsl-noise`, `@frapx/glsl-flowmap`, future `@frapx/glsl-sdf`, `@frapx/glsl-raymarch`.
+  - `glsl-<name>` — a GLSL snippet package meant to be concatenated into a fragment shader string, e.g. `@frapx/glsl-noise`, `@frapx/glsl-flowmap`, `@frapx/glsl-sdf`, future `@frapx/glsl-raymarch`.
   - `tool-<name>` — a non-effect tool built on the runtimes, such as offline frame/video export (added 2026-10-10), e.g. future `@frapx/tool-capture` (browser) and `@frapx/tool-render` (Node CLI). Keep browser and Node tools in separate packages so browser users never install Node-only dependencies.
 - The offline video export roadmap and its design decisions live in `docs/frapx_export_addon.md`; its "2026-10-10 決定事項" section takes precedence over the body.
 - Core must not depend on extension packages.
@@ -77,6 +78,7 @@
 - Keep package changelogs in `packages/*/CHANGELOG.md`.
 - Use annotated package tags like `@frapx/fx-canvas@0.3.0`.
 - Publish package changes from the package directory, not the repository root.
+- Every public package ships a `LICENSE` identical to the root `LICENSE`; `pnpm check:licenses` enforces this in CI and before publishing.
 - Scoped public packages should use `npm publish --access public` unless `publishConfig.access` covers it.
 - Run `pnpm -w build`, `pnpm -w typecheck`, and `pnpm -w test` before publishing when feasible.
 - See `RELEASING.md` for the full release procedure.
