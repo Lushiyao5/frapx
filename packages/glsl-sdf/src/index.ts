@@ -6,10 +6,9 @@ const glsl = String.raw;
 // frapx_sdBox(vec3, vec3)); GLSL ES 1.00 resolves them by exact type.
 
 export const sdfLicense = glsl`
-// Distance functions follow Inigo Quilez's articles (MIT):
-// https://iquilezles.org/articles/distfunctions/
-// https://iquilezles.org/articles/distfunctions2d/
-// See LICENSES/iq-distfunctions-MIT.txt in @frapx/glsl-sdf.
+// Adapted from Inigo Quilez's Shadertoy shaders.
+// License: MIT, Copyright (c) 2013-2020 Inigo Quilez.
+// Sources and license text: LICENSES/iq-distfunctions-MIT.txt in @frapx/glsl-sdf.
 `;
 
 /** 2D primitives. Negative inside, positive outside. */
