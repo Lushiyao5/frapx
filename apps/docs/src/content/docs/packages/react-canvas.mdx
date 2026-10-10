@@ -77,6 +77,19 @@ ref.current?.stop();
 ref.current?.setUniform("intensity", 1);
 ```
 
+### Deterministic rendering
+
+`clock` and `resolution` are props like any other option, but changing them
+switches the existing instance in place instead of recreating it. The handle
+exposes `setTime`, `setClock` and `setResolution`:
+
+```tsx
+<ShaderBackground ref={ref} fragment={fragment} clock="manual" resolution={[1920, 1080]} />;
+
+ref.current?.setTime(2);
+ref.current?.render();
+```
+
 ## Notes
 
 - React 18+ is supported.
