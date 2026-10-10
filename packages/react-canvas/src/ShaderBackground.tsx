@@ -1,4 +1,9 @@
 import {
+  type CaptureFormat,
+  type CaptureOptions,
+  type CaptureResult,
+  type ClockMode,
+  type Resolution,
   type ShaderBackgroundInstance,
   type TextureInput,
   type TextureMap,
@@ -29,6 +34,14 @@ export type ShaderBackgroundHandle<
   render(): void;
   resize(): void;
   destroy(): void;
+  setTime(seconds: number): void;
+  setClock(clock: ClockMode): void;
+  setResolution(resolution: Resolution | null): void;
+  /** Rejects while no instance is mounted. */
+  captureFrame<F extends CaptureFormat = "png">(
+    options?: CaptureOptions<F>
+  ): Promise<CaptureResult<F>>;
+  resetFeedback(): void;
   setTexture(name: string, input: TextureInput): Promise<void>;
   setTextures(values: TextureMap): Promise<void>;
   setUniform<K extends keyof TUniforms & string>(
@@ -61,6 +74,8 @@ const OPTION_KEYS = [
   "pauseWhenHidden",
   "respectReducedMotion",
   "renderMode",
+  "clock",
+  "resolution",
   "dpr",
   "maxDpr",
   "autoResize",
@@ -84,6 +99,8 @@ const _assertComplete: _MissingOptionKey extends never ? true : never = true;
 const RUNTIME_KEYS = new Set([
   "uniforms",
   "textures",
+  "clock",
+  "resolution",
   "onShaderReady",
   "onShaderError",
   "onBeforeRender",
@@ -143,6 +160,16 @@ const ShaderBackgroundInner = <
       render: () => instance?.render(),
       resize: () => instance?.resize(),
       destroy: () => instance?.destroy(),
+      setTime: (seconds) => instance?.setTime(seconds),
+      setClock: (clock) => instance?.setClock(clock),
+      setResolution: (resolution) => instance?.setResolution(resolution),
+      captureFrame: <F extends CaptureFormat = "png">(
+        options?: CaptureOptions<F>
+      ) =>
+        instance
+          ? instance.captureFrame(options)
+          : Promise.reject(new Error("No shader instance is mounted.")),
+      resetFeedback: () => instance?.resetFeedback(),
       setTexture: (name, input) =>
         instance?.setTexture(name, input) ?? Promise.resolve(),
       setTextures: (values) =>

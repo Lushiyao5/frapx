@@ -18,6 +18,10 @@ These packages were renamed on 2026-07-12 (formerly `@frapx/runtime`, `@frapx/sh
 `@frapx/shader-react`, `@frapx/shader-noise`, `@frapx/shader-flowmap`). The old npm
 packages are deprecated — see "Deprecating a Renamed Package" below.
 
+Package names follow the category-prefix scheme described in `AGENTS.md`
+(`core`, `fx-*`, `react-*`, `glsl-*`, and — since 2026-10-10 — `tool-*` for
+export tooling). Add new packages to the table above when they are first released.
+
 Examples and documentation changes do not require a package release unless they
 also change package metadata or published package contents.
 

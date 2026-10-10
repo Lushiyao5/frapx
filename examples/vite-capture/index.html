@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Frapx Capture Example</title>
+  </head>
+  <body>
+    <main class="app">
+      <section class="stage" data-stage></section>
+      <aside class="controls" aria-label="Capture controls">
+        <div class="controls__header">
+          <div>
+            <p class="eyebrow">Example</p>
+            <h1>Capture</h1>
+          </div>
+          <span class="status" data-status>Idle</span>
+        </div>
+
+        <label class="control">
+          <span>Resolution</span>
+          <select data-resolution>
+            <option value="1920x1080">1920 × 1080</option>
+            <option value="2560x1440">2560 × 1440</option>
+            <option value="3840x2160" selected>3840 × 2160 (4K)</option>
+          </select>
+        </label>
+
+        <div class="row">
+          <label class="control">
+            <span>FPS</span>
+            <select data-fps>
+              <option value="24">24</option>
+              <option value="30" selected>30</option>
+              <option value="60">60</option>
+            </select>
+          </label>
+          <label class="control">
+            <span>Seconds</span>
+            <input data-duration type="number" min="0.1" max="60" step="0.1" value="2" />
+          </label>
+        </div>
+
+        <label class="control">
+          <span>
+            <span>Preview time</span>
+            <output data-time-output>0.00s</output>
+          </span>
+          <input data-time type="range" min="0" max="2" step="0.01" value="0" />
+        </label>
+
+        <p class="note" data-destination></p>
+
+        <div class="row">
+          <button class="toggle toggle--primary" data-export type="button">
+            Export PNGs
+          </button>
+          <button class="toggle" data-cancel type="button" disabled>Cancel</button>
+        </div>
+
+        <progress data-progress max="1" value="0"></progress>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

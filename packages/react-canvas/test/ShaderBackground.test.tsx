@@ -21,7 +21,12 @@ const shaderMock = vi.hoisted(() => {
     setTexture: vi.fn(() => Promise.resolve()),
     setTextures: vi.fn(() => Promise.resolve()),
     setUniform: vi.fn(),
-    setUniforms: vi.fn()
+    setUniforms: vi.fn(),
+    setTime: vi.fn(),
+    setClock: vi.fn(),
+    setResolution: vi.fn(),
+    captureFrame: vi.fn(() => Promise.resolve(new Uint8Array(4))),
+    resetFeedback: vi.fn()
   };
 
   return {
@@ -193,5 +198,79 @@ describe("ShaderBackground", () => {
 
     expect(shaderMock.createShaderBackground).toHaveBeenCalledTimes(2);
     expect(shaderMock.instance.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it("switches clock and resolution in place without recreating", async () => {
+    await act(async () => {
+      root.render(
+        <ShaderBackground fragment="void main() {}" resolution={[640, 360]} />
+      );
+    });
+
+    expect(shaderMock.createShaderBackground).toHaveBeenCalledWith(
+      expect.objectContaining({ resolution: [640, 360] })
+    );
+
+    // A new array literal with the same values must not re-apply.
+    await act(async () => {
+      root.render(
+        <ShaderBackground fragment="void main() {}" resolution={[640, 360]} />
+      );
+    });
+    expect(shaderMock.instance.setResolution).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.render(
+        <ShaderBackground
+          fragment="void main() {}"
+          clock="manual"
+          resolution={[1920, 1080]}
+        />
+      );
+    });
+
+    expect(shaderMock.createShaderBackground).toHaveBeenCalledTimes(1);
+    expect(shaderMock.instance.setClock).toHaveBeenLastCalledWith("manual");
+    expect(shaderMock.instance.setResolution).toHaveBeenLastCalledWith([1920, 1080]);
+
+    await act(async () => {
+      root.render(<ShaderBackground fragment="void main() {}" />);
+    });
+
+    expect(shaderMock.instance.setClock).toHaveBeenLastCalledWith("realtime");
+    expect(shaderMock.instance.setResolution).toHaveBeenLastCalledWith(null);
+    expect(shaderMock.createShaderBackground).toHaveBeenCalledTimes(1);
+  });
+
+  it("exposes clock and resolution controls on the imperative handle", async () => {
+    const ref = { current: null as ShaderBackgroundHandle | null };
+
+    await act(async () => {
+      root.render(<ShaderBackground ref={ref} fragment="void main() {}" />);
+    });
+
+    ref.current?.setTime(1.5);
+    ref.current?.setClock("manual");
+    ref.current?.setResolution([800, 600]);
+
+    expect(shaderMock.instance.setTime).toHaveBeenCalledWith(1.5);
+    expect(shaderMock.instance.setClock).toHaveBeenCalledWith("manual");
+    expect(shaderMock.instance.setResolution).toHaveBeenCalledWith([800, 600]);
+  });
+
+  it("forwards captureFrame and resetFeedback on the imperative handle", async () => {
+    const ref = { current: null as ShaderBackgroundHandle | null };
+
+    await act(async () => {
+      root.render(<ShaderBackground ref={ref} fragment="void main() {}" />);
+    });
+
+    await expect(ref.current?.captureFrame({ format: "rgba8" })).resolves.toEqual(
+      new Uint8Array(4)
+    );
+    ref.current?.resetFeedback();
+
+    expect(shaderMock.instance.captureFrame).toHaveBeenCalledWith({ format: "rgba8" });
+    expect(shaderMock.instance.resetFeedback).toHaveBeenCalledTimes(1);
   });
 });

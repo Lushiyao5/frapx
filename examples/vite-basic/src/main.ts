@@ -104,20 +104,64 @@ void main() {
 }
 `;
 
+// Fixture scenes with known output for the capture E2E suite.
+const gradientFragment = glsl`
+precision highp float;
+
+uniform vec2 u_resolution;
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / u_resolution;
+  gl_FragColor = vec4(uv, 0.0, 1.0);
+}
+`;
+
+const accumulateFragment = glsl`
+precision highp float;
+
+uniform vec2 u_resolution;
+uniform sampler2D u_previousFrame;
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / u_resolution;
+  gl_FragColor = texture2D(u_previousFrame, uv) + vec4(1.0 / 1024.0);
+}
+`;
+
 const useWebGL2 = params.get("webgl2") === "1";
-const useFeedback = params.get("feedback") === "1";
-const fragment = useFeedback
-  ? useWebGL2
-    ? feedbackFragment300
-    : feedbackFragment100
-  : useWebGL2
-    ? fragment300
-    : fragment100;
+// `?feedback=1` enables feedback; `?feedback=rgba16f|rgba8` also picks the format.
+const feedbackParam = params.get("feedback");
+const feedbackFormat =
+  feedbackParam === "rgba16f" || feedbackParam === "rgba8" ? feedbackParam : null;
+const useFeedback = feedbackParam === "1" || feedbackFormat !== null;
+const scene = params.get("scene");
+const fragment =
+  scene === "gradient"
+    ? gradientFragment
+    : scene === "accumulate"
+      ? accumulateFragment
+      : useFeedback
+        ? useWebGL2
+          ? feedbackFragment300
+          : feedbackFragment100
+        : useWebGL2
+          ? fragment300
+          : fragment100;
+
+// `?clock=manual&res=640x360` exercises deterministic rendering.
+const clock = params.get("clock") === "manual" ? "manual" : "realtime";
+const resolutionMatch = /^(\d+)x(\d+)$/.exec(params.get("res") ?? "");
 
 const fx = createShaderBackground({
   target: "[data-hero]",
   fragment,
-  feedback: useFeedback,
+  feedback: feedbackFormat
+    ? { format: feedbackFormat, formatFallback: params.get("strict") !== "1" }
+    : useFeedback,
+  clock,
+  ...(resolutionMatch && {
+    resolution: [Number(resolutionMatch[1]), Number(resolutionMatch[2])] as const
+  }),
   uniforms: {
     progress: 0
   },
@@ -125,15 +169,18 @@ const fx = createShaderBackground({
   respectReducedMotion: params.get("reducedMotion") === "1",
   onAfterRender({ gl, width, height }) {
     const pixel = new Uint8Array(4);
-    gl.readPixels(
-      Math.floor(width / 2),
-      Math.floor(height / 2),
-      1,
-      1,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
-      pixel
-    );
+    // Float framebuffers cannot be read as UNSIGNED_BYTE; leave the sample empty.
+    if (fx.feedbackFormat !== "rgba16f") {
+      gl.readPixels(
+        Math.floor(width / 2),
+        Math.floor(height / 2),
+        1,
+        1,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        pixel
+      );
+    }
     window.__frapxShaderSample = {
       frames: (window.__frapxShaderSample?.frames ?? 0) + 1,
       pixel: Array.from(pixel)

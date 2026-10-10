@@ -2,6 +2,14 @@ export type GLContext = WebGLRenderingContext | WebGL2RenderingContext;
 
 export type ShaderLayer = "background" | "overlay";
 export type RenderMode = "always" | "demand";
+/**
+ * `"realtime"` advances time from requestAnimationFrame. `"manual"` never
+ * renders on its own: time only changes through `setTime()` and frames are
+ * drawn only by explicit `render()` calls, so output is deterministic.
+ */
+export type ClockMode = "realtime" | "manual";
+/** Fixed internal render size in pixels: `[width, height]`. */
+export type Resolution = readonly [number, number];
 export type DprOption = "auto" | number | (() => number);
 
 export type ShaderStatus =
@@ -67,6 +75,30 @@ export type UniformRuntimeValue<T> = T extends ExplicitUniformInput
             ? number
             : UniformInput;
 
+/**
+ * Storage format of the feedback buffers. `rgba16f` (half float) keeps values
+ * outside 0–1 and fine increments that 8-bit storage would round away; it needs
+ * WebGL2 with `EXT_color_buffer_float`.
+ */
+export type FeedbackFormat = "rgba8" | "rgba16f";
+
+/**
+ * `"png"` resolves to a `Blob`, `"rgba8"` to a `Uint8Array` and `"rgba16f"` to
+ * a `Float32Array`. Raw formats are RGBA, top row first.
+ */
+export type CaptureFormat = "png" | "rgba8" | "rgba16f";
+
+export type CaptureOptions<F extends CaptureFormat = CaptureFormat> = {
+  /** Defaults to `"png"`. */
+  format?: F;
+};
+
+export type CaptureResult<F extends CaptureFormat> = F extends "rgba16f"
+  ? Float32Array
+  : F extends "rgba8"
+    ? Uint8Array
+    : Blob;
+
 export type FeedbackOptions = {
   /**
    * Suffix name for the generated sampler uniform. Defaults to
@@ -77,6 +109,17 @@ export type FeedbackOptions = {
   filter?: "nearest" | "linear";
   wrap?: "clamp" | "repeat" | "mirror";
   clearColor?: UniformVec4;
+  /**
+   * Defaults to `"rgba8"`. `"rgba16f"` requests a WebGL2 context even for
+   * GLSL ES 1.00 shaders and falls back to WebGL1 when unavailable.
+   */
+  format?: FeedbackFormat;
+  /**
+   * When `format` is unsupported, `true` (default) warns and uses `"rgba8"`;
+   * `false` fails initialization with `UnsupportedError`. Read the allocated
+   * format from `instance.feedbackFormat`.
+   */
+  formatFallback?: boolean;
 };
 
 export type RenderState<TUniforms extends UniformInputMap = UniformInputMap> = {
@@ -120,6 +163,23 @@ export type CreateShaderBackgroundOptions<
    */
   respectReducedMotion?: boolean;
   renderMode?: RenderMode;
+  /**
+   * Defaults to `"realtime"`. With `"manual"`, no animation loop runs: set the
+   * time with `setTime()` and draw with `render()`. Offscreen, hidden and
+   * reduced-motion pausing are bypassed, and `u_pointer*` / `u_reducedMotion`
+   * stay at 0 so the same time and uniforms always produce the same pixels.
+   * Switch later with `setClock()`.
+   */
+  clock?: ClockMode;
+  /**
+   * Fixes the internal render size (`u_resolution`) instead of following the
+   * target's size. The canvas is letterboxed with `object-fit: contain`,
+   * `u_viewportSize` stays the displayed size and `u_pixelRatio` is derived
+   * from the two; `dpr` and `maxDpr` are ignored. Required when neither
+   * `target` nor `canvas` is given, in which case a detached canvas is created.
+   * Change later with `setResolution()`.
+   */
+  resolution?: Resolution;
   dpr?: DprOption;
   maxDpr?: number;
   autoResize?: boolean;
@@ -142,11 +202,51 @@ export type ShaderBackgroundInstance<
   readonly status: ShaderStatus;
   readonly supported: boolean;
   readonly ready: Promise<void>;
+  /** The active clock mode. */
+  readonly clock: ClockMode;
+  /**
+   * The feedback format actually allocated (after any fallback), or `null`
+   * without feedback or before initialization.
+   */
+  readonly feedbackFormat: FeedbackFormat | null;
   start(): void;
   stop(): void;
   render(): void;
   resize(): void;
   destroy(): void;
+  /**
+   * Sets `u_time` to `seconds`. In manual mode `u_delta` becomes the difference
+   * from the previous `setTime()` value (0 the first time, not clamped). In
+   * realtime mode this seeks the running clock. Does not render by itself.
+   */
+  setTime(seconds: number): void;
+  /**
+   * Switches between `"realtime"` and `"manual"` clocks. Returning to realtime
+   * resumes the loop if the instance was started.
+   */
+  setClock(clock: ClockMode): void;
+  /**
+   * Fixes the internal render size, or follows the target's size again when
+   * `null`. Resets the feedback buffers like any resize. Throws
+   * `UnsupportedError` when the size exceeds the GPU's limits, and `TypeError`
+   * when passing `null` to an instance created without a target.
+   */
+  setResolution(resolution: Resolution | null): void;
+  /**
+   * Draws a frame and reads it back in the same task, so it does not depend on
+   * `preserveDrawingBuffer`. Like `render()` it advances feedback, but it draws
+   * even while paused, offscreen or hidden. Waits for `ready` first.
+   * `"rgba16f"` reads the float feedback buffer and rejects with
+   * `UnsupportedError` unless `feedbackFormat` is `"rgba16f"`.
+   */
+  captureFrame<F extends CaptureFormat = "png">(
+    options?: CaptureOptions<F>
+  ): Promise<CaptureResult<F>>;
+  /**
+   * Clears both feedback buffers to `clearColor`, so the next frame starts
+   * from an empty history. Re-renders in demand mode; otherwise does not draw.
+   */
+  resetFeedback(): void;
   setTexture(name: string, input: TextureInput): Promise<void>;
   setTextures(values: TextureMap): Promise<void>;
   setUniform<K extends keyof TUniforms & string>(

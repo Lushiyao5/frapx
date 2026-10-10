@@ -1,8 +1,14 @@
 import type {
+  CaptureFormat,
+  CaptureOptions,
+  CaptureResult,
+  ClockMode,
   CreateShaderBackgroundOptions,
+  FeedbackFormat,
   GLContext,
   RenderState,
   ShaderBackgroundInstance,
+  Resolution,
   ShaderStatus,
   TextureInput,
   TextureMap,
@@ -54,6 +60,10 @@ export const createShaderBackground = <
   return new ShaderBackground<TUniforms>(options);
 };
 
+const wantsFloatFeedback = (
+  feedback: CreateShaderBackgroundOptions["feedback"]
+): boolean => typeof feedback === "object" && feedback.format === "rgba16f";
+
 class ShaderBackground<TUniforms extends UniformInputMap>
   implements ShaderBackgroundInstance<TUniforms>
 {
@@ -96,11 +106,12 @@ class ShaderBackground<TUniforms extends UniformInputMap>
       ...(options.pauseWhenHidden !== undefined && { pauseWhenHidden: options.pauseWhenHidden }),
       ...(options.respectReducedMotion !== undefined && { respectReducedMotion: options.respectReducedMotion }),
       ...(options.renderMode !== undefined && { renderMode: options.renderMode }),
+      ...(options.clock !== undefined && { clock: options.clock }),
+      ...(options.resolution !== undefined && { resolution: options.resolution }),
       ...(options.debug !== undefined && { debug: options.debug }),
 
       createContext: (canvas) => {
         const want300 = isGLSL300(options.fragment);
-        const contextType = want300 ? "webgl2" : "webgl";
         const attrs = {
           alpha: true,
           antialias: false,
@@ -109,11 +120,16 @@ class ShaderBackground<TUniforms extends UniformInputMap>
           premultipliedAlpha: true,
           preserveDrawingBuffer: false
         };
-        const gl = canvas.getContext(contextType, attrs) as GLContext | null;
-        if (!gl && want300) {
-          throw new UnsupportedError("WebGL2 is not supported in this browser.");
+        if (want300 || wantsFloatFeedback(options.feedback)) {
+          // WebGL2 also accepts GLSL ES 1.00, so float feedback can upgrade
+          // the context without changing the shader.
+          const gl2 = canvas.getContext("webgl2", attrs) as GLContext | null;
+          if (gl2) return gl2;
+          if (want300) {
+            throw new UnsupportedError("WebGL2 is not supported in this browser.");
+          }
         }
-        return gl;
+        return canvas.getContext("webgl", attrs) as GLContext | null;
       },
 
       onInit: async (gl, width, height) => {
@@ -139,6 +155,8 @@ class ShaderBackground<TUniforms extends UniformInputMap>
         if (this.shaderDestroyed) return;
         this.options.onResize?.(this.createRenderState(state));
       },
+
+      captureSource: () => this.feedbackState?.targets.read ?? null,
 
       onContextLost: () => {
         this.feedbackState = null;
@@ -176,6 +194,14 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     return this.host.supported;
   }
 
+  get clock(): ClockMode {
+    return this.host.clock;
+  }
+
+  get feedbackFormat(): FeedbackFormat | null {
+    return this.feedbackState?.targets.format ?? null;
+  }
+
   start(): void {
     this.host.start();
   }
@@ -192,6 +218,35 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     this.host.resize();
   }
 
+  setTime(seconds: number): void {
+    if (this.shaderDestroyed) return;
+    this.host.setTime(seconds);
+  }
+
+  setClock(clock: ClockMode): void {
+    if (this.shaderDestroyed) return;
+    this.host.setClock(clock);
+  }
+
+  setResolution(resolution: Resolution | null): void {
+    if (this.shaderDestroyed) return;
+    this.host.setResolution(resolution);
+  }
+
+  captureFrame<F extends CaptureFormat = "png">(
+    options?: CaptureOptions<F>
+  ): Promise<CaptureResult<F>> {
+    return this.host.captureFrame(options);
+  }
+
+  resetFeedback(): void {
+    if (this.shaderDestroyed || !this.feedbackState) return;
+    this.feedbackState.targets.clear();
+    if (this.shouldRenderOnDemand) {
+      this.host.render();
+    }
+  }
+
   destroy(): void {
     if (this.shaderDestroyed) return;
     this.shaderDestroyed = true;
@@ -201,7 +256,7 @@ class ShaderBackground<TUniforms extends UniformInputMap>
       for (const texture of this.textures.values()) {
         gl.deleteTexture(texture.texture);
       }
-      deleteFeedbackState(gl, this.feedbackState);
+      deleteFeedbackState(this.feedbackState);
       this.feedbackState = null;
       if (this.buffer) gl.deleteBuffer(this.buffer);
       if (this.program) gl.deleteProgram(this.program);
@@ -233,7 +288,7 @@ class ShaderBackground<TUniforms extends UniformInputMap>
       this.warnUnknownUniform(uniformName);
     }
 
-    if (this.options.renderMode === "demand" && !this.shaderDestroyed) {
+    if (this.shouldRenderOnDemand) {
       this.host.render();
     }
   }
@@ -287,7 +342,7 @@ class ShaderBackground<TUniforms extends UniformInputMap>
       if (previous) gl.deleteTexture(previous.texture);
       this.applyTextureSizeUniform(loaded);
 
-      if (this.options.renderMode === "demand" && !this.shaderDestroyed) {
+      if (this.shouldRenderOnDemand) {
         this.host.render();
       }
     } catch (error) {
@@ -315,12 +370,8 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     this.uniformCache.set("u_time", { type: "float", value: [state.time] });
     this.uniformCache.set("u_delta", { type: "float", value: [state.delta] });
 
-    this.resizeFeedback(gl, state.width, state.height);
-    gl.bindFramebuffer(
-      gl.FRAMEBUFFER,
-      this.feedbackState ? this.feedbackState.write.framebuffer : null
-    );
-    gl.viewport(0, 0, state.width, state.height);
+    this.resizeFeedback(state.width, state.height);
+    this.bindDrawTarget(gl, state.width, state.height);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(this.program);
     this.applyBuiltInUniforms(gl, state);
@@ -328,22 +379,34 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     const renderState = this.createRenderState(state);
     this.options.onBeforeRender?.(renderState);
     // Re-establish core draw state after user hook so GL side-effects
-    // (program, buffer, attribs, textures) cannot corrupt the core draw.
+    // (framebuffer, viewport, program, buffer, attribs, textures) cannot
+    // corrupt the core draw. resetFeedback() from the hook unbinds the FBO.
+    this.bindDrawTarget(gl, state.width, state.height);
     this.prepareDrawState(gl);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     this.options.onAfterRender?.(renderState);
 
     if (this.feedbackState) {
-      copyFeedbackToCanvas(gl, this.feedbackState, state.width, state.height);
+      copyFeedbackToCanvas(this.feedbackState, state.width, state.height);
       swapFeedbackTargets(this.feedbackState);
     }
+  }
+
+  // Demand mode re-renders on input changes, except under a manual clock where
+  // only explicit render() calls draw.
+  private get shouldRenderOnDemand(): boolean {
+    return (
+      this.options.renderMode === "demand" &&
+      this.host.clock !== "manual" &&
+      !this.shaderDestroyed
+    );
   }
 
   private initProgram(gl: GLContext): void {
     if (this.program) gl.deleteProgram(this.program);
     if (this.buffer) gl.deleteBuffer(this.buffer);
-    deleteFeedbackState(gl, this.feedbackState);
+    deleteFeedbackState(this.feedbackState);
     this.feedbackState = null;
 
     const defaultVertex = isGLSL300(this.options.fragment)
@@ -358,6 +421,14 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     this.buffer = createFullscreenBuffer(gl, this.program);
     this.attribLocation = gl.getAttribLocation(this.program, "a_position");
     this.uniformLocations = collectUniformLocations(gl, this.program);
+  }
+
+  private bindDrawTarget(gl: GLContext, width: number, height: number): void {
+    gl.bindFramebuffer(
+      gl.FRAMEBUFFER,
+      this.feedbackState ? this.feedbackState.targets.write.framebuffer : null
+    );
+    gl.viewport(0, 0, width, height);
   }
 
   // Re-bind core program, geometry, textures and uniforms so a draw is correct
@@ -383,15 +454,14 @@ class ShaderBackground<TUniforms extends UniformInputMap>
       this.feedbackOptions,
       width,
       height,
-      unit,
-      this.options.fragment
+      unit
     );
     this.applyFeedbackSizeUniform();
   }
 
-  private resizeFeedback(gl: GLContext, width: number, height: number): void {
+  private resizeFeedback(width: number, height: number): void {
     if (!this.feedbackState) return;
-    resizeFeedbackState(gl, this.feedbackState, width, height);
+    resizeFeedbackState(this.feedbackState, width, height);
     this.applyFeedbackSizeUniform();
   }
 
@@ -417,7 +487,10 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     if (!this.feedbackState) return;
     const uniform = {
       type: "vec2" as const,
-      value: [this.feedbackState.read.width, this.feedbackState.read.height]
+      value: [
+        this.feedbackState.targets.read.width,
+        this.feedbackState.targets.read.height
+      ]
     };
     this.uniformCache.set(this.feedbackState.options.sizeUniformName, uniform);
   }

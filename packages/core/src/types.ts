@@ -2,6 +2,14 @@ export type GLContext = WebGLRenderingContext | WebGL2RenderingContext;
 
 export type ShaderLayer = "background" | "overlay";
 export type RenderMode = "always" | "demand";
+/**
+ * `"realtime"` advances time from requestAnimationFrame. `"manual"` never
+ * renders on its own: time only changes through `setTime()` and frames are
+ * drawn only by explicit `render()` calls, so output is deterministic.
+ */
+export type ClockMode = "realtime" | "manual";
+/** Fixed internal render size in pixels: `[width, height]`. */
+export type Resolution = readonly [number, number];
 export type DprOption = "auto" | number | (() => number);
 
 export type ShaderStatus =
@@ -26,6 +34,71 @@ export type TextureOptions = {
 
 export type TextureInput = TextureSource | TextureOptions;
 export type TextureMap = Record<string, TextureInput>;
+
+/**
+ * Storage format of a render target. `rgba16f` (half float) needs WebGL2 with
+ * `EXT_color_buffer_float`.
+ */
+export type RenderTargetFormat = "rgba8" | "rgba16f";
+
+export type RenderTargetOptions = {
+  /** Defaults to `"rgba8"`. */
+  format?: RenderTargetFormat;
+  /**
+   * When the requested format is unsupported, `true` (default) warns and
+   * allocates `rgba8` instead; `false` throws `UnsupportedError`.
+   */
+  formatFallback?: boolean;
+  filter?: "nearest" | "linear";
+  wrap?: "clamp" | "repeat" | "mirror";
+  /** Color the storage is cleared to on creation, resize and `clear()`. */
+  clearColor?: readonly [number, number, number, number];
+};
+
+export type RenderTarget = {
+  readonly texture: WebGLTexture;
+  readonly framebuffer: WebGLFramebuffer;
+  readonly width: number;
+  readonly height: number;
+  /** The format actually allocated, after any fallback. */
+  readonly format: RenderTargetFormat;
+  /** Reallocates (and clears) the storage when the size changes. */
+  resize(width: number, height: number): void;
+  /** Clears the storage to `clearColor`. Leaves the default framebuffer bound. */
+  clear(): void;
+  dispose(): void;
+};
+
+export type PingPong = {
+  /** The target holding the last completed frame. */
+  readonly read: RenderTarget;
+  /** The target to draw the next frame into. */
+  readonly write: RenderTarget;
+  /** The format actually allocated, after any fallback. */
+  readonly format: RenderTargetFormat;
+  /** Exchanges `read` and `write`; call after drawing into `write`. */
+  swap(): void;
+  resize(width: number, height: number): void;
+  clear(): void;
+  dispose(): void;
+};
+
+/**
+ * `"png"` resolves to a `Blob`, `"rgba8"` to a `Uint8Array` and `"rgba16f"` to
+ * a `Float32Array`. Raw formats are RGBA, top row first.
+ */
+export type CaptureFormat = "png" | "rgba8" | "rgba16f";
+
+export type CaptureOptions<F extends CaptureFormat = CaptureFormat> = {
+  /** Defaults to `"png"`. */
+  format?: F;
+};
+
+export type CaptureResult<F extends CaptureFormat> = F extends "rgba16f"
+  ? Float32Array
+  : F extends "rgba8"
+    ? Uint8Array
+    : Blob;
 
 export type HostPointer = {
   x: number;
@@ -56,6 +129,11 @@ export type SetupCanvasOptions = {
   layer?: ShaderLayer;
   canvasClass?: string;
   canvasStyle?: Partial<CSSStyleDeclaration>;
+  /**
+   * When neither `target` nor `canvas` is given, create a canvas that is not
+   * attached to the document instead of failing.
+   */
+  detached?: boolean;
 };
 
 export type RuntimeHostOptions = {
@@ -72,6 +150,13 @@ export type RuntimeHostOptions = {
   pauseWhenHidden?: boolean;
   respectReducedMotion?: boolean;
   renderMode?: RenderMode;
+  /** Defaults to `"realtime"`. See {@link ClockMode}. */
+  clock?: ClockMode;
+  /**
+   * Fixes the internal render size instead of following the target's size.
+   * Required when neither `target` nor `canvas` is given.
+   */
+  resolution?: Resolution;
   debug?: boolean;
 
   createContext: (canvas: HTMLCanvasElement) => GLContext | null;
@@ -79,6 +164,11 @@ export type RuntimeHostOptions = {
   onDraw: (state: HostFrameState) => void;
   /** Called whenever the observed size actually changes (not every frame). */
   onResize?: (state: HostFrameState) => void;
+  /**
+   * Returns the render target that holds the last drawn frame at full
+   * precision, if any. `captureFrame({ format: "rgba16f" })` reads from it.
+   */
+  captureSource?: () => RenderTarget | null;
   onContextLost?: () => void;
   onContextRestored?: (
     gl: GLContext,
@@ -96,9 +186,31 @@ export type RuntimeHostInstance = {
   readonly status: ShaderStatus;
   readonly supported: boolean;
   readonly ready: Promise<void>;
+  readonly clock: ClockMode;
   start(): void;
   stop(): void;
   render(): void;
   resize(): void;
   destroy(): void;
+  /**
+   * Sets the clock to `seconds`. In manual mode `u_delta` becomes the
+   * difference from the previous `setTime()` value (0 the first time). In
+   * realtime mode this seeks the running clock. Does not render by itself.
+   */
+  setTime(seconds: number): void;
+  /** Switches between realtime and manual clocks after creation. */
+  setClock(clock: ClockMode): void;
+  /**
+   * Fixes the internal render size, or follows the target's size again when
+   * `null`. Throws `UnsupportedError` when the size exceeds the GPU limits.
+   */
+  setResolution(resolution: Resolution | null): void;
+  /**
+   * Draws a frame and reads it back in the same task, so it does not depend on
+   * `preserveDrawingBuffer`. Draws even while paused or hidden; waits for
+   * `ready` first. `"rgba16f"` needs a float `captureSource`.
+   */
+  captureFrame<F extends CaptureFormat = "png">(
+    options?: CaptureOptions<F>
+  ): Promise<CaptureResult<F>>;
 };

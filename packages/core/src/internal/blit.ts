@@ -3,7 +3,8 @@ import {
   createFullscreenBuffer,
   createProgram,
   defaultVertexShader,
-  defaultVertexShader300
+  defaultVertexShader300,
+  isWebGL2Context
 } from "./webgl";
 
 const blitFragmentShader = `
@@ -26,12 +27,6 @@ void main() {
   fragColor = texture(u_texture, v_uv);
 }
 `;
-
-// Duck-typed instead of `instanceof WebGL2RenderingContext` so this also works
-// against test mocks and other environments where the global constructor may
-// be unavailable.
-const isWebGL2Context = (gl: GLContext): boolean =>
-  typeof (gl as WebGL2RenderingContext).createVertexArray === "function";
 
 export type Blitter = {
   /**
