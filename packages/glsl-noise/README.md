@@ -56,4 +56,6 @@ Use `noise3d` when you need multiple functions in one shader to avoid duplicatin
 
 ## License
 
+MIT © 2026 kramhash. See [LICENSE](./LICENSE).
+
 The 3D simplex and classic Perlin implementations are derived from `webgl-noise` by Ashima Arts and Stefan Gustavson, distributed under the MIT license. See [`LICENSES/webgl-noise-MIT.txt`](./LICENSES/webgl-noise-MIT.txt).

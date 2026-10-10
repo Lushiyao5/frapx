@@ -128,3 +128,7 @@ above when applying tiling:
 ```glsl
 frapx_flowDistort(base, flow, baseUv, time, speed, strength)
 ```
+
+## License
+
+MIT © 2026 kramhash. See [LICENSE](./LICENSE).

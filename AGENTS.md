@@ -76,6 +76,7 @@
 - Keep package changelogs in `packages/*/CHANGELOG.md`.
 - Use annotated package tags like `@frapx/fx-canvas@0.3.0`.
 - Publish package changes from the package directory, not the repository root.
+- Every public package ships a `LICENSE` identical to the root `LICENSE`; `pnpm check:licenses` enforces this in CI and before publishing.
 - Scoped public packages should use `npm publish --access public` unless `publishConfig.access` covers it.
 - Run `pnpm -w build`, `pnpm -w typecheck`, and `pnpm -w test` before publishing when feasible.
 - See `RELEASING.md` for the full release procedure.

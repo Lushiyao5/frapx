@@ -69,4 +69,6 @@ Conventions:
 
 ## License
 
-MIT. The distance functions are adapted from Inigo Quilez's Shadertoy shaders, each published under the MIT License (Copyright (c) 2013-2020 Inigo Quilez). [`LICENSES/iq-distfunctions-MIT.txt`](./LICENSES/iq-distfunctions-MIT.txt) lists the source shader for each function and includes the license text.
+MIT © 2026 kramhash. See [LICENSE](./LICENSE).
+
+The distance functions are adapted from Inigo Quilez's Shadertoy shaders, each published under the MIT License (Copyright (c) 2013-2020 Inigo Quilez). [`LICENSES/iq-distfunctions-MIT.txt`](./LICENSES/iq-distfunctions-MIT.txt) lists the source shader for each function and includes the license text.

@@ -11,3 +11,4 @@
 - `sdfDomain`: `frapx_rotate`, `frapx_opRepeat`, `frapx_opRepeatLimited`, `frapx_opTwist` and `frapx_opBend`.
 - `sdf`: every group in one snippet.
 - `examples/vite-sdf`: a 2D distance field and a raymarched 3D scene.
+- Added the MIT `LICENSE` file to the published package.

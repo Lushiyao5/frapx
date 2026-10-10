@@ -265,6 +265,10 @@ Use trunk-based development:
 
 ## Notes on Bootstrapping a New Package
 
+Copy the root `LICENSE` into the new package directory. npm includes it in
+the tarball automatically, and `pnpm check:licenses` (run in CI and before
+publishing) fails if it is missing or differs from the root copy.
+
 When manually publishing a package for the first time (see "Trusted
 Publisher Setup" above), pushing the release tag afterward will still
 trigger `.github/workflows/publish.yml`. That run will pass build/typecheck/

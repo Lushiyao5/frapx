@@ -8,4 +8,4 @@ If you are building a WebGL experience, you most likely want [`@frapx/fx-canvas`
 
 ## License
 
-MIT
+MIT © 2026 kramhash. See [LICENSE](./LICENSE).
