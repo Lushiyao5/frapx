@@ -35,6 +35,71 @@ export type TextureOptions = {
 export type TextureInput = TextureSource | TextureOptions;
 export type TextureMap = Record<string, TextureInput>;
 
+/**
+ * Storage format of a render target. `rgba16f` (half float) needs WebGL2 with
+ * `EXT_color_buffer_float`.
+ */
+export type RenderTargetFormat = "rgba8" | "rgba16f";
+
+export type RenderTargetOptions = {
+  /** Defaults to `"rgba8"`. */
+  format?: RenderTargetFormat;
+  /**
+   * When the requested format is unsupported, `true` (default) warns and
+   * allocates `rgba8` instead; `false` throws `UnsupportedError`.
+   */
+  formatFallback?: boolean;
+  filter?: "nearest" | "linear";
+  wrap?: "clamp" | "repeat" | "mirror";
+  /** Color the storage is cleared to on creation, resize and `clear()`. */
+  clearColor?: readonly [number, number, number, number];
+};
+
+export type RenderTarget = {
+  readonly texture: WebGLTexture;
+  readonly framebuffer: WebGLFramebuffer;
+  readonly width: number;
+  readonly height: number;
+  /** The format actually allocated, after any fallback. */
+  readonly format: RenderTargetFormat;
+  /** Reallocates (and clears) the storage when the size changes. */
+  resize(width: number, height: number): void;
+  /** Clears the storage to `clearColor`. Leaves the default framebuffer bound. */
+  clear(): void;
+  dispose(): void;
+};
+
+export type PingPong = {
+  /** The target holding the last completed frame. */
+  readonly read: RenderTarget;
+  /** The target to draw the next frame into. */
+  readonly write: RenderTarget;
+  /** The format actually allocated, after any fallback. */
+  readonly format: RenderTargetFormat;
+  /** Exchanges `read` and `write`; call after drawing into `write`. */
+  swap(): void;
+  resize(width: number, height: number): void;
+  clear(): void;
+  dispose(): void;
+};
+
+/**
+ * `"png"` resolves to a `Blob`, `"rgba8"` to a `Uint8Array` and `"rgba16f"` to
+ * a `Float32Array`. Raw formats are RGBA, top row first.
+ */
+export type CaptureFormat = "png" | "rgba8" | "rgba16f";
+
+export type CaptureOptions<F extends CaptureFormat = CaptureFormat> = {
+  /** Defaults to `"png"`. */
+  format?: F;
+};
+
+export type CaptureResult<F extends CaptureFormat> = F extends "rgba16f"
+  ? Float32Array
+  : F extends "rgba8"
+    ? Uint8Array
+    : Blob;
+
 export type HostPointer = {
   x: number;
   y: number;
@@ -99,6 +164,11 @@ export type RuntimeHostOptions = {
   onDraw: (state: HostFrameState) => void;
   /** Called whenever the observed size actually changes (not every frame). */
   onResize?: (state: HostFrameState) => void;
+  /**
+   * Returns the render target that holds the last drawn frame at full
+   * precision, if any. `captureFrame({ format: "rgba16f" })` reads from it.
+   */
+  captureSource?: () => RenderTarget | null;
   onContextLost?: () => void;
   onContextRestored?: (
     gl: GLContext,
@@ -135,4 +205,12 @@ export type RuntimeHostInstance = {
    * `null`. Throws `UnsupportedError` when the size exceeds the GPU limits.
    */
   setResolution(resolution: Resolution | null): void;
+  /**
+   * Draws a frame and reads it back in the same task, so it does not depend on
+   * `preserveDrawingBuffer`. Draws even while paused or hidden; waits for
+   * `ready` first. `"rgba16f"` needs a float `captureSource`.
+   */
+  captureFrame<F extends CaptureFormat = "png">(
+    options?: CaptureOptions<F>
+  ): Promise<CaptureResult<F>>;
 };

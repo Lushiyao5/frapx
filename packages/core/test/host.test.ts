@@ -1,9 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRuntimeHost } from "../src/host";
-import { TargetNotFoundError, UnsupportedError } from "../src/internal/errors";
+import {
+  DestroyedError,
+  TargetNotFoundError,
+  UnsupportedError
+} from "../src/internal/errors";
 import type {
   GLContext,
   HostFrameState,
+  RenderTarget,
   RuntimeHostOptions
 } from "../src/types";
 
@@ -29,8 +34,27 @@ const createMockGl = (): GLContext =>
   ({
     MAX_VIEWPORT_DIMS: 3386,
     MAX_RENDERBUFFER_SIZE: 34024,
+    FRAMEBUFFER: 36160,
+    RGBA: 6408,
+    UNSIGNED_BYTE: 5121,
+    FLOAT: 5126,
     getParameter: vi.fn((parameter: number) =>
       parameter === 3386 ? new Int32Array([maxViewport, maxViewport]) : 16384
+    ),
+    bindFramebuffer: vi.fn(),
+    // Tags the first channel of every row with its GL row index (bottom = 0).
+    readPixels: vi.fn(
+      (
+        _x: number,
+        _y: number,
+        width: number,
+        height: number,
+        _format: number,
+        _type: number,
+        data: Uint8Array | Float32Array
+      ) => {
+        for (let row = 0; row < height; row++) data[row * width * 4] = row;
+      }
     )
   }) as unknown as GLContext;
 
@@ -60,6 +84,10 @@ class Canvas {
 
   addEventListener(type: string, listener: Listener): void {
     this.listeners.set(type, listener);
+  }
+
+  toBlob(callback: (blob: Blob | null) => void, type?: string): void {
+    callback(new Blob([], { type: type ?? "image/png" }));
   }
   removeEventListener(): void {}
   remove(): void {}
@@ -479,5 +507,127 @@ describe("detached canvas", () => {
     const { host } = createDetached();
     await expect(host.ready).rejects.toBeInstanceOf(TargetNotFoundError);
     expect(host.status).toBe("unsupported");
+  });
+});
+
+describe("captureFrame", () => {
+  const floatSource = {
+    texture: {},
+    framebuffer: { id: "float" },
+    width: 2,
+    height: 3,
+    format: "rgba16f"
+  } as unknown as RenderTarget;
+
+  it("draws a frame and returns rgba8 rows top first", async () => {
+    const { host, frames } = create({ clock: "manual", resolution: [2, 3] });
+    await host.ready;
+    host.setTime(2);
+
+    const data = await host.captureFrame({ format: "rgba8" });
+
+    expect(frames).toHaveLength(1);
+    expect(frames[0]!.time).toBe(2);
+    expect(data).toBeInstanceOf(Uint8Array);
+    expect(data).toHaveLength(2 * 3 * 4);
+    // GL rows are bottom-up; the capture must start with the top row.
+    expect([data[0], data[8], data[16]]).toEqual([2, 1, 0]);
+    const gl = host.gl as unknown as { bindFramebuffer: ReturnType<typeof vi.fn> };
+    expect(gl.bindFramebuffer).toHaveBeenCalledWith(36160, null);
+  });
+
+  it("draws even while the realtime loop is paused by visibility", async () => {
+    const { host, frames } = create({ resolution: [2, 2] });
+    await host.ready;
+    setHidden(true);
+    host.render();
+    expect(frames).toHaveLength(0);
+
+    await host.captureFrame({ format: "rgba8" });
+    expect(frames).toHaveLength(1);
+  });
+
+  it("encodes png through the canvas by default", async () => {
+    const { host, frames, canvas } = create({ clock: "manual", resolution: [2, 2] });
+    const toBlob = vi.spyOn(canvas, "toBlob");
+    await host.ready;
+
+    const blob = await host.captureFrame();
+
+    expect(blob).toBeInstanceOf(Blob);
+    expect(blob.type).toBe("image/png");
+    expect(toBlob).toHaveBeenCalledTimes(1);
+    expect(frames).toHaveLength(1);
+  });
+
+  it("waits for initialization before drawing", async () => {
+    const { host, frames } = create({ clock: "manual", resolution: [2, 2] });
+    const capture = host.captureFrame({ format: "rgba8" });
+    expect(frames).toHaveLength(0);
+    await capture;
+    expect(frames).toHaveLength(1);
+  });
+
+  it("rejects rgba16f without a float source and does not draw", async () => {
+    const { host, frames } = create({
+      clock: "manual",
+      resolution: [2, 3],
+      captureSource: () => ({ ...floatSource, format: "rgba8" }) as RenderTarget
+    });
+    await host.ready;
+
+    await expect(host.captureFrame({ format: "rgba16f" })).rejects.toBeInstanceOf(
+      UnsupportedError
+    );
+    expect(frames).toHaveLength(0);
+  });
+
+  it("reads rgba16f from the float capture source", async () => {
+    const { host } = create({
+      clock: "manual",
+      resolution: [2, 3],
+      captureSource: () => floatSource
+    });
+    await host.ready;
+
+    const data = await host.captureFrame({ format: "rgba16f" });
+
+    expect(data).toBeInstanceOf(Float32Array);
+    expect([data[0], data[8], data[16]]).toEqual([2, 1, 0]);
+    const gl = host.gl as unknown as {
+      bindFramebuffer: ReturnType<typeof vi.fn>;
+      readPixels: ReturnType<typeof vi.fn>;
+    };
+    expect(gl.bindFramebuffer).toHaveBeenCalledWith(36160, floatSource.framebuffer);
+    expect(gl.readPixels.mock.calls[0]![5]).toBe(5126);
+  });
+
+  it("rejects unknown formats and destroyed hosts", async () => {
+    const { host } = create({ clock: "manual", resolution: [2, 2] });
+    await host.ready;
+    await expect(
+      host.captureFrame({ format: "jpeg" as "png" })
+    ).rejects.toBeInstanceOf(RangeError);
+
+    host.destroy();
+    await expect(host.captureFrame()).rejects.toBeInstanceOf(DestroyedError);
+  });
+
+  it("releases the render lock when drawing throws", async () => {
+    let fail = true;
+    const { host, frames } = create({
+      clock: "manual",
+      resolution: [2, 2],
+      onDraw: (state) => {
+        if (fail) throw new Error("draw failed");
+        frames.push(state);
+      }
+    });
+    await host.ready;
+
+    await expect(host.captureFrame()).rejects.toThrow("draw failed");
+    fail = false;
+    host.render();
+    expect(frames).toHaveLength(1);
   });
 });

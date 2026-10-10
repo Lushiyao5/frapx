@@ -8,6 +8,13 @@
 - `resolution` option and `setResolution([w, h] | null)` to fix the internal render size independently of the target. The canvas is letterboxed with `object-fit: contain`, the viewport size still tracks the target, and `pixelRatio` is derived from the fit (`dpr` / `maxDpr` are ignored). Sizes beyond the GPU's viewport/renderbuffer limits fail with `UnsupportedError`.
 - Creating a host with neither `target` nor `canvas` now works when `resolution` is given: a detached canvas is created and no layout observers are attached.
 - `ClockMode` and `Resolution` types, and `SetupCanvasOptions.detached` / `DomSetup.detached`.
+- `createRenderTarget(gl, width, height, options)` and `createPingPong(...)`: texture-backed framebuffers with an explicit `format` (`"rgba8"` or `"rgba16f"`). `rgba16f` needs WebGL2 with `EXT_color_buffer_float`; otherwise it warns and allocates `rgba8`, or throws `UnsupportedError` with `formatFallback: false`. `supportsRenderTargetFormat` / `resolveRenderTargetFormat` expose the detection, and `isWebGL2Context` is now exported.
+- `captureFrame({ format })` on the host: draws a frame (bypassing pause gates) and reads it back in the same task as a PNG `Blob`, `Uint8Array` (`rgba8`) or `Float32Array` (`rgba16f`, from the new `captureSource` option), with rows top first.
+
+### Changed
+
+- An `UnsupportedError` thrown from `onInit` now sets status `"unsupported"` instead of `"error"`.
+- A throwing `onDraw` no longer leaves the host stuck in its in-render state.
 
 ## 0.2.0 - 2026-07-12
 

@@ -1,4 +1,7 @@
 import type {
+  CaptureFormat,
+  CaptureOptions,
+  CaptureResult,
   ClockMode,
   GLContext,
   HostFrameState,
@@ -9,6 +12,7 @@ import type {
   ShaderStatus
 } from "./types";
 import { DestroyedError, TargetNotFoundError, UnsupportedError } from "./internal/errors";
+import { canvasToPng, readPixels } from "./internal/capture";
 import {
   resolveDpr,
   resizeCanvasToResolution,
@@ -179,6 +183,52 @@ class RuntimeHost implements RuntimeHostInstance {
     this.resize();
   }
 
+  async captureFrame<F extends CaptureFormat = "png">(
+    options: CaptureOptions<F> = {}
+  ): Promise<CaptureResult<F>> {
+    const format: CaptureFormat = options.format ?? "png";
+    if (format !== "png" && format !== "rgba8" && format !== "rgba16f") {
+      throw new RangeError(`Unknown capture format: ${String(format)}`);
+    }
+
+    await this.ready;
+    if (this.destroyed) {
+      throw new DestroyedError("Runtime host was destroyed.");
+    }
+    if (!this.dom || !this.context) {
+      throw new UnsupportedError("Cannot capture without a WebGL context.");
+    }
+    if (this.inRender) {
+      throw new Error("captureFrame() cannot be called while a frame is drawing.");
+    }
+
+    // Check before drawing so a rejected capture has no side effects.
+    if (format === "rgba16f" && this.options.captureSource?.()?.format !== "rgba16f") {
+      throw new UnsupportedError(
+        "rgba16f capture needs a float render target, such as feedback with format rgba16f."
+      );
+    }
+
+    // Draw and read in this task: the drawing buffer is not preserved.
+    this.renderInternal(this.elapsed, this.isManual ? this.manualDelta : 0);
+    const gl = this.context;
+
+    if (format === "png") {
+      return canvasToPng(this.dom.canvas) as Promise<CaptureResult<F>>;
+    }
+    if (format === "rgba8") {
+      return readPixels(gl, null, this.width, this.height, "rgba8") as CaptureResult<F>;
+    }
+    const source = this.options.captureSource!()!;
+    return readPixels(
+      gl,
+      source.framebuffer,
+      source.width,
+      source.height,
+      "rgba16f"
+    ) as CaptureResult<F>;
+  }
+
   resize(): void {
     if (this.destroyed || !this.dom) return;
 
@@ -313,11 +363,13 @@ class RuntimeHost implements RuntimeHostInstance {
     const gl = this.context;
 
     this.inRender = true;
-    this.measureSize();
-
-    this.options.onDraw(this.createFrameState(time, delta, gl));
-    this.frame++;
-    this.inRender = false;
+    try {
+      this.measureSize();
+      this.options.onDraw(this.createFrameState(time, delta, gl));
+      this.frame++;
+    } finally {
+      this.inRender = false;
+    }
   }
 
   private createFrameState(
@@ -493,7 +545,8 @@ class RuntimeHost implements RuntimeHostInstance {
         this.render();
       }
     } catch (error) {
-      this.fail(error instanceof Error ? error : new Error(String(error)));
+      if (error instanceof UnsupportedError) this.failUnsupported(error);
+      else this.fail(error instanceof Error ? error : new Error(String(error)));
     }
   }
 

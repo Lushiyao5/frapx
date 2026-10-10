@@ -24,17 +24,31 @@ export {
   createProgram,
   createFullscreenBuffer,
   isGLSL300,
+  isWebGL2Context,
   defaultVertexShader,
   defaultVertexShader300
 } from "./internal/webgl";
 export { createBlitter } from "./internal/blit";
 export type { Blitter } from "./internal/blit";
+export {
+  createPingPong,
+  createRenderTarget,
+  resolveRenderTargetFormat,
+  supportsRenderTargetFormat
+} from "./internal/renderTarget";
 export type {
   GLContext,
   ShaderLayer,
   RenderMode,
   ClockMode,
   Resolution,
+  RenderTargetFormat,
+  RenderTargetOptions,
+  RenderTarget,
+  PingPong,
+  CaptureFormat,
+  CaptureOptions,
+  CaptureResult,
   DprOption,
   ShaderStatus,
   TextureSource,

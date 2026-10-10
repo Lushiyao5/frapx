@@ -24,6 +24,12 @@ void main() {
 export const isGLSL300 = (src: string): boolean =>
   /^\s*#version\s+300\s+es\b/.test(src);
 
+// Duck-typed instead of `instanceof WebGL2RenderingContext` so this also works
+// against test mocks and other environments where the global constructor may
+// be unavailable.
+export const isWebGL2Context = (gl: GLContext): gl is WebGL2RenderingContext =>
+  typeof (gl as WebGL2RenderingContext).createVertexArray === "function";
+
 export const createProgram = (
   gl: GLContext,
   vertexSource: string,
