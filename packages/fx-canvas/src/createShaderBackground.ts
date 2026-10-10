@@ -371,11 +371,7 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     this.uniformCache.set("u_delta", { type: "float", value: [state.delta] });
 
     this.resizeFeedback(state.width, state.height);
-    gl.bindFramebuffer(
-      gl.FRAMEBUFFER,
-      this.feedbackState ? this.feedbackState.targets.write.framebuffer : null
-    );
-    gl.viewport(0, 0, state.width, state.height);
+    this.bindDrawTarget(gl, state.width, state.height);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(this.program);
     this.applyBuiltInUniforms(gl, state);
@@ -383,7 +379,9 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     const renderState = this.createRenderState(state);
     this.options.onBeforeRender?.(renderState);
     // Re-establish core draw state after user hook so GL side-effects
-    // (program, buffer, attribs, textures) cannot corrupt the core draw.
+    // (framebuffer, viewport, program, buffer, attribs, textures) cannot
+    // corrupt the core draw. resetFeedback() from the hook unbinds the FBO.
+    this.bindDrawTarget(gl, state.width, state.height);
     this.prepareDrawState(gl);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -423,6 +421,14 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     this.buffer = createFullscreenBuffer(gl, this.program);
     this.attribLocation = gl.getAttribLocation(this.program, "a_position");
     this.uniformLocations = collectUniformLocations(gl, this.program);
+  }
+
+  private bindDrawTarget(gl: GLContext, width: number, height: number): void {
+    gl.bindFramebuffer(
+      gl.FRAMEBUFFER,
+      this.feedbackState ? this.feedbackState.targets.write.framebuffer : null
+    );
+    gl.viewport(0, 0, width, height);
   }
 
   // Re-bind core program, geometry, textures and uniforms so a draw is correct

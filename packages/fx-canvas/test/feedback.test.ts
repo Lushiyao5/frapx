@@ -400,6 +400,40 @@ describe("resetFeedback", () => {
     expect(gl.drawArrays).not.toHaveBeenCalled();
   });
 
+  it("keeps drawing into the feedback buffer when called from onBeforeRender", async () => {
+    const gl = createMockGl();
+    let bound: unknown = null;
+    const drawTargets: unknown[] = [];
+    gl.bindFramebuffer.mockImplementation((_target: number, framebuffer: unknown) => {
+      bound = framebuffer;
+    });
+    gl.drawArrays.mockImplementation(() => {
+      drawTargets.push(bound);
+    });
+    let reset = false;
+    const fx = createShaderBackground({
+      canvas: new Canvas(gl) as unknown as HTMLCanvasElement,
+      fragment: FRAGMENT,
+      feedback: true,
+      onBeforeRender: (state) => {
+        if (reset) return;
+        reset = true;
+        state.instance.resetFeedback();
+      }
+    });
+    await fx.ready;
+    drawTargets.length = 0;
+    gl.viewport.mockClear();
+
+    fx.render();
+
+    // Main draw goes to a feedback FBO, then the blit goes to the canvas.
+    expect(drawTargets).toHaveLength(2);
+    expect(drawTargets[0]).toEqual({ id: expect.stringMatching(/^framebuffer-/) });
+    expect(drawTargets[1]).toBeNull();
+    expect(gl.viewport).toHaveBeenLastCalledWith(0, 0, 32, 16);
+  });
+
   it("re-renders in demand mode", async () => {
     const gl = createMockGl();
     const fx = createShaderBackground({
