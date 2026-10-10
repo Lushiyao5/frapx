@@ -1,6 +1,9 @@
 import type {
+  ClockMode,
   GLContext,
   HostFrameState,
+  HostPointer,
+  Resolution,
   RuntimeHostInstance,
   RuntimeHostOptions,
   ShaderStatus
@@ -8,12 +11,16 @@ import type {
 import { DestroyedError, TargetNotFoundError, UnsupportedError } from "./internal/errors";
 import {
   resolveDpr,
+  resizeCanvasToResolution,
   resizeCanvasToTarget,
   setupCanvas,
   type DomSetup
 } from "./internal/dom";
 
 const MAX_DELTA_SECONDS = 0.1;
+
+// Manual clocks report a neutral pointer so output never depends on input.
+const IDLE_POINTER: HostPointer = { x: 0, y: 0, uvX: 0, uvY: 0, active: 0 };
 
 type Gate = "offscreen" | "hidden" | "reducedMotion";
 
@@ -51,9 +58,21 @@ class RuntimeHost implements RuntimeHostInstance {
   private removeListeners: Array<() => void> = [];
   private currentStatus: ShaderStatus = "idle";
   private contextRestoredShouldRun = false;
+  private clockMode: ClockMode;
+  private manualDelta = 0;
+  private lastManualTime: number | null = null;
+  private fixedResolution: Resolution | null;
+  private objectFitRestore: string | null = null;
+  // Letterbox offset (CSS px) of the contained canvas content inside the target.
+  private contentOffsetX = 0;
+  private contentOffsetY = 0;
 
   constructor(options: RuntimeHostOptions) {
     this.options = options;
+    this.clockMode = options.clock ?? "realtime";
+    this.fixedResolution = options.resolution
+      ? normalizeResolution(options.resolution)
+      : null;
     this.ready = new Promise<void>((resolve, reject) => {
       this.readyResolve = resolve;
       this.readyReject = reject;
@@ -79,6 +98,10 @@ class RuntimeHost implements RuntimeHostInstance {
     return !["unsupported", "destroyed"].includes(this.currentStatus);
   }
 
+  get clock(): ClockMode {
+    return this.clockMode;
+  }
+
   start(): void {
     if (this.destroyed || this.currentStatus === "unsupported") return;
     this.running = true;
@@ -99,11 +122,61 @@ class RuntimeHost implements RuntimeHostInstance {
       !this.dom ||
       !this.context ||
       this.currentStatus === "unsupported" ||
-      this.hasVisibilityBlock ||
       this.inRender
     )
       return;
+
+    if (this.isManual) {
+      // The caller decides when to draw; visibility gates do not apply.
+      this.renderInternal(this.elapsed, this.manualDelta);
+      return;
+    }
+
+    if (this.hasVisibilityBlock) return;
     this.renderInternal(this.elapsed, 0);
+  }
+
+  setTime(seconds: number): void {
+    if (!Number.isFinite(seconds)) {
+      throw new RangeError(`setTime() expects a finite number, got ${seconds}`);
+    }
+    if (this.destroyed) return;
+
+    if (this.isManual) {
+      this.manualDelta =
+        this.lastManualTime === null ? 0 : seconds - this.lastManualTime;
+      this.lastManualTime = seconds;
+    }
+    this.elapsed = seconds;
+  }
+
+  setClock(clock: ClockMode): void {
+    if (this.destroyed || clock === this.clockMode) return;
+    this.clockMode = clock;
+    this.manualDelta = 0;
+    this.lastManualTime = null;
+    // Gates kept tracking while manual, so this resumes against current state.
+    this.reconcile();
+  }
+
+  setResolution(resolution: Resolution | null): void {
+    if (this.destroyed) return;
+
+    if (resolution === null) {
+      if (this.isDetached) {
+        throw new TypeError(
+          "A canvas without a target needs a fixed resolution."
+        );
+      }
+      this.fixedResolution = null;
+    } else {
+      const next = normalizeResolution(resolution);
+      if (this.context) assertWithinLimits(this.context, next);
+      this.fixedResolution = next;
+    }
+
+    this.applyObjectFit();
+    this.resize();
   }
 
   resize(): void {
@@ -123,23 +196,10 @@ class RuntimeHost implements RuntimeHostInstance {
       this.viewportHeight !== prevViewportHeight;
 
     if (sizeChanged && this.context) {
-      this.options.onResize?.({
-        gl: this.context,
-        canvas: this.dom.canvas,
-        time: this.elapsed,
-        delta: 0,
-        frame: this.frame,
-        width: this.width,
-        height: this.height,
-        viewportWidth: this.viewportWidth,
-        viewportHeight: this.viewportHeight,
-        pixelRatio: this.pixelRatio,
-        reducedMotion: this.reducedMotionActive,
-        pointer: { ...this.pointer }
-      });
+      this.options.onResize?.(this.createFrameState(this.elapsed, 0));
     }
 
-    if (this.options.renderMode === "demand" && !this.inRender) {
+    if (this.shouldRenderOnDemand && !this.inRender) {
       this.render();
     }
   }
@@ -159,6 +219,8 @@ class RuntimeHost implements RuntimeHostInstance {
 
     if (this.dom?.createdCanvas) {
       this.dom.canvas.remove();
+    } else if (this.dom && this.objectFitRestore !== null) {
+      this.dom.canvas.style.objectFit = this.objectFitRestore;
     }
 
     const dom = this.dom;
@@ -168,6 +230,21 @@ class RuntimeHost implements RuntimeHostInstance {
 
     this.currentStatus = "destroyed";
     this.readyReject?.(new DestroyedError("Runtime host was destroyed."));
+  }
+
+  private get isManual(): boolean {
+    return this.clockMode === "manual";
+  }
+
+  private get isDetached(): boolean {
+    if (this.dom) return this.dom.detached === true;
+    return this.options.target === undefined && this.options.canvas === undefined;
+  }
+
+  // Demand mode re-renders on input changes, except under a manual clock where
+  // only explicit render() calls draw.
+  private get shouldRenderOnDemand(): boolean {
+    return this.options.renderMode === "demand" && !this.isManual;
   }
 
   private get hasVisibilityBlock(): boolean {
@@ -194,6 +271,12 @@ class RuntimeHost implements RuntimeHostInstance {
       this.currentStatus === "error" ||
       this.currentStatus === "context-lost"
     ) {
+      return;
+    }
+
+    if (this.isManual) {
+      this.cancelFrame();
+      this.currentStatus = "paused";
       return;
     }
 
@@ -232,9 +315,19 @@ class RuntimeHost implements RuntimeHostInstance {
     this.inRender = true;
     this.measureSize();
 
-    const state: HostFrameState = {
+    this.options.onDraw(this.createFrameState(time, delta, gl));
+    this.frame++;
+    this.inRender = false;
+  }
+
+  private createFrameState(
+    time: number,
+    delta: number,
+    gl: GLContext = this.context!
+  ): HostFrameState {
+    return {
       gl,
-      canvas: this.dom.canvas,
+      canvas: this.dom!.canvas,
       time,
       delta,
       frame: this.frame,
@@ -243,17 +336,38 @@ class RuntimeHost implements RuntimeHostInstance {
       viewportWidth: this.viewportWidth,
       viewportHeight: this.viewportHeight,
       pixelRatio: this.pixelRatio,
-      reducedMotion: this.reducedMotionActive,
-      pointer: { ...this.pointer }
+      reducedMotion: this.isManual ? false : this.reducedMotionActive,
+      pointer: this.isManual ? { ...IDLE_POINTER } : { ...this.pointer }
     };
-
-    this.options.onDraw(state);
-    this.frame++;
-    this.inRender = false;
   }
 
   private measureSize(): void {
     if (!this.dom) return;
+
+    if (this.fixedResolution) {
+      const size = resizeCanvasToResolution(
+        this.dom.canvas,
+        this.dom.detached ? null : this.dom.target,
+        this.fixedResolution
+      );
+      this.width = size.width;
+      this.height = size.height;
+      this.viewportWidth = size.viewportWidth;
+      this.viewportHeight = size.viewportHeight;
+      // Internal pixels per displayed CSS pixel under object-fit: contain.
+      this.pixelRatio = Math.max(
+        size.width / size.viewportWidth,
+        size.height / size.viewportHeight
+      );
+      this.contentOffsetX =
+        (size.viewportWidth - size.width / this.pixelRatio) / 2;
+      this.contentOffsetY =
+        (size.viewportHeight - size.height / this.pixelRatio) / 2;
+      return;
+    }
+
+    this.contentOffsetX = 0;
+    this.contentOffsetY = 0;
     this.pixelRatio = resolveDpr(this.options.dpr, this.options.maxDpr);
     const size = resizeCanvasToTarget(
       this.dom.canvas,
@@ -266,8 +380,22 @@ class RuntimeHost implements RuntimeHostInstance {
     this.viewportHeight = size.viewportHeight;
   }
 
+  // Letterbox the fixed-resolution canvas instead of stretching it.
+  private applyObjectFit(): void {
+    if (!this.dom) return;
+    const style = this.dom.canvas.style;
+    if (this.fixedResolution && this.objectFitRestore === null) {
+      this.objectFitRestore = style.objectFit ?? "";
+      style.objectFit = "contain";
+    } else if (!this.fixedResolution && this.objectFitRestore !== null) {
+      style.objectFit = this.objectFitRestore;
+      this.objectFitRestore = null;
+    }
+  }
+
   private scheduleFrame(): void {
-    if (this.rafId || this.options.renderMode === "demand") return;
+    if (this.rafId || this.options.renderMode === "demand" || this.isManual)
+      return;
 
     this.rafId = requestAnimationFrame((timestamp) => {
       this.rafId = 0;
@@ -302,11 +430,16 @@ class RuntimeHost implements RuntimeHostInstance {
       ...(this.options.canvas !== undefined && { canvas: this.options.canvas }),
       ...(this.options.layer !== undefined && { layer: this.options.layer }),
       ...(this.options.canvasClass !== undefined && { canvasClass: this.options.canvasClass }),
-      ...(this.options.canvasStyle !== undefined && { canvasStyle: this.options.canvasStyle })
+      ...(this.options.canvasStyle !== undefined && { canvasStyle: this.options.canvasStyle }),
+      detached: this.fixedResolution !== null
     });
 
     if (!this.dom) {
-      this.failUnsupported(new TargetNotFoundError("Target or canvas not found."));
+      this.failUnsupported(
+        new TargetNotFoundError(
+          "Target or canvas not found. Pass `resolution` to render without a target."
+        )
+      );
       return;
     }
 
@@ -326,10 +459,25 @@ class RuntimeHost implements RuntimeHostInstance {
       return;
     }
 
+    if (this.fixedResolution) {
+      try {
+        assertWithinLimits(gl, this.fixedResolution);
+      } catch (error) {
+        this.failUnsupported(
+          error instanceof Error ? error : new UnsupportedError(String(error))
+        );
+        return;
+      }
+      if (this.options.dpr !== undefined || this.options.maxDpr !== undefined) {
+        this.debugWarn("`dpr` and `maxDpr` are ignored while `resolution` is set.");
+      }
+    }
+
     this.context = gl;
     this.currentStatus = "loading";
 
     try {
+      this.applyObjectFit();
       this.setupDomObservers();
       this.setupContextEvents();
       this.measureSize();
@@ -341,7 +489,7 @@ class RuntimeHost implements RuntimeHostInstance {
 
       if (this.running || (this.options.autoStart ?? true)) {
         this.start();
-      } else if (this.options.renderMode === "demand") {
+      } else if (this.shouldRenderOnDemand) {
         this.render();
       }
     } catch (error) {
@@ -351,15 +499,18 @@ class RuntimeHost implements RuntimeHostInstance {
 
   private setupDomObservers(): void {
     if (!this.dom) return;
+    const detached = this.dom.detached === true;
 
-    if (this.options.autoResize ?? true) {
+    // A detached canvas has no layout: it can never be measured, scrolled into
+    // view or pointed at, so only document-level observers apply.
+    if (!detached && (this.options.autoResize ?? true)) {
       this.resizeObserver = new ResizeObserver(() => {
         this.resize();
       });
       this.resizeObserver.observe(this.dom.target);
     }
 
-    if (this.options.pauseWhenOffscreen ?? true) {
+    if (!detached && (this.options.pauseWhenOffscreen ?? true)) {
       this.intersectionObserver = new IntersectionObserver((entries) => {
         const entry = entries[0];
         this.setGate("offscreen", !entry?.isIntersecting);
@@ -380,23 +531,32 @@ class RuntimeHost implements RuntimeHostInstance {
 
     this.setupMotionObserver();
 
+    if (detached) return;
+
     const onPointerMove = (event: Event) => {
       if (!this.dom) return;
       const pointerEvent = event as PointerEvent;
       const rect = this.dom.target.getBoundingClientRect();
-      const x = pointerEvent.clientX - rect.left;
-      const y = pointerEvent.clientY - rect.top;
+      const x = pointerEvent.clientX - rect.left - this.contentOffsetX;
+      const y = pointerEvent.clientY - rect.top - this.contentOffsetY;
+      // Displayed content size in CSS px (smaller than rect when letterboxed).
+      const contentWidth = this.fixedResolution
+        ? this.width / this.pixelRatio
+        : rect.width;
+      const contentHeight = this.fixedResolution
+        ? this.height / this.pixelRatio
+        : rect.height;
       this.pointer.x = x * this.pixelRatio;
-      this.pointer.y = (rect.height - y) * this.pixelRatio;
-      this.pointer.uvX = rect.width > 0 ? x / rect.width : 0;
-      this.pointer.uvY = rect.height > 0 ? 1 - y / rect.height : 0;
+      this.pointer.y = (contentHeight - y) * this.pixelRatio;
+      this.pointer.uvX = contentWidth > 0 ? x / contentWidth : 0;
+      this.pointer.uvY = contentHeight > 0 ? 1 - y / contentHeight : 0;
       this.pointer.active = 1;
 
-      if (this.options.renderMode === "demand") this.render();
+      if (this.shouldRenderOnDemand) this.render();
     };
     const onPointerLeave = () => {
       this.pointer.active = 0;
-      if (this.options.renderMode === "demand") this.render();
+      if (this.shouldRenderOnDemand) this.render();
     };
 
     this.dom.target.addEventListener("pointermove", onPointerMove);
@@ -422,7 +582,7 @@ class RuntimeHost implements RuntimeHostInstance {
       this.reducedMotionActive = event.matches;
       if (this.options.respectReducedMotion) {
         this.setGate("reducedMotion", event.matches);
-      } else if (this.options.renderMode === "demand") {
+      } else if (this.shouldRenderOnDemand) {
         this.render();
       }
     };
@@ -456,7 +616,7 @@ class RuntimeHost implements RuntimeHostInstance {
         try {
           await this.options.onContextRestored?.(gl, this.width, this.height);
           if (this.contextRestoredShouldRun) this.start();
-          else this.render();
+          else if (!this.isManual) this.render();
         } catch (error) {
           this.fail(error instanceof Error ? error : new Error(String(error)));
         }
@@ -492,3 +652,39 @@ class RuntimeHost implements RuntimeHostInstance {
     }
   }
 }
+
+const normalizeResolution = (resolution: Resolution): Resolution => {
+  const [width, height] = resolution;
+  if (
+    !Number.isFinite(width) ||
+    !Number.isFinite(height) ||
+    width < 1 ||
+    height < 1
+  ) {
+    throw new RangeError(`Invalid resolution: ${width}x${height}`);
+  }
+  return [Math.round(width), Math.round(height)];
+};
+
+const assertWithinLimits = (gl: GLContext, resolution: Resolution): void => {
+  const [width, height] = resolution;
+  const viewportDims = gl.getParameter(gl.MAX_VIEWPORT_DIMS) as
+    | ArrayLike<number>
+    | null;
+  const renderbufferSize = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as
+    | number
+    | null;
+  const limit = (axis: 0 | 1): number =>
+    Math.min(
+      viewportDims?.[axis] ?? Number.POSITIVE_INFINITY,
+      typeof renderbufferSize === "number"
+        ? renderbufferSize
+        : Number.POSITIVE_INFINITY
+    );
+
+  if (width > limit(0) || height > limit(1)) {
+    throw new UnsupportedError(
+      `Resolution ${width}x${height} exceeds this GPU's limit of ${limit(0)}x${limit(1)}.`
+    );
+  }
+};

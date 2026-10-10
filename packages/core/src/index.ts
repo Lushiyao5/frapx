@@ -33,6 +33,8 @@ export type {
   GLContext,
   ShaderLayer,
   RenderMode,
+  ClockMode,
+  Resolution,
   DprOption,
   ShaderStatus,
   TextureSource,

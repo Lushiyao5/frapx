@@ -1,10 +1,19 @@
-import type { DprOption, SetupCanvasOptions } from "../types";
+import type { DprOption, Resolution, SetupCanvasOptions } from "../types";
 
 export type DomSetup = {
   target: Element;
   canvas: HTMLCanvasElement;
   createdCanvas: boolean;
   restoredPosition: string | null;
+  /** True when the canvas was created without being attached to the document. */
+  detached?: boolean;
+};
+
+export type CanvasSize = {
+  width: number;
+  height: number;
+  viewportWidth: number;
+  viewportHeight: number;
 };
 
 export const resolveElement = (
@@ -20,7 +29,17 @@ export const setupCanvas = (options: SetupCanvasOptions): DomSetup | null => {
   const canvas = options.canvas ?? document.createElement("canvas");
   const measurementTarget = target ?? options.canvas;
 
-  if (!measurementTarget) return null;
+  if (!measurementTarget) {
+    if (!options.detached) return null;
+    canvas.dataset.frapxCanvas = "";
+    return {
+      target: canvas,
+      canvas,
+      createdCanvas: true,
+      restoredPosition: null,
+      detached: true
+    };
+  }
 
   const createdCanvas = !options.canvas;
   const restoredPosition =
@@ -78,17 +97,38 @@ export const resizeCanvasToTarget = (
   canvas: HTMLCanvasElement,
   target: Element,
   dpr: number
-): {
-  width: number;
-  height: number;
-  viewportWidth: number;
-  viewportHeight: number;
-} => {
+): CanvasSize => {
   const rect = target.getBoundingClientRect();
   const viewportWidth = Math.max(1, rect.width || canvas.clientWidth || 1);
   const viewportHeight = Math.max(1, rect.height || canvas.clientHeight || 1);
   const width = Math.max(1, Math.round(viewportWidth * dpr));
   const height = Math.max(1, Math.round(viewportHeight * dpr));
+
+  if (canvas.width !== width) canvas.width = width;
+  if (canvas.height !== height) canvas.height = height;
+
+  return { width, height, viewportWidth, viewportHeight };
+};
+
+/**
+ * Sizes the canvas to a fixed internal resolution. The viewport size still
+ * comes from the target so `u_viewportSize` reflects the displayed size; a
+ * detached canvas has no layout, so its viewport equals the resolution.
+ */
+export const resizeCanvasToResolution = (
+  canvas: HTMLCanvasElement,
+  target: Element | null,
+  resolution: Resolution
+): CanvasSize => {
+  const [width, height] = resolution;
+  let viewportWidth = width;
+  let viewportHeight = height;
+
+  if (target) {
+    const rect = target.getBoundingClientRect();
+    viewportWidth = Math.max(1, rect.width || canvas.clientWidth || 1);
+    viewportHeight = Math.max(1, rect.height || canvas.clientHeight || 1);
+  }
 
   if (canvas.width !== width) canvas.width = width;
   if (canvas.height !== height) canvas.height = height;
