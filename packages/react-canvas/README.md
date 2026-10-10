@@ -96,6 +96,28 @@ ref.current?.setUniform("intensity", 1);
 The handle forwards commands to the latest shader instance, so it remains useful
 when React recreates the underlying runtime.
 
+### Deterministic rendering
+
+`clock` and `resolution` are passed like other options, but changing them
+switches the existing instance in place (`setClock` / `setResolution`) instead
+of recreating it. `resolution` is compared by value, so an inline array literal
+is fine. The handle also exposes `setTime`, `setClock` and `setResolution`:
+
+```tsx
+<ShaderBackground
+  ref={ref}
+  fragment={fragment}
+  clock="manual"
+  resolution={[1920, 1080]}
+/>;
+
+ref.current?.setTime(2);
+ref.current?.render();
+```
+
+See the `@frapx/fx-canvas` README ("Deterministic Rendering") for the
+semantics.
+
 ## Notes
 
 - React 18 and newer are supported.

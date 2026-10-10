@@ -162,6 +162,27 @@ export const useShaderBackground = <
     );
   }, [options.textures]);
 
+  // clock and resolution switch in place instead of recreating the instance.
+  const clock = options.clock ?? "realtime";
+  useEffect(() => {
+    instanceRef.current?.setClock(clock);
+  }, [clock]);
+
+  // Compared by value so an inline array literal does not re-apply every render.
+  const resolutionKey = options.resolution
+    ? `${options.resolution[0]}x${options.resolution[1]}`
+    : null;
+  useEffect(() => {
+    const fx = instanceRef.current;
+    if (!fx) return;
+    try {
+      fx.setResolution(latestOptionsRef.current.resolution ?? null);
+    } catch (nextError) {
+      setError(toError(nextError));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolutionKey]);
+
   return { ref, instance, status, error };
 };
 

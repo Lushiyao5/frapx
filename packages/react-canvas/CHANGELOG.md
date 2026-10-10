@@ -1,10 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `clock` and `resolution` props / hook options. Changing either switches the existing instance in place (`setClock` / `setResolution`) instead of recreating it; `resolution` is compared by value.
+- `setTime`, `setClock` and `setResolution` on the `ShaderBackground` imperative handle.
+
 ## 0.4.0 - 2026-07-12
 
 ### Changed
 
 - **Breaking: package renamed from `@frapx/shader-react` to `@frapx/react-canvas`**, following the `@frapx/shader` → `@frapx/fx-canvas` rename. No API changes. `@frapx/shader-react` is deprecated on npm and will not receive further updates.
+
+### Added
+
+- _Correction (noted after release):_ this version also shipped the `onResize` prop / hook option, forwarded without recreating the instance, which the entry above omitted.
 
 ## 0.3.0 - 2026-06-22
 
