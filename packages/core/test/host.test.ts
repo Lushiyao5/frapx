@@ -124,6 +124,7 @@ beforeEach(() => {
     get hidden() {
       return documentHidden;
     },
+    querySelector: () => null,
     createElement: () => {
       const canvas = new Canvas();
       createdElements.push(canvas);
@@ -501,6 +502,18 @@ describe("detached canvas", () => {
     const { host } = createDetached({ resolution: [64, 64] });
     await host.ready;
     expect(() => host.setResolution(null)).toThrow(TypeError);
+  });
+
+  it("fails when a given target does not resolve, even with a resolution", async () => {
+    const onError = vi.fn();
+    const { host } = createDetached({
+      target: ".missing",
+      resolution: [64, 64],
+      onError
+    });
+    await expect(host.ready).rejects.toBeInstanceOf(TargetNotFoundError);
+    expect(host.status).toBe("unsupported");
+    expect(onError).toHaveBeenCalledWith(expect.any(TargetNotFoundError));
   });
 
   it("still fails without a target when no resolution is given", async () => {

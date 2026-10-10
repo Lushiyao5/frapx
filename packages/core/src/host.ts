@@ -483,7 +483,12 @@ class RuntimeHost implements RuntimeHostInstance {
       ...(this.options.layer !== undefined && { layer: this.options.layer }),
       ...(this.options.canvasClass !== undefined && { canvasClass: this.options.canvasClass }),
       ...(this.options.canvasStyle !== undefined && { canvasStyle: this.options.canvasStyle }),
-      detached: this.fixedResolution !== null
+      // Only a missing target/canvas may fall back to a detached canvas; a
+      // target that fails to resolve must still report TargetNotFoundError.
+      detached:
+        this.fixedResolution !== null &&
+        this.options.target === undefined &&
+        this.options.canvas === undefined
     });
 
     if (!this.dom) {
