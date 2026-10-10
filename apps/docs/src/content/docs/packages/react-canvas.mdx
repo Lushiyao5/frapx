@@ -81,13 +81,14 @@ ref.current?.setUniform("intensity", 1);
 
 `clock` and `resolution` are props like any other option, but changing them
 switches the existing instance in place instead of recreating it. The handle
-exposes `setTime`, `setClock` and `setResolution`:
+exposes `setTime`, `setClock`, `setResolution`, `captureFrame` and
+`resetFeedback`:
 
 ```tsx
 <ShaderBackground ref={ref} fragment={fragment} clock="manual" resolution={[1920, 1080]} />;
 
 ref.current?.setTime(2);
-ref.current?.render();
+const png = await ref.current?.captureFrame();
 ```
 
 ## Notes

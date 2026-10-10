@@ -42,7 +42,7 @@ createShaderBackground({
 - **Built-in uniforms** — `u_time`, `u_delta`, `u_resolution`, `u_viewportSize`, `u_pixelRatio`, `u_pointer`, `u_pointerUv`, `u_pointerActive`, `u_reducedMotion`.
 - **WebGL1 and WebGL2** — start your fragment with `#version 300 es` to opt into GLSL ES 3.00; everything else stays WebGL1 by default.
 - **Textures** — image URL / `HTMLImageElement` / `HTMLCanvasElement` sources, with runtime updates via `setTexture()` / `setTextures()`.
-- **Feedback** — `feedback: true` gives you a managed ping-pong framebuffer exposed as `u_previousFrame` for effects that need to read the previous frame.
+- **Feedback** — `feedback: true` gives you a managed ping-pong framebuffer exposed as `u_previousFrame` for effects that need to read the previous frame. `feedback: { format: "rgba16f" }` uses half-float buffers on WebGL2 for accumulation without banding.
 - **Deterministic rendering** — `clock: "manual"` + `setTime()` / `render()` draws exactly when you ask, and `resolution` fixes the render size, for frame-accurate output such as video frames.
 
 ## Deterministic rendering
@@ -56,8 +56,8 @@ const fx = createShaderBackground({
 });
 await fx.ready;
 
-fx.setTime(1.5); // sets u_time only
-fx.render();     // draws now, even offscreen or in a hidden tab
+fx.setTime(1.5);                     // sets u_time only
+const png = await fx.captureFrame(); // draws now and returns a PNG Blob
 ```
 
 Under a manual clock nothing renders on its own, offscreen/hidden/reduced-motion
@@ -67,8 +67,20 @@ time and uniforms always produce the same pixels. `setClock()` switches between
 changes or releases the fixed size. With `resolution` set, the canvas is
 letterboxed (`object-fit: contain`) and `u_pixelRatio` is derived from the
 internal and displayed sizes. Passing neither `target` nor `canvas` renders into
-a detached canvas. Read pixels in the same task as `render()`, since the
-drawing buffer is not preserved.
+a detached canvas.
+
+`captureFrame()` draws and reads back in the same task, since the drawing buffer
+is not preserved. It returns a PNG `Blob` by default, or raw top-row-first RGBA
+with `{ format: "rgba8" }` (`Uint8Array`) and `{ format: "rgba16f" }`
+(`Float32Array`, read from float feedback buffers).
+
+### Float feedback
+
+`feedback: { format: "rgba16f" }` needs WebGL2 with `EXT_color_buffer_float`
+and requests a WebGL2 context even for GLSL ES 1.00 shaders. When float buffers
+are unavailable it warns and uses `rgba8`; `formatFallback: false` makes that an
+`UnsupportedError` instead. `fx.feedbackFormat` reports what was allocated, and
+`fx.resetFeedback()` clears the history.
 
 ## Instance API
 
@@ -82,6 +94,9 @@ fx.destroy();
 fx.setTime(2.5);
 fx.setClock("manual");
 fx.setResolution([1920, 1080]);
+await fx.captureFrame({ format: "png" });
+fx.feedbackFormat;
+fx.resetFeedback();
 fx.setUniform("progress", 0.5);
 fx.setUniforms({ progress: 0.5, color: [1, 0, 0] });
 await fx.setTexture("image", "/next-hero.webp");
