@@ -11,6 +11,7 @@ released, tagged, and documented on its own.
 | `@frapx/react-canvas` | `packages/react-canvas` | `@frapx/react-canvas@0.4.0` | Depends on `@frapx/fx-canvas`. Publish after it. |
 | `@frapx/glsl-noise` | `packages/glsl-noise` | `@frapx/glsl-noise@0.2.0` | |
 | `@frapx/glsl-flowmap` | `packages/glsl-flowmap` | `@frapx/glsl-flowmap@0.4.0` | |
+| `@frapx/glsl-sdf` | `packages/glsl-sdf` | `@frapx/glsl-sdf@0.1.0` | Not yet published. |
 | `@frapx/core` | `packages/core` | `@frapx/core@0.2.0` | Shared runtime. Publish before `@frapx/fx-canvas`. |
 
 These packages were renamed on 2026-07-12 (formerly `@frapx/runtime`, `@frapx/shader`,
@@ -62,6 +63,7 @@ Each public package owns its changelog:
 - `packages/react-canvas/CHANGELOG.md`
 - `packages/glsl-noise/CHANGELOG.md`
 - `packages/glsl-flowmap/CHANGELOG.md`
+- `packages/glsl-sdf/CHANGELOG.md`
 
 Use this format:
 

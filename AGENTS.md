@@ -16,6 +16,7 @@
 - The React binding package is `@frapx/react-canvas` in `packages/react-canvas`.
 - The optional 3D noise helper package is `@frapx/glsl-noise` in `packages/glsl-noise`.
 - The optional flowmap helper package is `@frapx/glsl-flowmap` in `packages/glsl-flowmap`.
+- The optional signed distance function package is `@frapx/glsl-sdf` in `packages/glsl-sdf`.
 - The example app is `@frapx/example-vite-basic` in `examples/vite-basic`.
 - Prefer the repository's established patterns over adding new abstractions.
 
@@ -45,7 +46,7 @@
   - `core` — the shared internal WebGL runtime host (`@frapx/core`). Not installed directly by end users.
   - `fx-<name>` — an effect runtime users instantiate directly, e.g. `@frapx/fx-canvas`, future `@frapx/fx-particles`.
   - `react-<name>` — the React binding for an `fx-<name>` package, e.g. `@frapx/react-canvas`, future `@frapx/react-particles`.
-  - `glsl-<name>` — a GLSL snippet package meant to be concatenated into a fragment shader string, e.g. `@frapx/glsl-noise`, `@frapx/glsl-flowmap`, future `@frapx/glsl-sdf`.
+  - `glsl-<name>` — a GLSL snippet package meant to be concatenated into a fragment shader string, e.g. `@frapx/glsl-noise`, `@frapx/glsl-flowmap`, `@frapx/glsl-sdf`.
 - Core must not depend on extension packages.
 - Extension packages may depend on or peer with `@frapx/fx-canvas` when they need shared helpers or types.
 - Small, broadly useful GLSL helpers may be added to `@frapx/fx-canvas/glsl`, but avoid turning core into a large shader snippet library.

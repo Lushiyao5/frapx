@@ -18,6 +18,7 @@ Packages are named by category, so the prefix tells you what kind of package it 
 **GLSL snippets** — string-concatenate into your own fragment shader:
 - [`@frapx/glsl-noise`](./packages/glsl-noise) - Lightweight GLSL 3D noise helpers.
 - [`@frapx/glsl-flowmap`](./packages/glsl-flowmap) - GLSL flowmap decode/distortion helpers.
+- [`@frapx/glsl-sdf`](./packages/glsl-sdf) - GLSL 2D/3D signed distance functions and operators.
 
 **Internal engine** — not installed directly; pulled in automatically as a dependency:
 - [`@frapx/core`](./packages/core) - Shared WebGL runtime host used internally by `@frapx/fx-canvas`.
@@ -55,6 +56,7 @@ Run a specific example with a workspace filter:
 ```sh
 pnpm --filter @frapx/example-vite-basic dev
 pnpm --filter @frapx/example-vite-feedback dev
+pnpm --filter @frapx/example-vite-sdf dev
 pnpm --filter @frapx/example-vite-react dev
 ```
 
