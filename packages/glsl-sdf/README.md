@@ -59,7 +59,7 @@ Conventions:
 - `frapx_opSubtract(a, b)` removes `b` from `a`. Smooth operators take a blend radius `k` that must be greater than 0.
 - 2D and 3D versions share a name and differ by argument type, for example `frapx_sdBox(vec2, vec2)` and `frapx_sdBox(vec3, vec3)`.
 - Rotate a 3D point about one axis by rotating a swizzle: `p.xz = frapx_rotate(p.xz, angle)`.
-- `frapx_sdEllipsoid` returns a bound rather than an exact distance. `frapx_opTwist` and `frapx_opBend` distort space, so shorten raymarching steps (for example, multiply the distance by 0.7) when using them.
+- `frapx_sdEllipsoid` returns a bound rather than an exact distance. `frapx_opTwist` and `frapx_opBend` distort space, so shorten raymarching steps (for example, multiply the distance by 0.5) when using them.
 
 ## Notes
 
