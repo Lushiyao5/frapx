@@ -180,7 +180,6 @@ export const useShaderBackground = <
     } catch (nextError) {
       setError(toError(nextError));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolutionKey]);
 
   return { ref, instance, status, error };
