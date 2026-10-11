@@ -2,7 +2,7 @@
 
 GLSL signed distance functions for `@frapx/fx-canvas`: 2D and 3D primitives, smooth booleans and domain operators.
 
-Like `@frapx/glsl-noise`, this package exports plain GLSL strings to concatenate into your own fragment shader. It contains no raymarching loop or lighting; those will live in `@frapx/glsl-raymarch`.
+Like `@frapx/glsl-noise`, this package exports plain GLSL strings to concatenate into your own fragment shader. It contains no raymarching loop or lighting; for the loop, normals, shadows and camera rays, see [`@frapx/glsl-raymarch`](../glsl-raymarch).
 
 ## Install
 
@@ -38,7 +38,7 @@ createShaderBackground({
 });
 ```
 
-For 3D, include `sdf3d` and evaluate it from your own raymarching loop. See `examples/vite-sdf` for a 2D field and a raymarched 3D scene.
+For 3D, include `sdf3d` and evaluate it from your own raymarching loop or from `@frapx/glsl-raymarch`. See `examples/vite-sdf` for a 2D field and a raymarched 3D scene.
 
 ## Exports
 

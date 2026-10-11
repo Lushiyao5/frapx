@@ -37,8 +37,9 @@ never need to guess:
 		Plain GLSL source strings you concatenate into your **own** fragment
 		shader — not a runtime, no instantiation. **[`@frapx/glsl-noise`](/frapx/packages/glsl-noise/)**
 		(3D noise), **[`@frapx/glsl-flowmap`](/frapx/packages/glsl-flowmap/)**
-		(flowmap decode/advection) and **[`@frapx/glsl-sdf`](/frapx/packages/glsl-sdf/)**
-		(2D/3D signed distance functions) are available today.
+		(flowmap decode/advection), **[`@frapx/glsl-sdf`](/frapx/packages/glsl-sdf/)**
+		(2D/3D signed distance functions) and **[`@frapx/glsl-raymarch`](/frapx/packages/glsl-raymarch/)**
+		(raymarching loop, shadows and camera rays) are available today.
 	</Card>
 	<Card title="core — internal engine" icon="setting">
 		**[`@frapx/core`](/frapx/packages/core/)** is the shared WebGL lifecycle
@@ -55,7 +56,8 @@ never need to guess:
 | Add the same, but I'm in a React app | `@frapx/fx-canvas` + `@frapx/react-canvas` |
 | Add turbulence/grain to my own fragment shader | `@frapx/glsl-noise` (needs `@frapx/fx-canvas` or your own GL setup) |
 | Distort a texture with a painted flowmap | `@frapx/glsl-flowmap` (WebGL2 / GLSL ES 3.00) |
-| Draw shapes or raymarch a 3D scene with signed distance functions | `@frapx/glsl-sdf` |
+| Draw shapes with signed distance functions | `@frapx/glsl-sdf` |
+| Raymarch a 3D scene with shadows, occlusion and a camera | `@frapx/glsl-raymarch` + `@frapx/glsl-sdf` |
 | Build a *different* effect runtime (not a background shader) | Nothing yet — see the [roadmap](https://github.com/kramhash/frapx) for `@frapx/fx-particles` |
 
 Still not sure? Start with [Getting Started](/frapx/getting-started/) — it

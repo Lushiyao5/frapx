@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Frapx Raymarch Example</title>
+  </head>
+  <body>
+    <main class="app">
+      <header class="bar">
+        <div>
+          <p class="eyebrow">Example</p>
+          <h1>Raymarching</h1>
+        </div>
+        <div class="controls">
+          <label class="control">
+            <span>
+              <span>Field of view</span>
+              <output data-fov-output>45°</output>
+            </span>
+            <input data-fov type="range" min="20" max="100" step="1" value="45" />
+          </label>
+          <label class="control">
+            <span>
+              <span>Shadow hardness</span>
+              <output data-shadow-output>16</output>
+            </span>
+            <input data-shadow type="range" min="2" max="64" step="1" value="16" />
+          </label>
+          <label class="control">
+            <span>
+              <span>Occlusion radius</span>
+              <output data-ao-output>0.30</output>
+            </span>
+            <input data-ao type="range" min="0.02" max="1" step="0.01" value="0.3" />
+          </label>
+        </div>
+      </header>
+      <section class="panel" data-panel>
+        <span class="tag">Drag to orbit</span>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
