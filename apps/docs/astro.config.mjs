@@ -32,6 +32,7 @@ export default defineConfig({
             { label: "@frapx/glsl-flowmap", slug: "packages/glsl-flowmap" },
             { label: "@frapx/glsl-sdf", slug: "packages/glsl-sdf" },
             { label: "@frapx/glsl-raymarch", slug: "packages/glsl-raymarch" },
+            { label: "@frapx/tool-capture", slug: "packages/tool-capture" },
             { label: "@frapx/core", slug: "packages/core" },
           ],
         },

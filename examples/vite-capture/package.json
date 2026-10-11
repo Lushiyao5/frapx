@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@frapx/fx-canvas": "workspace:*"
+    "@frapx/fx-canvas": "workspace:*",
+    "@frapx/tool-capture": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.8.3",

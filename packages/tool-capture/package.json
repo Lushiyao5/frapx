@@ -1,0 +1,45 @@
+{
+  "name": "@frapx/tool-capture",
+  "version": "0.1.0",
+  "description": "Browser frame export for @frapx/fx-canvas — deterministic PNG sequences (8-bit or 16-bit) written to a folder or a ZIP, with no dependencies.",
+  "keywords": [
+    "webgl",
+    "shader",
+    "capture",
+    "export",
+    "png-sequence",
+    "16-bit-png",
+    "zip"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@frapx/fx-canvas": "workspace:*"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kramhash/frapx.git",
+    "directory": "packages/tool-capture"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

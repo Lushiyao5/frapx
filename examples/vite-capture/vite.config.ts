@@ -3,7 +3,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   resolve: {
-    // Resolve all @frapx/fx-canvas subpaths to source so the example reflects edits
+    // Resolve @frapx packages to source so the example reflects edits
     // without a rebuild. Wildcard avoids per-export drift (e.g. /color, /glsl).
     alias: [
       {
@@ -21,6 +21,10 @@ export default defineConfig({
       {
         find: /^@frapx\/fx-canvas\/(.*)$/,
         replacement: resolve(__dirname, "../../packages/fx-canvas/src/$1.ts")
+      },
+      {
+        find: /^@frapx\/tool-capture$/,
+        replacement: resolve(__dirname, "../../packages/tool-capture/src/index.ts")
       }
     ]
   }

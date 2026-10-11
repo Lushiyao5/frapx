@@ -61,7 +61,7 @@ Uniforms set before `ready` are cached and applied on the first render.
 
 - `examples/vite-basic` - minimal Vite usage and integration checks.
 - `examples/vite-feedback` - interactive previous-frame feedback demo.
-- `examples/vite-capture` - raymarched scene exported as a 4K PNG sequence with `clock: "manual"` and `captureFrame()`.
+- `examples/vite-capture` - raymarched scene exported as a 4K PNG sequence with `clock: "manual"`, `captureFrame()` and `@frapx/tool-capture`.
 - `examples/vite-react` - React binding example.
 
 ## Color Uniforms
