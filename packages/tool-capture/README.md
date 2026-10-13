@@ -1,6 +1,6 @@
 # @frapx/tool-capture
 
-Browser frame export for `@frapx/fx-canvas`: render a deterministic PNG sequence (8-bit, or 16-bit from a float buffer) and write it to a folder or a single ZIP. No dependencies.
+Browser frame export for `@frapx/fx-canvas` and `@frapx/fx-passes`: render a deterministic PNG sequence (8-bit, or 16-bit from a float buffer) and write it to a folder or a single ZIP. No dependencies.
 
 It drives an instance through `setTime()` and `captureFrame()`, so frame `n` always shows the scene at `n / fps` seconds no matter how slow the GPU is. Video encoding (WebCodecs + a muxer) is planned for a later version.
 
@@ -90,7 +90,7 @@ Renders frames `startFrame` to `startFrame + frameCount - 1` and writes each one
 
 `u_delta` is `1 / fps` on every frame, including the first. When an export fails or is aborted, the sink's `abort()` runs and the promise rejects; frames already written to a folder stay there.
 
-The target only needs `ready`, `canvas`, `clock`, `setClock()`, `setTime()`, `captureFrame()` and optionally `resetFeedback()` (the `CaptureTarget` type). A `@frapx/fx-canvas` instance fits as is; this package does not depend on it.
+The target only needs `ready`, `canvas`, `clock`, `setClock()`, `setTime()`, `captureFrame()` and optionally `resetFeedback()` (the `CaptureTarget` type). `@frapx/fx-canvas` and `@frapx/fx-passes` instances fit as is; this package depends on neither. The export's `signal` is passed to `captureFrame()`, so an fx-passes frame accumulating many samples stops between samples.
 
 ### Sinks
 

@@ -9,6 +9,7 @@ on:
       - "apps/flowmap-painter/**"
       - "packages/core/**"
       - "packages/fx-canvas/**"
+      - "packages/fx-passes/**"
       - "packages/react-canvas/**"
       - "packages/glsl-flowmap/**"
       - "packages/glsl-noise/**"

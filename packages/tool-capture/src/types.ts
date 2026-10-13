@@ -12,8 +12,8 @@ export type FrameSink<TResult = void> = {
 export type ClockMode = "realtime" | "manual";
 
 /**
- * What `captureSequence()` drives. A `@frapx/fx-canvas` instance satisfies it
- * as is; the package itself is not a dependency.
+ * What `captureSequence()` drives. `@frapx/fx-canvas` and `@frapx/fx-passes`
+ * instances satisfy it as is; neither package is a dependency.
  */
 export type CaptureTarget = {
   readonly ready: Promise<void>;
@@ -21,8 +21,15 @@ export type CaptureTarget = {
   readonly clock: ClockMode;
   setClock(clock: ClockMode): void;
   setTime(seconds: number): void;
-  /** `"png"` resolves to a `Blob`, `"rgba16f"` to RGBA floats, top row first. */
-  captureFrame(options: { format: "png" | "rgba16f" }): Promise<Blob | Float32Array>;
+  /**
+   * `"png"` resolves to a `Blob`, `"rgba16f"` to RGBA floats, top row first.
+   * Receives the export's `signal`, so a frame drawn over several tasks (such
+   * as fx-passes sample accumulation) can stop part-way.
+   */
+  captureFrame(options: {
+    format: "png" | "rgba16f";
+    signal?: AbortSignal;
+  }): Promise<Blob | Float32Array>;
   resetFeedback?(): void;
 };
 

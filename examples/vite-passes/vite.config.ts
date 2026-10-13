@@ -10,6 +10,6 @@ const source = (name: string) => ({
 
 export default defineConfig({
   resolve: {
-    alias: [source("core"), source("fx-canvas"), source("fx-passes")]
+    alias: [source("core"), source("fx-canvas"), source("fx-passes"), source("tool-capture")]
   }
 });

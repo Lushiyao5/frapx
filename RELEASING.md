@@ -13,6 +13,7 @@ released, tagged, and documented on its own.
 | `@frapx/glsl-flowmap` | `packages/glsl-flowmap` | `@frapx/glsl-flowmap@0.4.0` | |
 | `@frapx/glsl-sdf` | `packages/glsl-sdf` | `@frapx/glsl-sdf@0.1.0` | |
 | `@frapx/glsl-raymarch` | `packages/glsl-raymarch` | `@frapx/glsl-raymarch@0.1.0` | |
+| `@frapx/fx-passes` | `packages/fx-passes` | `@frapx/fx-passes@0.1.0` | Depends on `@frapx/core`. Publish after it. |
 | `@frapx/tool-capture` | `packages/tool-capture` | `@frapx/tool-capture@0.1.0` | Browser export tool. Structurally typed; no runtime dependency on `@frapx/fx-canvas`. |
 | `@frapx/core` | `packages/core` | `@frapx/core@0.2.0` | Shared runtime. Publish before `@frapx/fx-canvas`. |
 
@@ -72,6 +73,7 @@ Each public package owns its changelog:
 - `packages/glsl-sdf/CHANGELOG.md`
 - `packages/glsl-raymarch/CHANGELOG.md`
 - `packages/tool-capture/CHANGELOG.md`
+- `packages/fx-passes/CHANGELOG.md`
 
 Use this format:
 

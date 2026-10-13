@@ -1,11 +1,14 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { createShaderBackground } from "@frapx/fx-canvas";
+import type { captureSequence, createZipSink } from "@frapx/tool-capture";
 import type { createPasses } from "../src";
 
 type Win = typeof window & {
   __frapx: {
     createPasses: typeof createPasses;
     createShaderBackground: typeof createShaderBackground;
+    captureSequence: typeof captureSequence;
+    createZipSink: typeof createZipSink;
   };
 };
 
@@ -500,4 +503,39 @@ test("refinement finishes a frame whose capture was aborted", async ({ page }) =
     return value;
   }, sampleIndexShader);
   expect(drawn).toBe(6);
+});
+
+test("exports accumulated frames with tool-capture's captureSequence", async ({ page }) => {
+  await open(page);
+  const result = await page.evaluate(async (fragment) => {
+    const { createPasses, captureSequence, createZipSink } = (window as Win).__frapx;
+    const sampleCounts: number[] = [];
+    const fx = createPasses({
+      resolution: [16, 8],
+      accumulation: { samples: 8, shutter: 0.5, fps: 24 },
+      passes: [{ name: "image", fragment, accumulate: true, format: "rgba32f" }],
+      uniforms: { level: 0.5 },
+      onSample: ({ drawn, capturing }) => {
+        if (capturing && drawn === 8) sampleCounts.push(drawn);
+      }
+    });
+    const zip = await captureSequence(fx, {
+      sink: createZipSink(),
+      fps: 24,
+      frameCount: 3,
+      format: "png16"
+    });
+    const bytes = new Uint8Array(await zip.arrayBuffer());
+    let entries = 0;
+    for (let i = 0; i + 3 < bytes.length; i++) {
+      if (bytes[i] === 0x50 && bytes[i + 1] === 0x4b && bytes[i + 2] === 3 && bytes[i + 3] === 4) entries++;
+    }
+    const clock = fx.clock;
+    fx.destroy();
+    return { entries, sampleCounts, clock };
+  }, sampleIndexShader);
+  expect(result.entries).toBe(3);
+  expect(result.sampleCounts).toEqual([8, 8, 8]);
+  // captureSequence restores the realtime clock it found.
+  expect(result.clock).toBe("realtime");
 });

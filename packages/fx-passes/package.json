@@ -33,6 +33,10 @@
   "dependencies": {
     "@frapx/core": "workspace:^"
   },
+  "devDependencies": {
+    "@frapx/fx-canvas": "workspace:*",
+    "@frapx/tool-capture": "workspace:*"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",

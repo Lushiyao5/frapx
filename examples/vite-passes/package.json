@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@frapx/fx-canvas": "workspace:*",
-    "@frapx/fx-passes": "workspace:*"
+    "@frapx/fx-passes": "workspace:*",
+    "@frapx/tool-capture": "workspace:*"
   },
   "devDependencies": {
     "vite": "^6.3.5",

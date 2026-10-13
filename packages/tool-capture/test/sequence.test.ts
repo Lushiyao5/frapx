@@ -169,6 +169,26 @@ describe("captureSequence", () => {
     expect(target.clock).toBe("realtime");
   });
 
+  it("passes the signal to every capture", async () => {
+    const { target } = createTarget();
+    const signals: Array<AbortSignal | undefined> = [];
+    const capture = target.captureFrame;
+    target.captureFrame = ((options) => {
+      signals.push(options.signal);
+      return capture(options);
+    }) as CaptureTarget["captureFrame"];
+    const controller = new AbortController();
+
+    await captureSequence(target, {
+      sink: createMemorySink().sink,
+      fps: 10,
+      frameCount: 2,
+      signal: controller.signal
+    });
+
+    expect(signals).toEqual([controller.signal, controller.signal]);
+  });
+
   it("does nothing when the signal is already aborted", async () => {
     const { target, calls } = createTarget();
     const controller = new AbortController();

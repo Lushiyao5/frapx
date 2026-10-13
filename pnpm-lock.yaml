@@ -149,6 +149,9 @@ importers:
       '@frapx/fx-passes':
         specifier: workspace:*
         version: link:../../packages/fx-passes
+      '@frapx/tool-capture':
+        specifier: workspace:*
+        version: link:../../packages/tool-capture
     devDependencies:
       typescript:
         specifier: ^5.8.3
@@ -240,6 +243,13 @@ importers:
       '@frapx/core':
         specifier: workspace:^
         version: link:../core
+    devDependencies:
+      '@frapx/fx-canvas':
+        specifier: workspace:*
+        version: link:../fx-canvas
+      '@frapx/tool-capture':
+        specifier: workspace:*
+        version: link:../tool-capture
 
   packages/glsl-flowmap: {}
 

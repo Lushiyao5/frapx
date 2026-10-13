@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `captureSequence()` passes its `signal` to each `captureFrame()`, so a frame drawn over several tasks can stop part-way. `CaptureTarget.captureFrame` accepts an optional `signal`.
+- `@frapx/fx-passes` instances are capture targets as is; accumulated frames export with all their samples.
+
 ## 0.1.0 - 2026-10-13
 
 ### Added

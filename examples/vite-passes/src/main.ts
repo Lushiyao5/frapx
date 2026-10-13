@@ -1,6 +1,7 @@
 import { createShaderBackground } from "@frapx/fx-canvas";
 import { createPasses } from "@frapx/fx-passes";
 import type { PassesInstance } from "@frapx/fx-passes";
+import { captureSequence, createZipSink } from "@frapx/tool-capture";
 import "./styles.css";
 
 declare global {
@@ -9,12 +10,14 @@ declare global {
     __frapx?: {
       createPasses: typeof createPasses;
       createShaderBackground: typeof createShaderBackground;
+      captureSequence: typeof captureSequence;
+      createZipSink: typeof createZipSink;
     };
     __passes?: PassesInstance;
   }
 }
 
-window.__frapx = { createPasses, createShaderBackground };
+window.__frapx = { createPasses, createShaderBackground, captureSequence, createZipSink };
 
 // A fan spinning fast enough to strobe at one sample per frame, with thin
 // rings that alias without jitter. Values above 1 feed the glow pass.
