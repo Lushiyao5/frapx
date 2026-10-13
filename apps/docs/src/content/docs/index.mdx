@@ -41,6 +41,12 @@ never need to guess:
 		(2D/3D signed distance functions) and **[`@frapx/glsl-raymarch`](/frapx/packages/glsl-raymarch/)**
 		(raymarching loop, shadows and camera rays) are available today.
 	</Card>
+	<Card title="tool-* — tools" icon="download">
+		Export and production utilities built on an `fx-*` instance, not effects
+		themselves. **[`@frapx/tool-capture`](/frapx/packages/tool-capture/)**
+		renders deterministic 8-bit or 16-bit PNG sequences to a folder or a ZIP
+		in the browser.
+	</Card>
 	<Card title="core — internal engine" icon="setting">
 		**[`@frapx/core`](/frapx/packages/core/)** is the shared WebGL lifecycle
 		host every `fx-*` package is built on. You install it transitively — as
@@ -58,6 +64,7 @@ never need to guess:
 | Distort a texture with a painted flowmap | `@frapx/glsl-flowmap` (WebGL2 / GLSL ES 3.00) |
 | Draw shapes with signed distance functions | `@frapx/glsl-sdf` |
 | Raymarch a 3D scene with shadows, occlusion and a camera | `@frapx/glsl-raymarch` + `@frapx/glsl-sdf` |
+| Export my shader as a PNG sequence for video | `@frapx/fx-canvas` + `@frapx/tool-capture` |
 | Build a *different* effect runtime (not a background shader) | Nothing yet — see the [roadmap](https://github.com/kramhash/frapx) for `@frapx/fx-particles` |
 
 Still not sure? Start with [Getting Started](/frapx/getting-started/) — it

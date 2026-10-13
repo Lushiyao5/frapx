@@ -1,0 +1,94 @@
+---
+title: "@frapx/tool-capture"
+description: Deterministic PNG sequence export for fx-canvas — 8-bit or 16-bit frames written to a folder or a ZIP, in the browser.
+---
+
+import { Badge } from "@astrojs/starlight/components";
+
+<Badge text="tool-* — tool" variant="note" /> Not an effect — it drives an `fx-*` instance you already have.
+
+Renders a shader as a numbered PNG sequence for video editing. Frame `n`
+always shows the scene at `n / fps` seconds, however slow the GPU is, because
+the instance runs on its manual clock and every frame is drawn and read back
+explicitly. No dependencies; video encoding is planned for a later version.
+
+```sh
+pnpm add @frapx/fx-canvas @frapx/tool-capture
+```
+
+```ts
+import { createShaderBackground } from "@frapx/fx-canvas";
+import { captureSequence, createZipSink, downloadBlob } from "@frapx/tool-capture";
+
+const fx = createShaderBackground({
+  target: ".stage",
+  fragment,
+  clock: "manual",
+  resolution: [3840, 2160]
+});
+
+button.addEventListener("click", async () => {
+  const zip = await captureSequence(fx, {
+    sink: createZipSink(),
+    fps: 30,
+    frameCount: 90
+  });
+  downloadBlob(zip, "frames.zip");
+});
+```
+
+`captureSequence()` switches the instance to the manual clock for the export
+and restores the previous clock afterwards, so pointer input, visibility and
+reduced motion never change the frames. A realtime instance resumes from the
+time of the last exported frame. `u_delta` is `1 / fps` on every
+frame, and feedback history is cleared before the first one.
+
+## Where frames go
+
+| Sink | Result | Use it for |
+| --- | --- | --- |
+| `createZipSink()` | ZIP `Blob` | Short exports in any browser. Held in memory; ZIP64 past 4 GiB. |
+| `pickDirectorySink()` | — | Long exports in Chromium: opens a folder picker and writes each frame as a file. Call it from a click. |
+| `createDirectorySink(handle)` | — | The same, with a `FileSystemDirectoryHandle` you already have. |
+
+Write your own by implementing `FrameSink<TResult>`: `write(name, blob)`,
+`close()` and an optional `abort(reason)`.
+
+## 16-bit PNG
+
+`format: "png16"` reads the float feedback buffer instead of the 8-bit
+canvas, so gradients keep more than 256 steps. Give the instance a float
+buffer and turn off the 8-bit fallback:
+
+```ts
+const fx = createShaderBackground({
+  target: ".stage",
+  fragment,
+  clock: "manual",
+  resolution: [3840, 2160],
+  feedback: { format: "rgba16f", formatFallback: false }
+});
+
+await captureSequence(fx, { sink, fps: 30, frameCount: 90, format: "png16" });
+```
+
+The buffer is half float — about 11 bits of precision near 1.0, finer near
+black. Values are clamped to 0–1 with no color conversion. Encoding runs on
+the CPU: roughly 0.7 s per 4K frame, against 0.08 s for 8-bit.
+
+## Options
+
+| Option | Default | |
+| --- | --- | --- |
+| `sink` | required | Where frames go. |
+| `fps` | required | Frame `n` is drawn at `n / fps` seconds. |
+| `frameCount` | required | Number of frames. |
+| `startFrame` | `0` | First frame number; names the files and sets the time, so split ranges line up for shaders that depend only on time (feedback history does not carry over). |
+| `format` | `"png"` | `"png"` or `"png16"`. |
+| `fileName` | `frame_00000.png` | `(frame) => string`. |
+| `resetFeedback` | `true` | Clear feedback history before the first frame. |
+| `signal` | | `AbortSignal`; aborting rejects with its reason. |
+| `onBeforeFrame` | | `({ frame, time })`, after the time is set and before drawing — e.g. to set uniforms. |
+| `onProgress` | | `({ frame, time, completed, total })`. |
+
+Full reference: [README](https://github.com/kramhash/frapx/blob/main/packages/tool-capture/README.md) on GitHub.

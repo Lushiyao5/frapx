@@ -21,6 +21,9 @@ Packages are named by category, so the prefix tells you what kind of package it 
 - [`@frapx/glsl-sdf`](./packages/glsl-sdf) - GLSL 2D/3D signed distance functions and operators.
 - [`@frapx/glsl-raymarch`](./packages/glsl-raymarch) - GLSL raymarching loop, normals, soft shadows, ambient occlusion and camera rays.
 
+**Tools** — export and production utilities built on the runtimes:
+- [`@frapx/tool-capture`](./packages/tool-capture) - Deterministic PNG sequence export (8-bit or 16-bit) to a folder or a ZIP, in the browser.
+
 **Internal engine** — not installed directly; pulled in automatically as a dependency:
 - [`@frapx/core`](./packages/core) - Shared WebGL runtime host used internally by `@frapx/fx-canvas`.
 
@@ -59,6 +62,8 @@ pnpm --filter @frapx/example-vite-basic dev
 pnpm --filter @frapx/example-vite-feedback dev
 pnpm --filter @frapx/example-vite-capture dev
 pnpm --filter @frapx/example-vite-sdf dev
+pnpm --filter @frapx/example-vite-raymarch dev
+pnpm --filter @frapx/example-vite-sdf-journey dev
 pnpm --filter @frapx/example-vite-react dev
 ```
 

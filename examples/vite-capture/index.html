@@ -28,6 +28,23 @@
 
         <div class="row">
           <label class="control">
+            <span>Format</span>
+            <select data-format>
+              <option value="png" selected>PNG 8-bit</option>
+              <option value="png16">PNG 16-bit</option>
+            </select>
+          </label>
+          <label class="control">
+            <span>Save to</span>
+            <select data-destination>
+              <option value="folder" selected>Folder</option>
+              <option value="zip">ZIP</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="row">
+          <label class="control">
             <span>FPS</span>
             <select data-fps>
               <option value="24">24</option>
@@ -49,7 +66,7 @@
           <input data-time type="range" min="0" max="2" step="0.01" value="0" />
         </label>
 
-        <p class="note" data-destination></p>
+        <p class="note" data-note></p>
 
         <div class="row">
           <button class="toggle toggle--primary" data-export type="button">

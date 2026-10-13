@@ -1,5 +1,13 @@
 import { createShaderBackground, glsl } from "@frapx/fx-canvas";
 import type { Resolution, ShaderBackgroundInstance } from "@frapx/fx-canvas";
+import {
+  canPickDirectory,
+  captureSequence,
+  createZipSink,
+  downloadBlob,
+  pickDirectorySink
+} from "@frapx/tool-capture";
+import type { CaptureProgress, SequenceFormat } from "@frapx/tool-capture";
 import "./styles.css";
 
 // A small raymarched SDF scene: heavy enough to be worth rendering offline,
@@ -130,41 +138,28 @@ void main() {
 }
 `;
 
-type FrameSink = {
-  label: string;
-  write(name: string, png: Blob): Promise<void>;
-};
-
-type ExportOptions = {
-  fps: number;
-  frameCount: number;
-  signal?: AbortSignal;
-  onProgress?: (done: number, total: number) => void;
-};
-
-// Not in TypeScript's DOM lib yet (Chromium-only File System Access API).
-type DirectoryPickerWindow = Window & {
-  showDirectoryPicker?: (options?: {
-    mode?: "read" | "readwrite";
-  }) => Promise<FileSystemDirectoryHandle>;
-};
+type Destination = "folder" | "zip";
 
 declare global {
   interface Window {
+    // Read by the @frapx/tool-capture E2E tests.
     __frapxCapture?: {
-      fx: ShaderBackgroundInstance;
-      exportSequence: (sink: FrameSink, options: ExportOptions) => Promise<number>;
+      readonly fx: ShaderBackgroundInstance;
+      captureSequence: typeof captureSequence;
+      createZipSink: typeof createZipSink;
     };
   }
 }
 
 const stage = document.querySelector<HTMLElement>("[data-stage]")!;
 const resolutionSelect = document.querySelector<HTMLSelectElement>("[data-resolution]")!;
+const formatSelect = document.querySelector<HTMLSelectElement>("[data-format]")!;
+const destinationSelect = document.querySelector<HTMLSelectElement>("[data-destination]")!;
 const fpsSelect = document.querySelector<HTMLSelectElement>("[data-fps]")!;
 const durationInput = document.querySelector<HTMLInputElement>("[data-duration]")!;
 const timeInput = document.querySelector<HTMLInputElement>("[data-time]")!;
 const timeOutput = document.querySelector<HTMLOutputElement>("[data-time-output]")!;
-const destination = document.querySelector<HTMLElement>("[data-destination]")!;
+const note = document.querySelector<HTMLElement>("[data-note]")!;
 const exportButton = document.querySelector<HTMLButtonElement>("[data-export]")!;
 const cancelButton = document.querySelector<HTMLButtonElement>("[data-cancel]")!;
 const progress = document.querySelector<HTMLProgressElement>("[data-progress]")!;
@@ -175,14 +170,51 @@ const parseResolution = (value: string): Resolution => {
   return [width!, height!];
 };
 
+// ?res=WxH and ?format=png16 preset the controls.
+const params = new URLSearchParams(window.location.search);
+const presetResolution = params.get("res");
+if (
+  presetResolution &&
+  /^\d+x\d+$/.test(presetResolution) &&
+  parseResolution(presetResolution).every((size) => size >= 1)
+) {
+  if (![...resolutionSelect.options].some((option) => option.value === presetResolution)) {
+    resolutionSelect.add(new Option(presetResolution.replace("x", " × "), presetResolution));
+  }
+  resolutionSelect.value = presetResolution;
+}
+if (params.get("format") === "png16") formatSelect.value = "png16";
+
+const folderOption = destinationSelect.querySelector<HTMLOptionElement>('option[value="folder"]')!;
+if (!canPickDirectory()) {
+  folderOption.disabled = true;
+  destinationSelect.value = "zip";
+}
+
+const describe = () => {
+  const format = formatSelect.value === "png16" ? "16-bit PNGs" : "PNGs";
+  note.textContent =
+    destinationSelect.value === "folder"
+      ? `${format} are written to a folder you choose.`
+      : `${format} are collected into one ZIP and downloaded. Long 4K exports need a lot of memory.`;
+};
+
 // The manual clock never animates on its own: every frame is an explicit
 // setTime() + render() (or captureFrame()), so exports are deterministic.
-const fx = createShaderBackground({
-  target: stage,
-  fragment,
-  clock: "manual",
-  resolution: parseResolution(resolutionSelect.value)
-});
+// 16-bit export reads the float feedback buffer, so that mode allocates one
+// and fails instead of silently falling back to 8 bits.
+const createFx = (format: SequenceFormat) =>
+  createShaderBackground({
+    target: stage,
+    fragment,
+    clock: "manual",
+    resolution: parseResolution(resolutionSelect.value),
+    ...(format === "png16"
+      ? { feedback: { format: "rgba16f" as const, formatFallback: false } }
+      : {})
+  });
+
+let fx = createFx(formatSelect.value as SequenceFormat);
 
 const preview = () => {
   const time = Number(timeInput.value);
@@ -191,63 +223,31 @@ const preview = () => {
   fx.render();
 };
 
-const frameName = (index: number) => `frame_${String(index).padStart(5, "0")}.png`;
-
-const exportSequence = async (
-  sink: FrameSink,
-  { fps, frameCount, signal, onProgress }: ExportOptions
-): Promise<number> => {
-  for (let index = 0; index < frameCount; index++) {
-    if (signal?.aborted) return index;
-    fx.setTime(index / fps);
-    // Draws and reads back in one task, so the PNG is never a stale frame.
-    const png = await fx.captureFrame({ format: "png" });
-    await sink.write(frameName(index), png);
-    onProgress?.(index + 1, frameCount);
+const switchFormat = async (format: SequenceFormat) => {
+  fx.destroy();
+  fx = createFx(format);
+  try {
+    await fx.ready;
+  } catch {
+    // Without WebGL2 + EXT_color_buffer_float there is no float buffer.
+    formatSelect.value = "png";
+    status.textContent = "No 16-bit";
+    fx.destroy();
+    fx = createFx("png");
+    await fx.ready;
   }
-  return frameCount;
+  describe();
+  preview();
 };
-
-const pickDirectorySink = async (): Promise<FrameSink | null> => {
-  const picker = (window as DirectoryPickerWindow).showDirectoryPicker;
-  if (!picker) return null;
-  const directory = await picker({ mode: "readwrite" });
-  return {
-    label: directory.name,
-    async write(name, png) {
-      const file = await directory.getFileHandle(name, { create: true });
-      const writable = await file.createWritable();
-      await writable.write(png);
-      await writable.close();
-    }
-  };
-};
-
-const downloadSink: FrameSink = {
-  label: "Downloads",
-  async write(name, png) {
-    const url = URL.createObjectURL(png);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = name;
-    link.click();
-    // Let the download start before releasing the blob.
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
-  }
-};
-
-const canPickDirectory = Boolean((window as DirectoryPickerWindow).showDirectoryPicker);
-destination.textContent = canPickDirectory
-  ? "Frames are written to a folder you choose."
-  : "Frames are saved as individual downloads.";
 
 let abort: AbortController | null = null;
 
 const setBusy = (busy: boolean) => {
   exportButton.disabled = busy;
   cancelButton.disabled = !busy;
-  resolutionSelect.disabled = busy;
-  fpsSelect.disabled = busy;
+  for (const control of [resolutionSelect, formatSelect, destinationSelect, fpsSelect]) {
+    control.disabled = busy;
+  }
   durationInput.disabled = busy;
   timeInput.disabled = busy;
 };
@@ -255,37 +255,51 @@ const setBusy = (busy: boolean) => {
 exportButton.addEventListener("click", async () => {
   const fps = Number(fpsSelect.value);
   const frameCount = Math.max(1, Math.round(Number(durationInput.value) * fps));
+  const format = formatSelect.value as SequenceFormat;
+  const destination = destinationSelect.value as Destination;
 
-  let sink: FrameSink | null;
-  try {
-    sink = canPickDirectory ? await pickDirectorySink() : downloadSink;
-  } catch {
-    // The user dismissed the folder picker.
-    return;
+  let folder: Awaited<ReturnType<typeof pickDirectorySink>> | null = null;
+  if (destination === "folder") {
+    try {
+      folder = await pickDirectorySink();
+    } catch {
+      // The user dismissed the folder picker.
+      return;
+    }
   }
-  if (!sink) return;
 
   abort = new AbortController();
   setBusy(true);
   progress.value = 0;
   const started = performance.now();
+  const options = {
+    fps,
+    frameCount,
+    format,
+    signal: abort.signal,
+    onProgress({ completed, total }: CaptureProgress) {
+      progress.value = completed / total;
+      status.textContent = `${completed}/${total}`;
+    }
+  };
 
   try {
-    const written = await exportSequence(sink, {
-      fps,
-      frameCount,
-      signal: abort.signal,
-      onProgress(done, total) {
-        progress.value = done / total;
-        status.textContent = `${done}/${total}`;
-      }
-    });
+    if (folder) {
+      await captureSequence(fx, { ...options, sink: folder });
+    } else {
+      const zip = await captureSequence(fx, { ...options, sink: createZipSink() });
+      const [width, height] = parseResolution(resolutionSelect.value);
+      downloadBlob(zip, `frapx-${width}x${height}-${fps}fps.zip`);
+    }
     const seconds = ((performance.now() - started) / 1000).toFixed(1);
-    status.textContent =
-      written === frameCount ? `Done ${seconds}s` : `Stopped ${written}/${frameCount}`;
+    status.textContent = `Done ${seconds}s`;
   } catch (error) {
-    status.textContent = "Failed";
-    console.error(error);
+    if (abort.signal.aborted) {
+      status.textContent = `Stopped ${Math.round(progress.value * frameCount)}/${frameCount}`;
+    } else {
+      status.textContent = "Failed";
+      console.error(error);
+    }
   } finally {
     abort = null;
     setBusy(false);
@@ -300,6 +314,12 @@ resolutionSelect.addEventListener("change", () => {
   preview();
 });
 
+formatSelect.addEventListener("change", () => {
+  void switchFormat(formatSelect.value as SequenceFormat);
+});
+
+destinationSelect.addEventListener("change", describe);
+
 durationInput.addEventListener("change", () => {
   timeInput.max = String(Math.max(0.1, Number(durationInput.value)));
   preview();
@@ -307,6 +327,18 @@ durationInput.addEventListener("change", () => {
 
 timeInput.addEventListener("input", preview);
 
-window.__frapxCapture = { fx, exportSequence };
+window.__frapxCapture = {
+  get fx() {
+    return fx;
+  },
+  captureSequence,
+  createZipSink
+};
 
-void fx.ready.then(preview);
+describe();
+void fx.ready.then(preview, () => {
+  // Opened with ?format=png16 where float buffers are unavailable.
+  status.textContent = "No 16-bit";
+  formatSelect.value = "png";
+  void switchFormat("png");
+});
