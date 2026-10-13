@@ -1,4 +1,5 @@
 export { createPasses } from "./createPasses";
+export { glsl } from "@frapx/core";
 export type {
   AccumulationOptions,
   CaptureFormat,

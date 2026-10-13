@@ -162,9 +162,9 @@ importers:
 
   examples/vite-poolrooms:
     dependencies:
-      '@frapx/fx-canvas':
+      '@frapx/fx-passes':
         specifier: workspace:*
-        version: link:../../packages/fx-canvas
+        version: link:../../packages/fx-passes
       '@frapx/glsl-raymarch':
         specifier: workspace:*
         version: link:../../packages/glsl-raymarch

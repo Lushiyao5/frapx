@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@frapx/fx-canvas": "workspace:*",
+    "@frapx/fx-passes": "workspace:*",
     "@frapx/glsl-raymarch": "workspace:*",
     "@frapx/glsl-sdf": "workspace:*",
     "@frapx/tool-capture": "workspace:*"

@@ -1,8 +1,8 @@
 # Poolrooms
 
 A seamless 24-second loop through an endless grid of tiled pool halls, path
-traced with `@frapx/glsl-sdf` and `@frapx/glsl-raymarch` and exported frame by
-frame with `@frapx/tool-capture`.
+traced with `@frapx/glsl-sdf` and `@frapx/glsl-raymarch`, accumulated with
+`@frapx/fx-passes` and exported frame by frame with `@frapx/tool-capture`.
 
 ```sh
 pnpm --filter @frapx/example-vite-poolrooms dev
@@ -13,22 +13,25 @@ Access API (Chrome or Edge).
 
 ## How a frame is made
 
-- The fx-canvas feedback buffer (`rgba16f`) holds the running mean of the
-  current frame's samples. Sample 0 discards the history, so frames never
-  bleed into each other. Each write rounds to a neighbouring half float at
-  random, in proportion to the remainder: a GPU that truncates on store (an
-  M-series Mac's does) otherwise darkens the mean as samples pile up, by about
-  5% at 256 samples.
-- `captureSequence()` calls `onBeforeFrame`, which draws samples 0 to N − 2
-  and waits for the GPU after each one; `captureFrame()` then draws sample
-  N − 1, which adds grain and dither, and reads the frame.
+- Two `@frapx/fx-passes` passes. `scene` path traces one sample in linear
+  light and accumulates: the runtime sums the samples in 32-bit float and
+  passes their mean on, so the mean never drifts darker as samples pile up
+  (a running mean stored in half floats does, on GPUs that truncate on store).
+  `display` then applies exposure, vignette and the tone curve once per frame,
+  and adds grain and triangular dither so 8-bit exports do not band.
+- `captureSequence()` sets the time to `frame / fps` and calls
+  `captureFrame()`, which draws all the frame's samples, waiting for the GPU
+  between batches so a slow 4K frame never trips the browser's GPU watchdog.
 - Each sample jitters within the pixel and within a 180° shutter, so the mean
   is anti-aliased and motion blurred. The jitter, the shutter time and the
   first bounce's light and direction come from an Owen-scrambled Sobol
-  sequence, which spreads a pixel's samples more evenly than random numbers.
-- The scene only sees the frame number modulo the loop (720 frames at 30 fps),
-  and the random numbers are seeded from it, so frame 720 is byte-identical to
-  frame 0. Ranges split across several exports match a single export.
+  sequence indexed by `u_sampleIndex`. It is scrambled per pixel, so low sample
+  counts look like noise rather than the ghost copies a frame-wide sequence
+  such as `u_jitter` gives.
+- The scene derives the frame number from the frame time modulo the loop (720
+  frames at 30 fps) and seeds its random numbers from it, so frame 720 is
+  byte-identical to frame 0. Ranges split across several exports match a
+  single export.
 
 ## Rendering the loop
 
