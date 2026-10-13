@@ -15,24 +15,34 @@ Access API (Chrome or Edge).
 
 - The fx-canvas feedback buffer (`rgba16f`) holds the running mean of the
   current frame's samples. Sample 0 discards the history, so frames never
-  bleed into each other.
+  bleed into each other. Each write rounds to a neighbouring half float at
+  random, in proportion to the remainder: a GPU that truncates on store (an
+  M-series Mac's does) otherwise darkens the mean as samples pile up, by about
+  5% at 256 samples.
 - `captureSequence()` calls `onBeforeFrame`, which draws samples 0 to N − 2
   and waits for the GPU after each one; `captureFrame()` then draws sample
   N − 1, which adds grain and dither, and reads the frame.
 - Each sample jitters within the pixel and within a 180° shutter, so the mean
-  is anti-aliased and motion blurred.
+  is anti-aliased and motion blurred. The jitter, the shutter time and the
+  first bounce's light and direction come from an Owen-scrambled Sobol
+  sequence, which spreads a pixel's samples more evenly than random numbers.
 - The scene only sees the frame number modulo the loop (720 frames at 30 fps),
   and the random numbers are seeded from it, so frame 720 is byte-identical to
   frame 0. Ranges split across several exports match a single export.
 
 ## Rendering the loop
 
-At 3840 × 2160 with 64 samples, a frame takes about 11 s and its PNG is about
-20 MB (the grain does not compress), so the full loop is about 2 h and 14 GB on
-an M-series Mac. Keep the tab visible while exporting: background tabs throttle
-the timers that pace the samples.
+At 3840 × 2160 with 192 samples, a frame takes about 34 s and its PNG is about
+19 MB (the grain does not compress), so the full loop is about 7 h and 14 GB on
+an M-series Mac. Viewed at 1080p, 192 samples is hard to tell from a
+2048-sample reference. Keep the tab visible while exporting: background tabs
+throttle the timers that pace the samples.
 
-1. Choose 3840 × 2160, Path traced, 30 fps, 64 samples, frames 0–719.
+A paused frame refines to the Samples count. A smaller resolution looks
+grainier than the 4K export at the same count, so preview at 3840 × 2160
+(about 30 s per frame) to judge noise, and use the smaller ones for framing.
+
+1. Choose 3840 × 2160, Path traced, 30 fps, 192 samples, frames 0–719.
 2. Export to folder. To resume after stopping, set First to the frame shown and
    export again into the same folder.
 3. Encode in that folder. ProRes 422 HQ master for editing:

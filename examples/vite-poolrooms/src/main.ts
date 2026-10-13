@@ -10,15 +10,14 @@ import type { CaptureProgress, FrameSink } from "@frapx/tool-capture";
 import { LOOP_SECONDS, fragment } from "./scene.glsl";
 import "./styles.css";
 
-// Preview accumulates this many samples on a still frame before idling.
-const PREVIEW_SAMPLES = 64;
-
 type ExportOptions = {
   startFrame: number;
   frameCount: number;
   samples: number;
   signal?: AbortSignal;
   onProgress?: (progress: CaptureProgress) => void;
+  // Called after each sample but the last, which captureFrame() draws.
+  onSample?: (frame: number, drawn: number) => void;
 };
 
 declare global {
@@ -72,6 +71,10 @@ if (
 const presetSpp = Number(params.get("spp"));
 if (Number.isInteger(presetSpp) && presetSpp >= 1) sppInput.value = String(presetSpp);
 
+// Samples per exported frame. A paused still frame refines to the same count,
+// so the preview shows what the export will look like.
+const targetSamples = () => Math.max(1, Math.round(Number(sppInput.value)) || 1);
+
 // The feedback buffer holds the running mean of the current frame's samples,
 // so it must be float: 8-bit storage would round each step of the mean.
 const fx = createShaderBackground({
@@ -123,7 +126,18 @@ const drawSample = () => {
   fx.setUniforms({ loopFrame: frame % loopFrames(), sample, samples: 0 });
   fx.render();
   sample += 1;
-  samplesLabel.textContent = `${sample} sample${sample === 1 ? "" : "s"}`;
+  showSamples();
+};
+
+const showSamples = () => {
+  const target = targetSamples();
+  if (playing) {
+    samplesLabel.textContent = "Playing · 1 sample per frame";
+  } else if (sample < target) {
+    samplesLabel.textContent = `Refining · ${sample}/${target} samples`;
+  } else {
+    samplesLabel.textContent = `Done · ${target} samples`;
+  }
 };
 
 const showFrame = (next: number) => {
@@ -140,7 +154,7 @@ const tick = () => {
   if (playing) {
     showFrame((frame + 1) % loopFrames());
     drawSample();
-  } else if (sample < PREVIEW_SAMPLES) {
+  } else if (sample < targetSamples()) {
     drawSample();
   } else {
     return;
@@ -165,7 +179,7 @@ const setPlaying = (next: boolean) => {
  * modulo the loop, so frame loopFrames renders exactly like frame 0.
  */
 const exportSequence = async <R>(sink: FrameSink<R>, options: ExportOptions): Promise<R> => {
-  const { startFrame, frameCount, samples, signal, onProgress } = options;
+  const { startFrame, frameCount, samples, signal, onProgress, onSample } = options;
   exporting = true;
   cancelAnimationFrame(rafId);
   rafId = 0;
@@ -186,6 +200,7 @@ const exportSequence = async <R>(sink: FrameSink<R>, options: ExportOptions): Pr
           fx.setUniforms({ sample: k, samples });
           fx.render();
           await gpuIdle();
+          onSample?.(current, k + 1);
         }
         fx.setUniforms({ sample: samples - 1, samples });
       }
@@ -212,6 +227,7 @@ const describe = () => {
 };
 
 let abort: AbortController | null = null;
+const baseTitle = document.title;
 
 const setBusy = (busy: boolean) => {
   exportButton.disabled = busy || !canPickDirectory();
@@ -223,7 +239,7 @@ const setBusy = (busy: boolean) => {
 };
 
 exportButton.addEventListener("click", async () => {
-  const samples = Math.max(1, Math.round(Number(sppInput.value)));
+  const samples = targetSamples();
   const first = Math.max(0, Math.round(Number(firstInput.value)));
   const last = Math.max(first, Math.round(Number(lastInput.value)));
   const frameCount = last - first + 1;
@@ -241,6 +257,10 @@ exportButton.addEventListener("click", async () => {
   setBusy(true);
   progressBar.value = 0;
   const started = performance.now();
+  let written = 0;
+  status.textContent = `0/${frameCount}`;
+  note.textContent = `Rendering frame ${first}…`;
+  document.title = `0/${frameCount} · ${baseTitle}`;
 
   try {
     await exportSequence(folder, {
@@ -248,23 +268,37 @@ exportButton.addEventListener("click", async () => {
       frameCount,
       samples,
       signal: abort.signal,
+      onSample(current, drawn) {
+        progressBar.value = (written + drawn / samples) / frameCount;
+        samplesLabel.textContent =
+          drawn < samples - 1
+            ? `Frame ${current} · ${drawn}/${samples} samples`
+            : `Frame ${current} · writing PNG`;
+      },
       onProgress({ frame: current, completed, total }) {
+        written = completed;
         progressBar.value = completed / total;
         const elapsed = (performance.now() - started) / 1000;
         const remaining = (elapsed / completed) * (total - completed);
         status.textContent = `${completed}/${total}`;
-        note.textContent = `Wrote frame ${current}. ${(elapsed / completed).toFixed(1)}s per frame, about ${formatDuration(remaining)} left.`;
+        document.title = `${completed}/${total} · ${baseTitle}`;
+        note.textContent =
+          completed < total
+            ? `Wrote frame ${current}. ${(elapsed / completed).toFixed(1)}s per frame, about ${formatDuration(remaining)} left.`
+            : `Wrote frame ${current}.`;
       }
     });
     status.textContent = "Done";
-    note.textContent = `Wrote ${frameCount} frames in ${formatDuration((performance.now() - started) / 1000)}.`;
+    document.title = `✓ Done · ${baseTitle}`;
+    note.textContent = `Wrote ${frameCount} frames (${first}–${last}) in ${formatDuration((performance.now() - started) / 1000)}.`;
   } catch (error) {
     if (abort.signal.aborted) {
-      const done = Math.round(progressBar.value * frameCount);
       status.textContent = "Stopped";
-      note.textContent = `Stopped after ${done} frames. Resume with First set to ${first + done}.`;
+      document.title = `Stopped · ${baseTitle}`;
+      note.textContent = `Stopped after ${written} frames. Resume with First set to ${first + written}.`;
     } else {
       status.textContent = "Failed";
+      document.title = `Failed · ${baseTitle}`;
       note.textContent = error instanceof Error ? error.message : String(error);
       console.error(error);
     }
@@ -302,6 +336,13 @@ fpsSelect.addEventListener("change", () => {
   lastInput.value = String(loopFrames() - 1);
   showFrame(0);
   describe();
+  wake();
+});
+
+sppInput.addEventListener("change", () => {
+  // The running mean cannot drop samples, so a lower count starts over.
+  if (sample > targetSamples()) sample = 0;
+  if (!playing) showSamples();
   wake();
 });
 
