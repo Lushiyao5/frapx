@@ -26,7 +26,9 @@ never need to guess:
 	<Card title="fx-* — effect runtimes" icon="rocket">
 		Instantiate directly in your app. **[`@frapx/fx-canvas`](/frapx/packages/fx-canvas/)**
 		drives a full-screen WebGL fragment shader as a background or overlay.
-		This is what most people install first.
+		This is what most people install first. **[`@frapx/fx-passes`](/frapx/packages/fx-passes/)**
+		chains passes and accumulates samples for anti-aliased, motion-blurred
+		video frames (WebGL2).
 	</Card>
 	<Card title="react-* — framework bindings" icon="puzzle">
 		A thin React wrapper around an `fx-*` package. **[`@frapx/react-canvas`](/frapx/packages/react-canvas/)**
@@ -65,6 +67,7 @@ never need to guess:
 | Draw shapes with signed distance functions | `@frapx/glsl-sdf` |
 | Raymarch a 3D scene with shadows, occlusion and a camera | `@frapx/glsl-raymarch` + `@frapx/glsl-sdf` |
 | Export my shader as a PNG sequence for video | `@frapx/fx-canvas` + `@frapx/tool-capture` |
+| Chain passes (bloom, trails) or render anti-aliased, motion-blurred frames | `@frapx/fx-passes` (+ `@frapx/tool-capture` to export) |
 | Build a *different* effect runtime (not a background shader) | Nothing yet — see the [roadmap](https://github.com/kramhash/frapx) for `@frapx/fx-particles` |
 
 Still not sure? Start with [Getting Started](/frapx/getting-started/) — it

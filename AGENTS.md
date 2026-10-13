@@ -18,6 +18,7 @@
 - The optional flowmap helper package is `@frapx/glsl-flowmap` in `packages/glsl-flowmap`.
 - The optional signed distance function package is `@frapx/glsl-sdf` in `packages/glsl-sdf`.
 - The optional raymarching package is `@frapx/glsl-raymarch` in `packages/glsl-raymarch`.
+- The multipass and sample-accumulation runtime is `@frapx/fx-passes` in `packages/fx-passes` (WebGL2 only, shares the `@frapx/core` host with fx-canvas).
 - The browser frame export tool is `@frapx/tool-capture` in `packages/tool-capture`.
 - The example app is `@frapx/example-vite-basic` in `examples/vite-basic`.
 - Prefer the repository's established patterns over adding new abstractions.
@@ -46,7 +47,7 @@
 - Add optional capabilities such as SDF helpers, noise libraries, presets, or larger GLSL utility sets as separate packages by default.
 - Naming follows a category-prefix scheme (renamed 2026-07-12, see `RELEASING.md`):
   - `core` — the shared internal WebGL runtime host (`@frapx/core`). Not installed directly by end users.
-  - `fx-<name>` — an effect runtime users instantiate directly, e.g. `@frapx/fx-canvas`, future `@frapx/fx-passes`, `@frapx/fx-particles`.
+  - `fx-<name>` — an effect runtime users instantiate directly, e.g. `@frapx/fx-canvas`, `@frapx/fx-passes`, future `@frapx/fx-particles`.
   - `react-<name>` — the React binding for an `fx-<name>` package, e.g. `@frapx/react-canvas`, future `@frapx/react-particles`.
   - `glsl-<name>` — a GLSL snippet package meant to be concatenated into a fragment shader string, e.g. `@frapx/glsl-noise`, `@frapx/glsl-flowmap`, `@frapx/glsl-sdf`, `@frapx/glsl-raymarch`.
   - `tool-<name>` — a non-effect tool built on the runtimes, such as offline frame/video export (added 2026-10-10), e.g. `@frapx/tool-capture` (browser) and future `@frapx/tool-render` (Node CLI). Keep browser and Node tools in separate packages so browser users never install Node-only dependencies.

@@ -1,0 +1,72 @@
+---
+title: "@frapx/fx-passes"
+description: WebGL2 multipass runtime for video work — Shadertoy-style buffers, float outputs and deterministic sample accumulation for anti-aliasing and motion blur.
+---
+
+import { Badge } from "@astrojs/starlight/components";
+
+<Badge text="fx-* — effect runtime" variant="tip" /> Instantiate it directly. WebGL2 only.
+
+`@frapx/fx-passes` chains fragment shaders into passes. Each pass renders into its own float buffer, and a pass can be drawn many times per frame and averaged. It runs on the same host as [`@frapx/fx-canvas`](/frapx/packages/fx-canvas/), so the manual clock, fixed `resolution`, `captureFrame()` and the lifecycle work the same way. [`@frapx/tool-capture`](/frapx/packages/tool-capture/) exports it without changes.
+
+Stay with `fx-canvas` for website backgrounds. Reach for `fx-passes` when a single pass is not enough (bloom, trails, simulations) or when frames for video need many samples.
+
+```sh
+pnpm add @frapx/fx-passes
+```
+
+```ts
+import { createPasses } from "@frapx/fx-passes";
+
+const fx = createPasses({
+  target: "#stage",
+  resolution: [3840, 2160],
+  clock: "manual",
+  accumulation: { samples: 64, shutter: 0.5, fps: 60 },
+  passes: [
+    { name: "scene", fragment: sceneFragment, accumulate: true, format: "rgba32f" },
+    { name: "bloom", fragment: bloomFragment, inputs: ["scene"], scale: 0.5 },
+    { name: "final", fragment: finalFragment, inputs: ["scene", "bloom"] }
+  ]
+});
+
+fx.setTime(2);
+const pixels = await fx.captureFrame({ format: "rgba16f" });
+```
+
+## Passes
+
+Passes are drawn in order every frame, and the last one is shown and captured.
+
+| Option | Meaning |
+| --- | --- |
+| `name` | GLSL identifier. Readers sample the output as `u_<name>`, sized `u_<name>Size` |
+| `inputs` | Passes to sample. An earlier pass gives this frame's output. The pass itself or a later one gives the previous frame's (Shadertoy-style; double-buffered automatically, cleared by `resetFeedback()`) |
+| `format` | `"rgba16f"` (default), `"rgba32f"` or `"rgba8"` |
+| `scale` | Output size relative to the canvas. `u_resolution` is the pass' own size |
+| `filter` / `wrap` | How readers sample the output |
+| `accumulate` | Draw the pass `accumulation.samples` times per frame and pass the mean on |
+
+Uniforms and textures are shared: every pass that declares one receives it.
+
+## Accumulation
+
+An accumulating pass outputs a single sample's color. The runtime sums the samples in 32-bit float, so the mean never drifts darker the way a running average stored in half floats does. Later passes run once on the mean, so tone mapping and bloom see the converged image.
+
+| Uniform | In accumulating passes |
+| --- | --- |
+| `u_time` | The sample's moment within the open shutter, `[time, time + shutter / fps)` |
+| `u_frameTime` | The frame's time |
+| `u_jitter` | Sub-pixel offset in pixels in [-0.5, 0.5); add it to `gl_FragCoord.xy` |
+| `u_sampleIndex`, `u_sampleCount` | The sample's index and the frame's sample count |
+
+A shader that depends only on time gets motion blur without changes. Samples follow a deterministic low-discrepancy sequence, and sample 0 is the plain frame.
+
+- **Preview**: an unchanged frame gains one sample per draw until `samples`, and any input change starts over. A running realtime loop shows one sample per frame. A stopped or manual-clock instance keeps refining the still frame on its own. Progress is in `samplesDrawn` and `onSample`.
+- **Capture**: `captureFrame()` draws all samples from scratch. It waits for the GPU between batches so long frames never trip the browser's GPU watchdog, checks `signal` between samples, then runs the remaining passes and reads the last one. Uniform, accumulation and feedback changes made while it draws apply to the next frame.
+
+Accumulating passes come first and may only read passes listed after them, which gives those passes' previous-frame output.
+
+## Requirements
+
+WebGL2 with `EXT_color_buffer_float`, otherwise `status` is `"unsupported"`. Each pass may use GLSL ES 1.00 or 3.00. With `EXT_float_blend`, samples are summed by additive blending; without it, by an extra pass.

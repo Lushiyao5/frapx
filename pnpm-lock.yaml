@@ -141,6 +141,25 @@ importers:
         specifier: ^6.3.5
         version: 6.4.3(@types/node@24.13.2)(lightningcss@1.32.0)(yaml@2.9.0)
 
+  examples/vite-passes:
+    dependencies:
+      '@frapx/fx-canvas':
+        specifier: workspace:*
+        version: link:../../packages/fx-canvas
+      '@frapx/fx-passes':
+        specifier: workspace:*
+        version: link:../../packages/fx-passes
+      '@frapx/tool-capture':
+        specifier: workspace:*
+        version: link:../../packages/tool-capture
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.3.5
+        version: 6.4.3(@types/node@24.13.2)(lightningcss@1.32.0)(yaml@2.9.0)
+
   examples/vite-poolrooms:
     dependencies:
       '@frapx/fx-canvas':
@@ -240,6 +259,19 @@ importers:
       '@frapx/core':
         specifier: workspace:^
         version: link:../core
+
+  packages/fx-passes:
+    dependencies:
+      '@frapx/core':
+        specifier: workspace:^
+        version: link:../core
+    devDependencies:
+      '@frapx/fx-canvas':
+        specifier: workspace:*
+        version: link:../fx-canvas
+      '@frapx/tool-capture':
+        specifier: workspace:*
+        version: link:../tool-capture
 
   packages/glsl-flowmap: {}
 

@@ -16,14 +16,18 @@ const assertOptions = (fps: number, frameCount: number, startFrame: number) => {
   }
 };
 
-const captureOne = async (target: CaptureTarget, format: SequenceFormat): Promise<Blob> => {
+const captureOne = async (
+  target: CaptureTarget,
+  format: SequenceFormat,
+  signal: AbortSignal | undefined
+): Promise<Blob> => {
   if (format === "png") {
-    const png = await target.captureFrame({ format: "png" });
+    const png = await target.captureFrame({ format: "png", ...(signal ? { signal } : {}) });
     if (!(png instanceof Blob)) throw new TypeError("captureFrame() did not return a PNG Blob.");
     return png;
   }
 
-  const pixels = await target.captureFrame({ format: "rgba16f" });
+  const pixels = await target.captureFrame({ format: "rgba16f", ...(signal ? { signal } : {}) });
   if (!(pixels instanceof Float32Array)) {
     throw new TypeError("captureFrame() did not return rgba16f pixels.");
   }
@@ -80,7 +84,7 @@ export const captureSequence = async <TResult>(
       const time = frame / fps;
       target.setTime(time);
       await onBeforeFrame?.({ frame, time });
-      await sink.write(fileName(frame), await captureOne(target, format));
+      await sink.write(fileName(frame), await captureOne(target, format, signal));
       onProgress?.({ frame, time, completed: index + 1, total: frameCount });
     }
   } catch (error) {

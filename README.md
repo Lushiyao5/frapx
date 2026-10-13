@@ -11,6 +11,7 @@ Packages are named by category, so the prefix tells you what kind of package it 
 
 **Effect runtimes** — instantiate directly in your app:
 - [`@frapx/fx-canvas`](./packages/fx-canvas) - Create lightweight WebGL shader backgrounds for websites.
+- [`@frapx/fx-passes`](./packages/fx-passes) - WebGL2 multipass runtime for video work: Shadertoy-style buffers, float outputs and deterministic sample accumulation for anti-aliasing and motion blur.
 
 **Framework bindings** — for an effect runtime above:
 - [`@frapx/react-canvas`](./packages/react-canvas) - React bindings for `@frapx/fx-canvas`.
@@ -25,7 +26,7 @@ Packages are named by category, so the prefix tells you what kind of package it 
 - [`@frapx/tool-capture`](./packages/tool-capture) - Deterministic PNG sequence export (8-bit or 16-bit) to a folder or a ZIP, in the browser.
 
 **Internal engine** — not installed directly; pulled in automatically as a dependency:
-- [`@frapx/core`](./packages/core) - Shared WebGL runtime host used internally by `@frapx/fx-canvas`.
+- [`@frapx/core`](./packages/core) - Shared WebGL runtime host used internally by `@frapx/fx-canvas` and `@frapx/fx-passes`.
 
 Not sure what you need? If you're adding an animated WebGL background, start with
 `@frapx/fx-canvas` (or `@frapx/react-canvas` in a React app) and pull in a `glsl-*`
