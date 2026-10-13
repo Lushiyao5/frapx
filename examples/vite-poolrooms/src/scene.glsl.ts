@@ -75,6 +75,53 @@ vec2 rand2() {
   return vec2(rand(), rand());
 }
 
+// Owen-scrambled Sobol points (Burley 2020, "Practical Hash-based Owen
+// Scrambling"). The samples of one pixel cover each 2D pair of these evenly,
+// so the dimensions that decide the most converge faster than with
+// independent random numbers. Every pixel and frame has its own scramble.
+uint reverseBits(uint x) {
+  x = ((x >> 1u) & 0x55555555u) | ((x & 0x55555555u) << 1u);
+  x = ((x >> 2u) & 0x33333333u) | ((x & 0x33333333u) << 2u);
+  x = ((x >> 4u) & 0x0f0f0f0fu) | ((x & 0x0f0f0f0fu) << 4u);
+  x = ((x >> 8u) & 0x00ff00ffu) | ((x & 0x00ff00ffu) << 8u);
+  return (x >> 16u) | (x << 16u);
+}
+
+uint owenScramble(uint x, uint seed) {
+  x = reverseBits(x) + seed;
+  x ^= x * 0x6c50b47cu;
+  x ^= x * 0xb82f1e52u;
+  x ^= x * 0xc7afe638u;
+  x ^= x * 0x8d22f6e6u;
+  return reverseBits(x);
+}
+
+// Second Sobol dimension; the first is reverseBits(index).
+uint sobol1(uint index) {
+  uint result = 0u;
+  for (uint v = 1u << 31; index != 0u; index >>= 1u, v ^= v >> 1u) {
+    if ((index & 1u) != 0u) result ^= v;
+  }
+  return result;
+}
+
+vec2 sobol2(uint index, uint seed) {
+  uint i = owenScramble(index, pcg(seed));
+  uint x = owenScramble(reverseBits(i), pcg(seed ^ 0xa511e9b3u));
+  uint y = owenScramble(sobol1(i), pcg(seed ^ 0x63d83595u));
+  return vec2(uvec2(x, y) >> 8u) / 16777216.0;
+}
+
+// Sample pairs drawn from the sequence: sub-pixel offset; shutter time and
+// the first surface event's choice; the first diffuse vertex's light pick,
+// point on the light and bounce direction. Everything else uses rand().
+const int QMC_PIXEL = 0;
+const int QMC_TIME = 1;
+const int QMC_PICK = 2;
+const int QMC_LIGHT = 3;
+const int QMC_BOUNCE = 4;
+vec2 qmc[5];
+
 float hash12(vec2 p) {
   return float(pcg(pcg(uint(int(p.x) + 4096)) ^ uint(int(p.y) + 8192))) / 4294967296.0;
 }
@@ -291,8 +338,7 @@ const float TILE_F0 = 0.04;
 const float TILE_ROUGHNESS = 0.025;
 const float INDIRECT_CLAMP = 4.0;  // firefly guard for anything past the camera ray
 
-vec3 cosineSample(vec3 n) {
-  vec2 u = rand2();
+vec3 cosineSample(vec3 n, vec2 u) {
   float r = sqrt(u.x);
   float phi = TAU * u.y;
   vec3 t = normalize(cross(abs(n.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0), n));
@@ -338,6 +384,7 @@ float caustics(vec2 xz, float depth, float seconds) {
 const int NEE_BAYS = 2;
 const int NEE_COUNT = 3 * (2 * NEE_BAYS + 1);
 const vec2 LIGHT_SIZE = WELL - 0.04;
+const float NEIGHBOUR_WEIGHT = 0.25;
 
 float skylightWeight(vec3 p, vec3 n, float hall, float bay) {
   if (!hasSkylight(bayKind(bay))) return 0.0;
@@ -347,7 +394,7 @@ float skylightWeight(vec3 p, vec3 n, float hall, float bay) {
   return max(dot(n, l), 0.0) * max(l.y, 0.0) / dist2;
 }
 
-vec3 sampleSkylights(vec3 p, vec3 n, float seconds) {
+vec3 sampleSkylights(vec3 p, vec3 n, float seconds, float pickU, vec2 pointU) {
   float hall0 = floor(p.x / HALL + 0.5);
   float bay0 = bayIndex(p.z);
   float weights[NEE_COUNT];
@@ -355,12 +402,13 @@ vec3 sampleSkylights(vec3 p, vec3 n, float seconds) {
   for (int i = 0; i < NEE_COUNT; i++) {
     float hall = hall0 + float(i / (2 * NEE_BAYS + 1)) - 1.0;
     float bay = bay0 + float(i % (2 * NEE_BAYS + 1) - NEE_BAYS);
-    weights[i] = skylightWeight(p, n, hall, bay);
+    // The wall hides most of a neighbouring hall's skylights.
+    weights[i] = skylightWeight(p, n, hall, bay) * (i / (2 * NEE_BAYS + 1) == 1 ? 1.0 : NEIGHBOUR_WEIGHT);
     total += weights[i];
   }
   if (total <= 0.0) return vec3(0.0);
 
-  float pick = rand() * total;
+  float pick = pickU * total;
   int chosen = NEE_COUNT - 1;
   for (int i = 0; i < NEE_COUNT; i++) {
     pick -= weights[i];
@@ -373,7 +421,7 @@ vec3 sampleSkylights(vec3 p, vec3 n, float seconds) {
   float hall = hall0 + float(chosen / (2 * NEE_BAYS + 1)) - 1.0;
   float bay = bay0 + float(chosen % (2 * NEE_BAYS + 1) - NEE_BAYS);
 
-  vec2 u = rand2() * 2.0 - 1.0;
+  vec2 u = pointU * 2.0 - 1.0;
   vec3 lightPoint = vec3(hall * HALL + u.x * LIGHT_SIZE.x, SKY_Y, bay * BAY + u.y * LIGHT_SIZE.y);
   vec3 toLight = lightPoint - p;
   float dist2 = dot(toLight, toLight);
@@ -441,7 +489,7 @@ vec3 pathRadiance(vec3 ro, vec3 rd, float seconds, out float firstDistance) {
       float eta = fromAbove ? 1.0 / WATER_IOR : WATER_IOR;
       vec3 refracted = refract(rd, facing, eta);
       float f = fresnel(dot(-rd, facing), 0.02);
-      if (dot(refracted, refracted) < 0.5 || rand() < f) {
+      if (dot(refracted, refracted) < 0.5 || (event == 0 ? qmc[QMC_TIME].y : rand()) < f) {
         rd = reflect(rd, facing);
         ro = p + facing * 0.002;
       } else {
@@ -457,7 +505,7 @@ vec3 pathRadiance(vec3 ro, vec3 rd, float seconds, out float firstDistance) {
 
     // Glazed tiles: a glossy coat over a diffuse base. Grout is matte.
     float coat = fresnel(dot(-rd, n), TILE_F0) * (1.0 - grout);
-    if (rand() < coat) {
+    if ((event == 0 ? qmc[QMC_TIME].y : rand()) < coat) {
       rd = normalize(reflect(rd, n) + TILE_ROUGHNESS * randomInSphere());
       if (dot(rd, n) <= 0.0) break;
       ro = p + n * 0.003;
@@ -466,16 +514,23 @@ vec3 pathRadiance(vec3 ro, vec3 rd, float seconds, out float firstDistance) {
     }
 
     if (diffuseBounces >= MAX_DIFFUSE) break;
+    bool first = diffuseBounces == 0;
     diffuseBounces++;
 
     throughput *= albedo;
-    vec3 direct = throughput * sampleSkylights(p, n, seconds);
+    vec3 direct = throughput * sampleSkylights(
+      p,
+      n,
+      seconds,
+      first ? qmc[QMC_PICK].x : rand(),
+      first ? qmc[QMC_LIGHT] : rand2()
+    );
     radiance += min(direct, vec3(INDIRECT_CLAMP));
 
     neeHall = floor(p.x / HALL + 0.5);
     neeBay = bayIndex(p.z);
     lastDiffuse = true;
-    rd = cosineSample(n);
+    rd = cosineSample(n, first ? qmc[QMC_BOUNCE] : rand2());
     ro = p + n * 0.003;
   }
 
@@ -505,6 +560,17 @@ vec3 decodeDisplay(vec3 display) {
   return -log(1.0 - mapped) / (EXPOSURE * vignette());
 }
 
+// The buffer is half float, 11 significant bits. A late sample moves the mean
+// by less than the rounding step, and a GPU that truncates when it stores (an
+// Apple M-series one does) let the mean drift darker as samples were added:
+// -5% at 256 samples, -23% at 2048.
+// Rounding here to a neighbouring half float, up with the probability of the
+// remainder, keeps the stored mean unbiased whatever rounding the GPU does.
+vec3 roundToHalf(vec3 v) {
+  vec3 step = exp2(floor(log2(max(abs(v), 6.104e-5))) - 10.0);
+  return floor(v / step + vec3(rand(), rand(), rand())) * step;
+}
+
 void writeSample(vec3 radiance) {
   float k = u_sample;
   vec3 mean = radiance;
@@ -520,16 +586,18 @@ void writeSample(vec3 radiance) {
     color *= 1.0 + 0.025 * grain;
     color += (rand() + rand() - 1.0) / 255.0;
   }
-  fragColor = vec4(color, 1.0);
+  fragColor = vec4(roundToHalf(color), 1.0);
 }
 
 void main() {
   uvec2 pixel = uvec2(gl_FragCoord.xy);
-  rngState = pcg(pixel.x + pcg(pixel.y + pcg(uint(u_loopFrame) + pcg(uint(u_sample)))));
+  uint pixelSeed = pcg(pixel.x + pcg(pixel.y + pcg(uint(u_loopFrame))));
+  rngState = pcg(pixelSeed + pcg(uint(u_sample)));
+  for (int i = 0; i < 5; i++) qmc[i] = sobol2(uint(u_sample), pixelSeed + uint(i) * 0x9e3779b9u);
 
   // Sub-pixel jitter and a moment within the open shutter, per sample.
-  vec2 fragCoord = gl_FragCoord.xy + (u_samples > 0.5 || u_sample > 0.5 ? rand2() - 0.5 : vec2(0.0));
-  float seconds = (u_loopFrame + SHUTTER * rand()) / u_fps;
+  vec2 fragCoord = gl_FragCoord.xy + (u_samples > 0.5 || u_sample > 0.5 ? qmc[QMC_PIXEL] - 0.5 : vec2(0.0));
+  float seconds = (u_loopFrame + SHUTTER * qmc[QMC_TIME].x) / u_fps;
 
   float phase = seconds / LOOP_SECONDS;
   float a = TAU * phase;

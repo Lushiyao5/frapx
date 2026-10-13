@@ -58,12 +58,17 @@
           <span class="note" data-samples>0 samples</span>
         </div>
 
+        <p class="note">
+          A paused frame refines to the export's sample count. Below 4K it looks grainier than
+          the export, so judge noise at 3840 × 2160.
+        </p>
+
         <hr class="divider" />
 
         <div class="row row--3">
           <label class="control">
             <span>Samples</span>
-            <input data-spp type="number" min="1" max="4096" step="1" value="64" />
+            <input data-spp type="number" min="1" max="4096" step="1" value="192" />
           </label>
           <label class="control">
             <span>First</span>
