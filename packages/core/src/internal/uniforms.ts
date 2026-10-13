@@ -1,5 +1,5 @@
 import type { ExplicitUniformInput, GLContext, UniformInput, UniformType } from "../types";
-import { toUniformName } from "@frapx/core";
+import { toUniformName } from "./names";
 
 export type NormalizedUniform = {
   type: UniformType;
@@ -75,6 +75,26 @@ export const applyProgramUniform = (
 ): void => {
   gl.useProgram(program);
   applyUniform(gl, location, uniform);
+};
+
+/**
+ * Uploads every cached uniform to the bound program. Calls `onMissing` with
+ * the name of each uniform the program lacks or optimized out.
+ */
+export const applyUniforms = (
+  gl: GLContext,
+  locations: ReadonlyMap<string, WebGLUniformLocation>,
+  cache: ReadonlyMap<string, NormalizedUniform>,
+  onMissing?: (name: string) => void
+): void => {
+  for (const [name, uniform] of cache) {
+    const location = locations.get(name);
+    if (!location) {
+      onMissing?.(name);
+      continue;
+    }
+    applyUniform(gl, location, uniform);
+  }
 };
 
 export const collectUniformLocations = (

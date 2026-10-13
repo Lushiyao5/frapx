@@ -1,4 +1,5 @@
 export { createRuntimeHost } from "./host";
+export { waitForGpu } from "./internal/capture";
 export { hexToRgb, hexToRgba } from "./color";
 export type { Rgb, Rgba } from "./color";
 export { glsl, glslUtils } from "./glsl";
@@ -20,6 +21,19 @@ export {
 export type { DomSetup } from "./internal/dom";
 export { loadTexture } from "./internal/textures";
 export type { LoadedTexture } from "./internal/textures";
+export { createTextureSet } from "./internal/textureSet";
+export type { TextureSet } from "./internal/textureSet";
+export {
+  applyProgramUniform,
+  applyUniform,
+  applyUniforms,
+  collectUniformLocations,
+  createUniformCache,
+  normalizeUniform
+} from "./internal/uniforms";
+export type { NormalizedUniform } from "./internal/uniforms";
+export { createFullscreenProgram } from "./internal/fullscreenProgram";
+export type { FullscreenProgram } from "./internal/fullscreenProgram";
 export {
   createProgram,
   createFullscreenBuffer,
@@ -55,6 +69,15 @@ export type {
   TextureOptions,
   TextureInput,
   TextureMap,
+  UniformScalar,
+  UniformVec2,
+  UniformVec3,
+  UniformVec4,
+  UniformType,
+  ExplicitUniformInput,
+  UniformInput,
+  UniformInputMap,
+  UniformRuntimeValue,
   HostPointer,
   HostFrameState,
   SetupCanvasOptions,

@@ -1,4 +1,30 @@
 import type { GLContext } from "../types";
+import { isWebGL2Context } from "./webgl";
+
+/**
+ * Resolves once the GPU has finished every command submitted so far, polling
+ * a fence between tasks. Waiting between heavy draws keeps each submission
+ * short, so a long render never trips the browser's GPU watchdog and loses
+ * the context. Resolves immediately on WebGL1.
+ */
+export const waitForGpu = (gl: GLContext): Promise<void> => {
+  if (!isWebGL2Context(gl)) return Promise.resolve();
+  const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+  if (!sync) return Promise.resolve();
+  gl.flush();
+  return new Promise((resolve) => {
+    const poll = () => {
+      const status = gl.clientWaitSync(sync, 0, 0);
+      if (status === gl.TIMEOUT_EXPIRED) {
+        setTimeout(poll, 4);
+        return;
+      }
+      gl.deleteSync(sync);
+      resolve();
+    };
+    poll();
+  });
+};
 
 /**
  * Reads RGBA pixels from `framebuffer` (or the drawing buffer when `null`) and

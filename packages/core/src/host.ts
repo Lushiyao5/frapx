@@ -47,6 +47,8 @@ class RuntimeHost implements RuntimeHostInstance {
   private rafId = 0;
   private running = false;
   private inRender = false;
+  private captureDrawing = false;
+  private resizePending = false;
   private destroyed = false;
   private gates = new Set<Gate>();
   private reducedMotionActive = false;
@@ -203,34 +205,40 @@ class RuntimeHost implements RuntimeHostInstance {
     }
 
     // Check before drawing so a rejected capture has no side effects.
-    if (format === "rgba16f" && this.options.captureSource?.()?.format !== "rgba16f") {
+    const sourceFormat = this.options.captureSource?.()?.format;
+    if (format === "rgba16f" && sourceFormat !== "rgba16f" && sourceFormat !== "rgba32f") {
       throw new UnsupportedError(
         "rgba16f capture needs a float render target, such as feedback with format rgba16f."
       );
     }
+    options.signal?.throwIfAborted();
 
-    // Draw and read in this task: the drawing buffer is not preserved.
-    this.renderInternal(this.elapsed, this.isManual ? this.manualDelta : 0);
-    const gl = this.context;
+    const delta = this.isManual ? this.manualDelta : 0;
+    const drawContext = this.context;
+    if (!this.options.onCaptureDraw) {
+      this.renderInternal(this.elapsed, delta);
+      return this.readCapture(format, drawContext);
+    }
 
-    if (format === "png") {
-      return canvasToPng(this.dom.canvas) as Promise<CaptureResult<F>>;
+    try {
+      await this.renderForCapture(this.options.onCaptureDraw, delta, options.signal);
+      return this.readCapture(format, drawContext);
+    } finally {
+      // Resizes requested while drawing apply once the frame is read.
+      if (this.resizePending) {
+        this.resizePending = false;
+        this.resize();
+      }
     }
-    if (format === "rgba8") {
-      return readPixels(gl, null, this.width, this.height, "rgba8") as CaptureResult<F>;
-    }
-    const source = this.options.captureSource!()!;
-    return readPixels(
-      gl,
-      source.framebuffer,
-      source.width,
-      source.height,
-      "rgba16f"
-    ) as CaptureResult<F>;
   }
 
   resize(): void {
     if (this.destroyed || !this.dom) return;
+    // Keep the size an asynchronous capture draw started with until it is read.
+    if (this.captureDrawing) {
+      this.resizePending = true;
+      return;
+    }
 
     const prevWidth = this.width;
     const prevHeight = this.height;
@@ -359,7 +367,8 @@ class RuntimeHost implements RuntimeHostInstance {
   }
 
   private renderInternal(time: number, delta: number): void {
-    if (!this.dom || !this.context) return;
+    // An asynchronous capture draw holds the lock across tasks.
+    if (!this.dom || !this.context || this.inRender) return;
     const gl = this.context;
 
     this.inRender = true;
@@ -370,6 +379,57 @@ class RuntimeHost implements RuntimeHostInstance {
     } finally {
       this.inRender = false;
     }
+  }
+
+  // Holds the render lock across an asynchronous capture draw so no other
+  // frame interleaves with it.
+  private async renderForCapture(
+    draw: NonNullable<RuntimeHostOptions["onCaptureDraw"]>,
+    delta: number,
+    signal: AbortSignal | undefined
+  ): Promise<void> {
+    if (!this.dom || !this.context) return;
+    this.inRender = true;
+    this.captureDrawing = true;
+    try {
+      this.measureSize();
+      await draw(this.createFrameState(this.elapsed, delta, this.context), signal);
+      this.frame++;
+    } finally {
+      this.inRender = false;
+      this.captureDrawing = false;
+    }
+  }
+
+  // Reads the frame just drawn, in the task that drew it: the drawing buffer
+  // is not preserved. Fails if the context drawn into is gone, including when
+  // it was lost and restored while an asynchronous draw was pending.
+  private readCapture<F extends CaptureFormat>(
+    format: CaptureFormat,
+    drawContext: GLContext | null
+  ): Promise<CaptureResult<F>> | CaptureResult<F> {
+    if (this.destroyed) {
+      throw new DestroyedError("Runtime host was destroyed.");
+    }
+    const gl = this.context;
+    if (!gl || gl !== drawContext || !this.dom) {
+      throw new UnsupportedError("The WebGL context was lost while capturing.");
+    }
+
+    if (format === "png") {
+      return canvasToPng(this.dom.canvas) as Promise<CaptureResult<F>>;
+    }
+    if (format === "rgba8") {
+      return readPixels(gl, null, this.width, this.height, "rgba8") as CaptureResult<F>;
+    }
+    const source = this.options.captureSource!()!;
+    return readPixels(
+      gl,
+      source.framebuffer,
+      source.width,
+      source.height,
+      "rgba16f"
+    ) as CaptureResult<F>;
   }
 
   private createFrameState(

@@ -35,11 +35,52 @@ export type TextureOptions = {
 export type TextureInput = TextureSource | TextureOptions;
 export type TextureMap = Record<string, TextureInput>;
 
+export type UniformScalar = number;
+export type UniformVec2 = [number, number] | readonly [number, number];
+export type UniformVec3 =
+  | [number, number, number]
+  | readonly [number, number, number];
+export type UniformVec4 =
+  | [number, number, number, number]
+  | readonly [number, number, number, number];
+
+export type UniformType = "float" | "vec2" | "vec3" | "vec4" | "mat3" | "mat4";
+
+export type ExplicitUniformInput = {
+  type: UniformType;
+  value: number[] | Float32Array;
+};
+
+export type UniformInput =
+  | UniformScalar
+  | UniformVec2
+  | UniformVec3
+  | UniformVec4
+  | Float32Array
+  | ExplicitUniformInput;
+
+export type UniformInputMap = Record<string, UniformInput>;
+
+export type UniformRuntimeValue<T> = T extends ExplicitUniformInput
+  ? ExplicitUniformInput
+  : T extends Float32Array
+    ? Float32Array
+    : T extends readonly [number, number]
+      ? UniformVec2
+      : T extends readonly [number, number, number]
+        ? UniformVec3
+        : T extends readonly [number, number, number, number]
+          ? UniformVec4
+          : T extends number
+            ? number
+            : UniformInput;
+
 /**
- * Storage format of a render target. `rgba16f` (half float) needs WebGL2 with
- * `EXT_color_buffer_float`.
+ * Storage format of a render target. `rgba16f` (half float) and `rgba32f`
+ * (float) need WebGL2 with `EXT_color_buffer_float`. `rgba32f` is sampled with
+ * nearest filtering unless `OES_texture_float_linear` is available.
  */
-export type RenderTargetFormat = "rgba8" | "rgba16f";
+export type RenderTargetFormat = "rgba8" | "rgba16f" | "rgba32f";
 
 export type RenderTargetOptions = {
   /** Defaults to `"rgba8"`. */
@@ -92,6 +133,11 @@ export type CaptureFormat = "png" | "rgba8" | "rgba16f";
 export type CaptureOptions<F extends CaptureFormat = CaptureFormat> = {
   /** Defaults to `"png"`. */
   format?: F;
+  /**
+   * Rejects the capture with the signal's reason when aborted before drawing,
+   * or between the steps of a capture that draws over several tasks.
+   */
+  signal?: AbortSignal;
 };
 
 export type CaptureResult<F extends CaptureFormat> = F extends "rgba16f"
@@ -169,6 +215,17 @@ export type RuntimeHostOptions = {
    * precision, if any. `captureFrame({ format: "rgba16f" })` reads from it.
    */
   captureSource?: () => RenderTarget | null;
+  /**
+   * Draws the frame `captureFrame()` reads, in place of `onDraw`, when drawing
+   * it takes more than one task (such as accumulating samples while waiting
+   * for the GPU). The host holds its render lock until the promise settles and
+   * reads the result in the task that settled it, so the final draw into the
+   * canvas must happen in that task. Receives the capture's abort signal.
+   */
+  onCaptureDraw?: (
+    state: HostFrameState,
+    signal: AbortSignal | undefined
+  ) => Promise<void>;
   onContextLost?: () => void;
   onContextRestored?: (
     gl: GLContext,

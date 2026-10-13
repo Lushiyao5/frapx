@@ -12,7 +12,8 @@ const DEFAULT_CLEAR_COLOR = [0, 0, 0, 0] as const;
 
 /**
  * Whether `format` can be allocated as a color attachment on `gl`. `rgba8` is
- * always available; `rgba16f` needs WebGL2 and `EXT_color_buffer_float`.
+ * always available; `rgba16f` and `rgba32f` need WebGL2 and
+ * `EXT_color_buffer_float`.
  * Enables the extension as a side effect when present.
  */
 export const supportsRenderTargetFormat = (
@@ -166,16 +167,17 @@ class Target implements RenderTarget {
     }
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    if (this.format === "rgba16f" && isWebGL2Context(gl)) {
+    if (this.format !== "rgba8" && isWebGL2Context(gl)) {
+      const half = this.format === "rgba16f";
       gl.texImage2D(
         gl.TEXTURE_2D,
         0,
-        gl.RGBA16F,
+        half ? gl.RGBA16F : gl.RGBA32F,
         this.width,
         this.height,
         0,
         gl.RGBA,
-        gl.HALF_FLOAT,
+        half ? gl.HALF_FLOAT : gl.FLOAT,
         null
       );
     } else {
@@ -193,7 +195,11 @@ class Target implements RenderTarget {
     }
 
     const wrap = getWrap(gl, this.options.wrap ?? "clamp");
-    const filter = this.options.filter === "nearest" ? gl.NEAREST : gl.LINEAR;
+    // Linear filtering of 32-bit float textures is an optional extension.
+    const linear =
+      this.options.filter !== "nearest" &&
+      (this.format !== "rgba32f" || gl.getExtension("OES_texture_float_linear") !== null);
+    const filter = linear ? gl.LINEAR : gl.NEAREST;
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
