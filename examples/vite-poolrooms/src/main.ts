@@ -1,5 +1,5 @@
-import { createShaderBackground } from "@frapx/fx-canvas";
-import type { Resolution, ShaderBackgroundInstance } from "@frapx/fx-canvas";
+import { createPasses } from "@frapx/fx-passes";
+import type { PassesInstance, Resolution, SampleProgress } from "@frapx/fx-passes";
 import {
   canPickDirectory,
   captureSequence,
@@ -7,7 +7,7 @@ import {
   pickDirectorySink
 } from "@frapx/tool-capture";
 import type { CaptureProgress, FrameSink } from "@frapx/tool-capture";
-import { LOOP_SECONDS, fragment } from "./scene.glsl";
+import { LOOP_SECONDS, display, scene } from "./scene.glsl";
 import "./styles.css";
 
 type ExportOptions = {
@@ -16,7 +16,6 @@ type ExportOptions = {
   samples: number;
   signal?: AbortSignal;
   onProgress?: (progress: CaptureProgress) => void;
-  // Called after each sample but the last, which captureFrame() draws.
   onSample?: (frame: number, drawn: number) => void;
 };
 
@@ -24,7 +23,7 @@ declare global {
   interface Window {
     // Read by verification scripts.
     __poolrooms?: {
-      readonly fx: ShaderBackgroundInstance;
+      readonly fx: PassesInstance;
       readonly loopFrames: number;
       showFrame(frame: number): void;
       exportSequence<R>(sink: FrameSink<R>, options: ExportOptions): Promise<R>;
@@ -75,102 +74,70 @@ if (Number.isInteger(presetSpp) && presetSpp >= 1) sppInput.value = String(prese
 // so the preview shows what the export will look like.
 const targetSamples = () => Math.max(1, Math.round(Number(sppInput.value)) || 1);
 
-// The feedback buffer holds the running mean of the current frame's samples,
-// so it must be float: 8-bit storage would round each step of the mean.
-const fx = createShaderBackground({
-  target: stage,
-  fragment,
-  clock: "manual",
-  resolution: parseResolution(resolutionSelect.value),
-  feedback: { format: "rgba16f", formatFallback: false, filter: "nearest" },
-  uniforms: {
-    loopFrame: 0,
-    fps: Number(fpsSelect.value),
-    sample: 0,
-    samples: 0,
-    preview: modeSelect.value === "preview" ? 1 : 0
-  }
-});
-
-const loopFrames = () => Math.round(LOOP_SECONDS * Number(fpsSelect.value));
-
-// Resolves once the GPU has finished everything submitted so far. Waiting
-// between samples keeps each submission short, so a slow 4K frame never
-// trips the browser's GPU watchdog and loses the context.
-const gpuIdle = (): Promise<void> => {
-  const gl = fx.gl;
-  if (!(gl instanceof WebGL2RenderingContext)) return Promise.resolve();
-  const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-  if (!sync) return Promise.resolve();
-  gl.flush();
-  return new Promise((resolve) => {
-    const poll = () => {
-      if (gl.clientWaitSync(sync, 0, 0) === gl.TIMEOUT_EXPIRED) {
-        setTimeout(poll, 4);
-        return;
-      }
-      gl.deleteSync(sync);
-      resolve();
-    };
-    poll();
-  });
-};
-
 let frame = Number(params.get("frame")) || 0;
-let sample = 0;
 let playing = false;
 let exporting = false;
 let rafId = 0;
-
-const drawSample = () => {
-  fx.setUniforms({ loopFrame: frame % loopFrames(), sample, samples: 0 });
-  fx.render();
-  sample += 1;
-  showSamples();
+// Where sample progress goes: the preview label, or the export's progress.
+let reportSample = (progress: SampleProgress) => {
+  if (!progress.capturing) showSamples(progress.drawn, progress.total);
 };
 
-const showSamples = () => {
-  const target = targetSamples();
+// The scene pass sums its samples in float, so the mean never drifts with
+// the count; the display pass tone maps the mean once per frame.
+const fx = createPasses({
+  target: stage,
+  clock: "manual",
+  resolution: parseResolution(resolutionSelect.value),
+  accumulation: { samples: targetSamples() },
+  passes: [
+    { name: "scene", fragment: scene, accumulate: true, format: "rgba32f", filter: "nearest" },
+    { name: "display", fragment: display, inputs: ["scene"], filter: "nearest" }
+  ],
+  uniforms: {
+    fps: Number(fpsSelect.value),
+    preview: modeSelect.value === "preview" ? 1 : 0
+  },
+  onSample: (progress) => reportSample(progress)
+});
+
+const fps = () => Number(fpsSelect.value);
+const loopFrames = () => Math.round(LOOP_SECONDS * fps());
+
+const showSamples = (drawn: number, total: number) => {
   if (playing) {
     samplesLabel.textContent = "Playing · 1 sample per frame";
-  } else if (sample < target) {
-    samplesLabel.textContent = `Refining · ${sample}/${target} samples`;
+  } else if (drawn < total) {
+    samplesLabel.textContent = `Refining · ${drawn}/${total} samples`;
   } else {
-    samplesLabel.textContent = `Done · ${target} samples`;
+    samplesLabel.textContent = `Done · ${total} samples`;
   }
 };
 
+// Draws `next` from its first sample; a paused frame then refines by itself.
 const showFrame = (next: number) => {
   frame = next;
-  sample = 0;
   frameInput.value = String(frame % loopFrames());
   frameOutput.value = String(frame % loopFrames());
+  if (exporting) return;
+  fx.setTime(frame / fps());
+  fx.render();
 };
 
-// Playing draws one sample per frame; paused, the still frame keeps refining.
+// Playing draws one sample per frame.
 const tick = () => {
   rafId = 0;
-  if (exporting) return;
-  if (playing) {
-    showFrame((frame + 1) % loopFrames());
-    drawSample();
-  } else if (sample < targetSamples()) {
-    drawSample();
-  } else {
-    return;
-  }
+  if (!playing || exporting) return;
+  showFrame((frame + 1) % loopFrames());
   rafId = requestAnimationFrame(tick);
-};
-
-const wake = () => {
-  if (!rafId && !exporting) rafId = requestAnimationFrame(tick);
 };
 
 const setPlaying = (next: boolean) => {
   playing = next;
   playButton.textContent = playing ? "Pause" : "Play";
-  if (!playing) sample = 0;
-  wake();
+  fx.setAccumulation({ samples: playing ? 1 : targetSamples() });
+  if (playing && !rafId) rafId = requestAnimationFrame(tick);
+  if (!playing) showFrame(frame);
 };
 
 /**
@@ -183,32 +150,30 @@ const exportSequence = async <R>(sink: FrameSink<R>, options: ExportOptions): Pr
   exporting = true;
   cancelAnimationFrame(rafId);
   rafId = 0;
+  let current = startFrame;
+  reportSample = ({ drawn, capturing }) => {
+    if (capturing) onSample?.(current, drawn);
+  };
   try {
-    await gpuIdle();
+    fx.setAccumulation({ samples });
     return await captureSequence(fx, {
       sink,
-      fps: Number(fpsSelect.value),
+      fps: fps(),
       frameCount,
       startFrame,
       ...(signal ? { signal } : {}),
       ...(onProgress ? { onProgress } : {}),
-      // Every sample but the last; captureFrame() draws the last one.
-      async onBeforeFrame({ frame: current }) {
-        fx.setUniform("loopFrame", current % loopFrames());
-        for (let k = 0; k < samples - 1; k++) {
-          signal?.throwIfAborted();
-          fx.setUniforms({ sample: k, samples });
-          fx.render();
-          await gpuIdle();
-          onSample?.(current, k + 1);
-        }
-        fx.setUniforms({ sample: samples - 1, samples });
+      onBeforeFrame({ frame: next }) {
+        current = next;
       }
     });
   } finally {
     exporting = false;
-    sample = 0;
-    wake();
+    reportSample = (progress) => {
+      if (!progress.capturing) showSamples(progress.drawn, progress.total);
+    };
+    fx.setAccumulation({ samples: targetSamples() });
+    showFrame(frame);
   }
 };
 
@@ -271,7 +236,7 @@ exportButton.addEventListener("click", async () => {
       onSample(current, drawn) {
         progressBar.value = (written + drawn / samples) / frameCount;
         samplesLabel.textContent =
-          drawn < samples - 1
+          drawn < samples
             ? `Frame ${current} · ${drawn}/${samples} samples`
             : `Frame ${current} · writing PNG`;
       },
@@ -313,37 +278,30 @@ cancelButton.addEventListener("click", () => abort?.abort());
 playButton.addEventListener("click", () => setPlaying(!playing));
 
 frameInput.addEventListener("input", () => {
-  setPlaying(false);
+  if (playing) setPlaying(false);
   showFrame(Number(frameInput.value));
-  wake();
 });
 
 resolutionSelect.addEventListener("change", () => {
   fx.setResolution(parseResolution(resolutionSelect.value));
-  sample = 0;
-  wake();
+  showFrame(frame);
 });
 
+// Input changes restart the frame's samples and refine again by themselves.
 modeSelect.addEventListener("change", () => {
   fx.setUniform("preview", modeSelect.value === "preview" ? 1 : 0);
-  sample = 0;
-  wake();
 });
 
 fpsSelect.addEventListener("change", () => {
-  fx.setUniform("fps", Number(fpsSelect.value));
+  fx.setUniform("fps", fps());
   frameInput.max = String(loopFrames() - 1);
   lastInput.value = String(loopFrames() - 1);
   showFrame(0);
   describe();
-  wake();
 });
 
 sppInput.addEventListener("change", () => {
-  // The running mean cannot drop samples, so a lower count starts over.
-  if (sample > targetSamples()) sample = 0;
-  if (!playing) showSamples();
-  wake();
+  if (!playing) fx.setAccumulation({ samples: targetSamples() });
 });
 
 firstInput.addEventListener("change", describe);
@@ -355,22 +313,22 @@ window.__poolrooms = {
     return loopFrames();
   },
   showFrame(next: number) {
-    setPlaying(false);
+    if (playing) setPlaying(false);
     showFrame(next);
-    wake();
   },
   exportSequence,
   createZipSink
 };
 
-showFrame(frame);
+frameInput.value = String(frame % loopFrames());
+frameOutput.value = String(frame % loopFrames());
 describe();
 setBusy(false);
 
 void fx.ready.then(
   () => {
     status.textContent = "Ready";
-    wake();
+    showFrame(frame);
   },
   (error: unknown) => {
     // Needs WebGL2 with EXT_color_buffer_float for the float buffer.

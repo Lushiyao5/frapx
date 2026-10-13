@@ -1,30 +1,37 @@
-import { glsl } from "@frapx/fx-canvas";
+import { glsl } from "@frapx/fx-passes";
 import { raymarch, raymarchCamera } from "@frapx/glsl-raymarch";
 import { sdf2d, sdf3d, sdfOps } from "@frapx/glsl-sdf";
 
 /** Seconds in one seamless loop. */
 export const LOOP_SECONDS = 24;
 
+// Frame number within the loop, from the frame time, so frame N and frame
+// N + loop length match.
+const loopFrame = `
+float loopFrame() {
+  float frames = floor(${LOOP_SECONDS.toFixed(1)} * u_fps + 0.5);
+  return mod(floor(u_frameTime * u_fps + 0.5), frames);
+}
+`;
+
 // An endless grid of tiled pool halls under skylights. Every sample is one
-// path through the scene; the feedback buffer keeps the running mean of the
-// samples drawn for the current frame (see writeSample at the bottom).
-export const fragment = glsl`#version 300 es
+// path through the scene, in linear light; @frapx/fx-passes sums the samples
+// of a frame in float and hands their mean to the display pass.
+export const scene = glsl`#version 300 es
 precision highp float;
 
-in vec2 v_uv;
 out vec4 fragColor;
 
 uniform vec2 u_resolution;
-uniform sampler2D u_previousFrame;
-// Frame number within the loop, so frame N and frame N + loop length match.
-uniform float u_loopFrame;
+uniform float u_frameTime;
 uniform float u_fps;
-// Index of this sample within the frame. Sample 0 discards the history.
-uniform float u_sample;
-// Samples per frame. The last one adds grain and dither; 0 never finishes.
-uniform float u_samples;
+// Index of this sample within the frame, and the samples in the frame.
+uniform float u_sampleIndex;
+uniform float u_sampleCount;
 // 1: fast direct lighting for scrubbing, 0: path traced.
 uniform float u_preview;
+
+${loopFrame}
 
 #define FRAPX_RAYMARCH_STEPS 256
 
@@ -537,67 +544,19 @@ vec3 pathRadiance(vec3 ro, vec3 rd, float seconds, out float firstDistance) {
   return radiance;
 }
 
-// ---------------------------------------------------------------- output
-
-// Display encoding: exposure, vignette and an exponential tone curve, all
-// invertible, so the buffer always holds a viewable image while the running
-// mean is still taken in linear light.
-const float EXPOSURE = 1.15;
-
-float vignette() {
-  vec2 c = v_uv - 0.5;
-  c.x *= u_resolution.x / u_resolution.y;
-  return 1.0 - 0.32 * smoothstep(0.2, 1.05, length(c));
-}
-
-vec3 encodeDisplay(vec3 linear) {
-  vec3 mapped = 1.0 - exp(-max(linear, 0.0) * EXPOSURE * vignette());
-  return pow(mapped, vec3(1.0 / 2.2));
-}
-
-vec3 decodeDisplay(vec3 display) {
-  vec3 mapped = min(pow(max(display, 0.0), vec3(2.2)), vec3(0.9995));
-  return -log(1.0 - mapped) / (EXPOSURE * vignette());
-}
-
-// The buffer is half float, 11 significant bits. A late sample moves the mean
-// by less than the rounding step, and a GPU that truncates when it stores (an
-// Apple M-series one does) let the mean drift darker as samples were added:
-// -5% at 256 samples, -23% at 2048.
-// Rounding here to a neighbouring half float, up with the probability of the
-// remainder, keeps the stored mean unbiased whatever rounding the GPU does.
-vec3 roundToHalf(vec3 v) {
-  vec3 step = exp2(floor(log2(max(abs(v), 6.104e-5))) - 10.0);
-  return floor(v / step + vec3(rand(), rand(), rand())) * step;
-}
-
-void writeSample(vec3 radiance) {
-  float k = u_sample;
-  vec3 mean = radiance;
-  if (k > 0.5) {
-    vec3 previous = decodeDisplay(texelFetch(u_previousFrame, ivec2(gl_FragCoord.xy), 0).rgb);
-    mean = mix(previous, radiance, 1.0 / (k + 1.0));
-  }
-  vec3 color = encodeDisplay(mean);
-
-  if (u_samples > 0.5 && k > u_samples - 1.5) {
-    // Grain, then triangular dither so 8-bit export does not band.
-    float grain = rand() + rand() - 1.0;
-    color *= 1.0 + 0.025 * grain;
-    color += (rand() + rand() - 1.0) / 255.0;
-  }
-  fragColor = vec4(roundToHalf(color), 1.0);
-}
-
 void main() {
+  float frame = loopFrame();
+  uint sampleIndex = uint(u_sampleIndex);
   uvec2 pixel = uvec2(gl_FragCoord.xy);
-  uint pixelSeed = pcg(pixel.x + pcg(pixel.y + pcg(uint(u_loopFrame))));
-  rngState = pcg(pixelSeed + pcg(uint(u_sample)));
-  for (int i = 0; i < 5; i++) qmc[i] = sobol2(uint(u_sample), pixelSeed + uint(i) * 0x9e3779b9u);
+  uint pixelSeed = pcg(pixel.x + pcg(pixel.y + pcg(uint(frame))));
+  rngState = pcg(pixelSeed + pcg(sampleIndex));
+  for (int i = 0; i < 5; i++) qmc[i] = sobol2(sampleIndex, pixelSeed + uint(i) * 0x9e3779b9u);
 
-  // Sub-pixel jitter and a moment within the open shutter, per sample.
-  vec2 fragCoord = gl_FragCoord.xy + (u_samples > 0.5 || u_sample > 0.5 ? qmc[QMC_PIXEL] - 0.5 : vec2(0.0));
-  float seconds = (u_loopFrame + SHUTTER * qmc[QMC_TIME].x) / u_fps;
+  // Sub-pixel jitter and a moment within the open shutter, per sample. The
+  // scene draws them from its own per-pixel scrambled sequence rather than the
+  // frame-wide u_jitter, so low sample counts look like noise, not ghosts.
+  vec2 fragCoord = gl_FragCoord.xy + (u_sampleCount > 1.5 ? qmc[QMC_PIXEL] - 0.5 : vec2(0.0));
+  float seconds = (frame + SHUTTER * qmc[QMC_TIME].x) / u_fps;
 
   float phase = seconds / LOOP_SECONDS;
   float a = TAU * phase;
@@ -608,13 +567,64 @@ void main() {
   vec3 rd = frapx_cameraRay(fragCoord, u_resolution, camera, radians(64.0));
 
   if (u_preview > 0.5) {
-    writeSample(previewRadiance(eye, rd, seconds));
+    fragColor = vec4(previewRadiance(eye, rd, seconds), 1.0);
     return;
   }
 
   // Aerial perspective on the camera ray only: distant halls fade to haze.
   float firstDistance;
   vec3 radiance = pathRadiance(eye, rd, seconds, firstDistance);
-  writeSample(mix(radiance, HAZE, 1.0 - exp(-0.006 * firstDistance)));
+  fragColor = vec4(mix(radiance, HAZE, 1.0 - exp(-0.006 * firstDistance)), 1.0);
+}
+`;
+
+// Runs once per frame on the mean: exposure, vignette and an exponential tone
+// curve, then film grain and triangular dither so 8-bit exports do not band.
+export const display = glsl`#version 300 es
+precision highp float;
+
+in vec2 v_uv;
+out vec4 fragColor;
+
+uniform sampler2D u_scene;
+uniform vec2 u_resolution;
+uniform float u_frameTime;
+uniform float u_fps;
+
+${loopFrame}
+
+const float EXPOSURE = 1.15;
+
+uint pcg(uint v) {
+  uint state = v * 747796405u + 2891336453u;
+  uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+  return (word >> 22u) ^ word;
+}
+
+uint rngState;
+
+float rand() {
+  rngState = pcg(rngState);
+  return float(rngState) / 4294967296.0;
+}
+
+float vignette() {
+  vec2 c = v_uv - 0.5;
+  c.x *= u_resolution.x / u_resolution.y;
+  return 1.0 - 0.32 * smoothstep(0.2, 1.05, length(c));
+}
+
+void main() {
+  vec3 linear = texelFetch(u_scene, ivec2(gl_FragCoord.xy), 0).rgb;
+  vec3 mapped = 1.0 - exp(-max(linear, 0.0) * EXPOSURE * vignette());
+  vec3 color = pow(mapped, vec3(1.0 / 2.2));
+
+  // Seeded by pixel and frame, so a frame always gets the same grain.
+  uvec2 pixel = uvec2(gl_FragCoord.xy);
+  rngState = pcg(pixel.x + pcg(pixel.y + pcg(uint(loopFrame()) + 0x51ed270bu)));
+  float grain = rand() + rand() - 1.0;
+  color *= 1.0 + 0.025 * grain;
+  color += (rand() + rand() - 1.0) / 255.0;
+  fragColor = vec4(color, 1.0);
 }
 `;
