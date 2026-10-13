@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `captureFrame({ signal })`: an already-aborted signal rejects the capture without drawing.
+
+### Changed
+
+- Uniform, texture and program management now come from `@frapx/core`, which `@frapx/fx-passes` shares. Behavior is unchanged. The uniform input types are re-exported from `@frapx/core`; they keep the same names and shapes.
+
 ## 0.8.0 - 2026-10-10
 
 ### Added

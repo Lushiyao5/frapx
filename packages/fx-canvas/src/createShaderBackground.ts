@@ -19,20 +19,24 @@ import type {
 import {
   TextureLoadError,
   UnsupportedError,
+  applyProgramUniform,
+  applyUniforms,
+  createFullscreenProgram,
   createRuntimeHost,
+  createTextureSet,
+  createUniformCache,
   isGLSL300,
-  loadTexture,
+  normalizeUniform,
   toUniformName
 } from "@frapx/core";
-import type { HostFrameState, RuntimeHostInstance } from "@frapx/core";
-import {
-  applyProgramUniform,
-  applyUniform,
-  collectUniformLocations,
-  createUniformCache,
-  normalizeUniform,
-  type NormalizedUniform
-} from "./internal/uniforms";
+import type {
+  FullscreenProgram,
+  HostFrameState,
+  LoadedTexture,
+  NormalizedUniform,
+  RuntimeHostInstance,
+  TextureSet
+} from "@frapx/core";
 import {
   bindFeedbackForRead,
   copyFeedbackToCanvas,
@@ -44,13 +48,6 @@ import {
   type FeedbackState,
   type NormalizedFeedbackOptions
 } from "./internal/feedback";
-import {
-  createFullscreenBuffer,
-  createProgram,
-  defaultVertexShader,
-  defaultVertexShader300
-} from "./internal/webgl";
-import type { LoadedTexture } from "./internal/textures";
 
 export const createShaderBackground = <
   TUniforms extends UniformInputMap = UniformInputMap
@@ -76,14 +73,8 @@ class ShaderBackground<TUniforms extends UniformInputMap>
 
   // Shader-specific GL state
   private _gl: GLContext | null = null;
-  private program: WebGLProgram | null = null;
-  private buffer: WebGLBuffer | null = null;
-  private attribLocation = -1;
-  private uniformLocations = new Map<string, WebGLUniformLocation>();
-  private textureInputs = new Map<string, TextureInput>();
-  private textures = new Map<string, LoadedTexture>();
-  private textureUnits = new Map<string, number>();
-  private textureVersions = new Map<string, number>();
+  private shaderProgram: FullscreenProgram | null = null;
+  private textureSet: TextureSet;
   private feedbackOptions: NormalizedFeedbackOptions | null = null;
   private feedbackState: FeedbackState | null = null;
   private shaderDestroyed = false;
@@ -91,6 +82,7 @@ class ShaderBackground<TUniforms extends UniformInputMap>
   constructor(options: CreateShaderBackgroundOptions<TUniforms>) {
     this.options = options;
     this.uniformCache = createUniformCache(options.uniforms);
+    this.textureSet = createTextureSet(options.textures);
 
     this.host = createRuntimeHost({
       ...(options.target !== undefined && { target: options.target }),
@@ -139,7 +131,6 @@ class ShaderBackground<TUniforms extends UniformInputMap>
         }
         this.feedbackOptions = normalizeFeedbackOptions(options.feedback);
         this.initProgram(gl);
-        this.textureInputs = new Map(Object.entries(options.textures ?? {}));
         this.assertNoFeedbackTextureConflict();
         this.initFeedback(gl, width, height);
         await this.loadTextureInputs(gl);
@@ -147,7 +138,7 @@ class ShaderBackground<TUniforms extends UniformInputMap>
       },
 
       onDraw: (state) => {
-        if (this.shaderDestroyed || !this.program) return;
+        if (this.shaderDestroyed || !this.shaderProgram) return;
         this.drawFrame(state);
       },
 
@@ -199,7 +190,8 @@ class ShaderBackground<TUniforms extends UniformInputMap>
   }
 
   get feedbackFormat(): FeedbackFormat | null {
-    return this.feedbackState?.targets.format ?? null;
+    // Feedback only ever requests rgba8 or rgba16f, and falls back to rgba8.
+    return (this.feedbackState?.targets.format as FeedbackFormat | undefined) ?? null;
   }
 
   start(): void {
@@ -253,13 +245,10 @@ class ShaderBackground<TUniforms extends UniformInputMap>
 
     const gl = this._gl;
     if (gl) {
-      for (const texture of this.textures.values()) {
-        gl.deleteTexture(texture.texture);
-      }
+      this.textureSet.dispose(gl);
       deleteFeedbackState(this.feedbackState);
       this.feedbackState = null;
-      if (this.buffer) gl.deleteBuffer(this.buffer);
-      if (this.program) gl.deleteProgram(this.program);
+      this.shaderProgram?.dispose();
     }
 
     this.host.destroy();
@@ -276,15 +265,16 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     this.uniformCache.set(uniformName, normalizeUniform(value));
 
     const gl = this._gl;
-    const location = this.uniformLocations.get(uniformName);
-    if (gl && this.program && location) {
+    const program = this.shaderProgram;
+    const location = program?.locations.get(uniformName);
+    if (gl && program && location) {
       applyProgramUniform(
         gl,
-        this.program,
+        program.program,
         location,
         this.uniformCache.get(uniformName)!
       );
-    } else if (this.program) {
+    } else if (program) {
       this.warnUnknownUniform(uniformName);
     }
 
@@ -324,31 +314,20 @@ class ShaderBackground<TUniforms extends UniformInputMap>
       throw error;
     }
 
-    const version = (this.textureVersions.get(name) ?? 0) + 1;
-    this.textureVersions.set(name, version);
-
     try {
-      const unit = this.resolveTextureUnit(gl, name);
-      const loaded = await loadTexture(gl, name, input, unit);
-
-      if (this.shaderDestroyed || this.textureVersions.get(name) !== version) {
-        gl.deleteTexture(loaded.texture);
-        return;
-      }
-
-      const previous = this.textures.get(name);
-      this.textureInputs.set(name, input);
-      this.textures.set(name, loaded);
-      if (previous) gl.deleteTexture(previous.texture);
+      const loaded = await this.textureSet.set(
+        gl,
+        name,
+        input,
+        () => this.shaderDestroyed
+      );
+      if (!loaded) return;
       this.applyTextureSizeUniform(loaded);
 
       if (this.shouldRenderOnDemand) {
         this.host.render();
       }
     } catch (error) {
-      if (!this.textures.has(name) && !this.textureInputs.has(name)) {
-        this.textureUnits.delete(name);
-      }
       const normalized =
         error instanceof Error ? error : new Error(String(error));
       this.options.onError?.(normalized);
@@ -373,7 +352,7 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     this.resizeFeedback(state.width, state.height);
     this.bindDrawTarget(gl, state.width, state.height);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.useProgram(this.program);
+    gl.useProgram(this.shaderProgram!.program);
     this.applyBuiltInUniforms(gl, state);
 
     const renderState = this.createRenderState(state);
@@ -384,7 +363,7 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     this.bindDrawTarget(gl, state.width, state.height);
     this.prepareDrawState(gl);
 
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    this.shaderProgram!.draw();
     this.options.onAfterRender?.(renderState);
 
     if (this.feedbackState) {
@@ -404,23 +383,16 @@ class ShaderBackground<TUniforms extends UniformInputMap>
   }
 
   private initProgram(gl: GLContext): void {
-    if (this.program) gl.deleteProgram(this.program);
-    if (this.buffer) gl.deleteBuffer(this.buffer);
+    this.shaderProgram?.dispose();
+    this.shaderProgram = null;
     deleteFeedbackState(this.feedbackState);
     this.feedbackState = null;
 
-    const defaultVertex = isGLSL300(this.options.fragment)
-      ? defaultVertexShader300
-      : defaultVertexShader;
-    this.program = createProgram(
+    this.shaderProgram = createFullscreenProgram(
       gl,
-      this.options.vertex ?? defaultVertex,
-      this.options.fragment
+      this.options.fragment,
+      this.options.vertex
     );
-    gl.useProgram(this.program);
-    this.buffer = createFullscreenBuffer(gl, this.program);
-    this.attribLocation = gl.getAttribLocation(this.program, "a_position");
-    this.uniformLocations = collectUniformLocations(gl, this.program);
   }
 
   private bindDrawTarget(gl: GLContext, width: number, height: number): void {
@@ -434,21 +406,18 @@ class ShaderBackground<TUniforms extends UniformInputMap>
   // Re-bind core program, geometry, textures and uniforms so a draw is correct
   // regardless of GL state changed by onBeforeRender/onAfterRender.
   private prepareDrawState(gl: GLContext): void {
-    if (!this.program) return;
-    gl.useProgram(this.program);
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
-    if (this.attribLocation >= 0) {
-      gl.enableVertexAttribArray(this.attribLocation);
-      gl.vertexAttribPointer(this.attribLocation, 2, gl.FLOAT, false, 0, 0);
-    }
-    this.applyTextures(gl);
+    if (!this.shaderProgram) return;
+    this.shaderProgram.use();
+    this.textureSet.bind(gl, this.shaderProgram.locations, (name) =>
+      this.warnUnknownUniform(name)
+    );
     this.applyCachedUniforms(gl);
     this.applyFeedbackTexture(gl);
   }
 
   private initFeedback(gl: GLContext, width: number, height: number): void {
     if (!this.feedbackOptions) return;
-    const unit = this.resolveTextureUnit(gl, this.feedbackOptions.uniform);
+    const unit = this.textureSet.reserveUnit(gl, this.feedbackOptions.uniform);
     this.feedbackState = createFeedbackState(
       gl,
       this.feedbackOptions,
@@ -496,7 +465,7 @@ class ShaderBackground<TUniforms extends UniformInputMap>
   }
 
   private applyTextureSizeUniforms(): void {
-    for (const texture of this.textures.values()) {
+    for (const texture of this.textureSet.textures.values()) {
       this.applyTextureSizeUniform(texture);
     }
   }
@@ -509,44 +478,25 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     this.uniformCache.set(texture.sizeUniformName, uniform);
 
     const gl = this._gl;
-    const location = this.uniformLocations.get(texture.sizeUniformName);
-    if (gl && this.program && location) {
-      applyProgramUniform(gl, this.program, location, uniform);
-    } else if (this.program) {
+    const program = this.shaderProgram;
+    const location = program?.locations.get(texture.sizeUniformName);
+    if (gl && program && location) {
+      applyProgramUniform(gl, program.program, location, uniform);
+    } else if (program) {
       this.warnUnknownUniform(texture.sizeUniformName);
     }
   }
 
   private applyCachedUniforms(gl: GLContext): void {
-    for (const [name, uniform] of this.uniformCache) {
-      const location = this.uniformLocations.get(name);
-      if (!location) {
-        this.warnUnknownUniform(name);
-        continue;
-      }
-      applyUniform(gl, location, uniform);
-    }
-  }
-
-  private applyTextures(gl: GLContext): void {
-    for (const texture of this.textures.values()) {
-      const unit = this.textureUnits.get(texture.name);
-      if (unit === undefined) continue;
-      const location = this.uniformLocations.get(texture.uniformName);
-      if (!location) {
-        this.warnUnknownUniform(texture.uniformName);
-        continue;
-      }
-
-      gl.activeTexture(gl.TEXTURE0 + unit);
-      gl.bindTexture(gl.TEXTURE_2D, texture.texture);
-      gl.uniform1i(location, unit);
-    }
+    if (!this.shaderProgram) return;
+    applyUniforms(gl, this.shaderProgram.locations, this.uniformCache, (name) =>
+      this.warnUnknownUniform(name)
+    );
   }
 
   private applyFeedbackTexture(gl: GLContext): void {
     if (!this.feedbackState) return;
-    const location = this.uniformLocations.get(
+    const location = this.shaderProgram?.locations.get(
       this.feedbackState.options.uniformName
     );
     if (!location) {
@@ -556,42 +506,13 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     bindFeedbackForRead(gl, this.feedbackState, location);
   }
 
-  private async loadTextureInputs(gl: GLContext): Promise<void> {
-    const loadedTextures = new Map<string, LoadedTexture>();
-
-    for (const [name, input] of this.textureInputs) {
-      if (this.shaderDestroyed) break;
-      const unit = this.resolveTextureUnit(gl, name);
-      loadedTextures.set(name, await loadTexture(gl, name, input, unit));
-    }
-
-    for (const texture of this.textures.values()) {
-      gl.deleteTexture(texture.texture);
-    }
-    this.textures = loadedTextures;
-  }
-
-  private resolveTextureUnit(gl: GLContext, name: string): number {
-    const existing = this.textureUnits.get(name);
-    if (existing !== undefined) return existing;
-
-    const maxUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS) as number;
-
-    for (let unit = 0; unit < maxUnits; unit += 1) {
-      if (![...this.textureUnits.values()].includes(unit)) {
-        this.textureUnits.set(name, unit);
-        return unit;
-      }
-    }
-
-    throw new TextureLoadError(
-      `Texture unit limit exceeded while loading texture: ${name}`
-    );
+  private loadTextureInputs(gl: GLContext): Promise<void> {
+    return this.textureSet.loadAll(gl, () => this.shaderDestroyed);
   }
 
   private assertNoFeedbackTextureConflict(): void {
     if (!this.feedbackOptions) return;
-    if (this.textureInputs.has(this.feedbackOptions.uniform)) {
+    if (this.textureSet.hasInput(this.feedbackOptions.uniform)) {
       throw new TextureLoadError(
         `Texture name conflicts with feedback uniform: ${this.feedbackOptions.uniform}`
       );

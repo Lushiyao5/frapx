@@ -1,3 +1,10 @@
+import type {
+  UniformInput,
+  UniformInputMap,
+  UniformRuntimeValue,
+  UniformVec4
+} from "@frapx/core";
+
 export type GLContext = WebGLRenderingContext | WebGL2RenderingContext;
 
 export type ShaderLayer = "background" | "overlay";
@@ -35,45 +42,17 @@ export type TextureOptions = {
 export type TextureInput = TextureSource | TextureOptions;
 export type TextureMap = Record<string, TextureInput>;
 
-export type UniformScalar = number;
-export type UniformVec2 = [number, number] | readonly [number, number];
-export type UniformVec3 =
-  | [number, number, number]
-  | readonly [number, number, number];
-export type UniformVec4 =
-  | [number, number, number, number]
-  | readonly [number, number, number, number];
-
-export type UniformType = "float" | "vec2" | "vec3" | "vec4" | "mat3" | "mat4";
-
-export type ExplicitUniformInput = {
-  type: UniformType;
-  value: number[] | Float32Array;
-};
-
-export type UniformInput =
-  | UniformScalar
-  | UniformVec2
-  | UniformVec3
-  | UniformVec4
-  | Float32Array
-  | ExplicitUniformInput;
-
-export type UniformInputMap = Record<string, UniformInput>;
-
-export type UniformRuntimeValue<T> = T extends ExplicitUniformInput
-  ? ExplicitUniformInput
-  : T extends Float32Array
-    ? Float32Array
-    : T extends readonly [number, number]
-      ? UniformVec2
-      : T extends readonly [number, number, number]
-        ? UniformVec3
-        : T extends readonly [number, number, number, number]
-          ? UniformVec4
-          : T extends number
-            ? number
-            : UniformInput;
+export type {
+  ExplicitUniformInput,
+  UniformInput,
+  UniformInputMap,
+  UniformRuntimeValue,
+  UniformScalar,
+  UniformType,
+  UniformVec2,
+  UniformVec3,
+  UniformVec4
+} from "@frapx/core";
 
 /**
  * Storage format of the feedback buffers. `rgba16f` (half float) keeps values
@@ -91,6 +70,8 @@ export type CaptureFormat = "png" | "rgba8" | "rgba16f";
 export type CaptureOptions<F extends CaptureFormat = CaptureFormat> = {
   /** Defaults to `"png"`. */
   format?: F;
+  /** Rejects the capture with the signal's reason when already aborted. */
+  signal?: AbortSignal;
 };
 
 export type CaptureResult<F extends CaptureFormat> = F extends "rgba16f"

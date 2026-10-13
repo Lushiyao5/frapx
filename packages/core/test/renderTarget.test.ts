@@ -11,8 +11,9 @@ import type { GLContext } from "../src/types";
 
 const createMockGl = ({
   webgl2 = false,
-  colorBufferFloat = false
-}: { webgl2?: boolean; colorBufferFloat?: boolean } = {}) => {
+  colorBufferFloat = false,
+  floatLinear = false
+}: { webgl2?: boolean; colorBufferFloat?: boolean; floatLinear?: boolean } = {}) => {
   let textureId = 0;
   let framebufferId = 0;
   const gl: Record<string, unknown> = {
@@ -32,8 +33,10 @@ const createMockGl = ({
     NEAREST: 9728,
     RGBA: 6408,
     RGBA16F: 34842,
+    RGBA32F: 34836,
     UNSIGNED_BYTE: 5121,
     HALF_FLOAT: 5131,
+    FLOAT: 5126,
     createTexture: vi.fn(() => ({ id: `texture-${textureId++}` })),
     deleteTexture: vi.fn(),
     bindTexture: vi.fn(),
@@ -48,7 +51,10 @@ const createMockGl = ({
     clearColor: vi.fn(),
     clear: vi.fn(),
     getExtension: vi.fn((name: string) =>
-      name === "EXT_color_buffer_float" && colorBufferFloat ? {} : null
+      (name === "EXT_color_buffer_float" && colorBufferFloat) ||
+      (name === "OES_texture_float_linear" && floatLinear)
+        ? {}
+        : null
     )
   };
   if (webgl2) {
@@ -102,6 +108,30 @@ describe("createRenderTarget", () => {
     expect(target.format).toBe("rgba16f");
     expect(gl.texImage2D).toHaveBeenCalledWith(
       gl.TEXTURE_2D, 0, gl.RGBA16F, 4, 2, 0, gl.RGBA, gl.HALF_FLOAT, null
+    );
+  });
+
+  it("allocates float storage when rgba32f is supported", () => {
+    const gl = createMockGl({ webgl2: true, colorBufferFloat: true });
+    const target = createRenderTarget(gl, 4, 2, { format: "rgba32f" });
+
+    expect(target.format).toBe("rgba32f");
+    expect(gl.texImage2D).toHaveBeenCalledWith(
+      gl.TEXTURE_2D, 0, gl.RGBA32F, 4, 2, 0, gl.RGBA, gl.FLOAT, null
+    );
+  });
+
+  it("samples rgba32f with nearest filtering unless float linear filtering exists", () => {
+    const plain = createMockGl({ webgl2: true, colorBufferFloat: true });
+    createRenderTarget(plain, 4, 2, { format: "rgba32f" });
+    expect(plain.texParameteri).toHaveBeenCalledWith(
+      plain.TEXTURE_2D, plain.TEXTURE_MIN_FILTER, plain.NEAREST
+    );
+
+    const linear = createMockGl({ webgl2: true, colorBufferFloat: true, floatLinear: true });
+    createRenderTarget(linear, 4, 2, { format: "rgba32f" });
+    expect(linear.texParameteri).toHaveBeenCalledWith(
+      linear.TEXTURE_2D, linear.TEXTURE_MIN_FILTER, linear.LINEAR
     );
   });
 

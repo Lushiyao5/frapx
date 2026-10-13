@@ -626,6 +626,165 @@ describe("captureFrame", () => {
     await expect(host.captureFrame()).rejects.toBeInstanceOf(DestroyedError);
   });
 
+  it("reads rgba16f from an rgba32f capture source", async () => {
+    const { host } = create({
+      clock: "manual",
+      resolution: [2, 3],
+      captureSource: () => ({ ...floatSource, format: "rgba32f" }) as RenderTarget
+    });
+    await host.ready;
+
+    const data = await host.captureFrame({ format: "rgba16f" });
+    expect(data).toBeInstanceOf(Float32Array);
+  });
+
+  it("rejects an aborted capture without drawing", async () => {
+    const { host, frames } = create({ clock: "manual", resolution: [2, 2] });
+    await host.ready;
+    const controller = new AbortController();
+    controller.abort(new Error("stop"));
+
+    await expect(
+      host.captureFrame({ format: "rgba8", signal: controller.signal })
+    ).rejects.toThrow("stop");
+    expect(frames).toHaveLength(0);
+  });
+
+  describe("with onCaptureDraw", () => {
+    const deferred = () => {
+      let resolve!: () => void;
+      const promise = new Promise<void>((r) => {
+        resolve = r;
+      });
+      return { promise, resolve };
+    };
+
+    it("draws through the hook, holding the render lock until it settles", async () => {
+      const step = deferred();
+      const captured: HostFrameState[] = [];
+      const signals: Array<AbortSignal | undefined> = [];
+      const { host, frames } = create({
+        clock: "manual",
+        resolution: [2, 3],
+        onCaptureDraw: async (state, signal) => {
+          captured.push(state);
+          signals.push(signal);
+          await step.promise;
+        }
+      });
+      await host.ready;
+      host.setTime(1.5);
+      const controller = new AbortController();
+
+      const capture = host.captureFrame({ format: "rgba8", signal: controller.signal });
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(captured).toHaveLength(1);
+      expect(captured[0]!.time).toBe(1.5);
+      expect(signals[0]).toBe(controller.signal);
+
+      // Other draws wait until the capture draw settles.
+      host.render();
+      expect(frames).toHaveLength(0);
+      await expect(host.captureFrame()).rejects.toThrow("while a frame is drawing");
+
+      step.resolve();
+      const data = await capture;
+      expect(data).toHaveLength(2 * 3 * 4);
+      expect(frames).toHaveLength(0);
+
+      host.render();
+      expect(frames).toHaveLength(1);
+      expect(frames[0]!.frame).toBe(1);
+    });
+
+    it("rejects when the host is destroyed while drawing", async () => {
+      const step = deferred();
+      const { host } = create({
+        clock: "manual",
+        resolution: [2, 2],
+        onCaptureDraw: () => step.promise
+      });
+      await host.ready;
+
+      const capture = host.captureFrame({ format: "rgba8" });
+      await Promise.resolve();
+      await Promise.resolve();
+      host.destroy();
+      step.resolve();
+
+      await expect(capture).rejects.toBeInstanceOf(DestroyedError);
+    });
+
+    it("rejects when the context is lost and restored while drawing", async () => {
+      const step = deferred();
+      const { host, canvas } = create({
+        clock: "manual",
+        resolution: [2, 2],
+        onCaptureDraw: () => step.promise
+      });
+      await host.ready;
+
+      const capture = host.captureFrame({ format: "rgba8" });
+      await Promise.resolve();
+      await Promise.resolve();
+      canvas.dispatch("webglcontextlost", { preventDefault: () => {} });
+      canvas.dispatch("webglcontextrestored");
+      expect(host.gl).not.toBeNull();
+      step.resolve();
+
+      await expect(capture).rejects.toThrow("lost while capturing");
+    });
+
+    it("defers resizes requested while drawing until the frame is read", async () => {
+      const step = deferred();
+      const resized: HostFrameState[] = [];
+      const { host } = create({
+        clock: "manual",
+        resolution: [2, 3],
+        onResize: (state) => {
+          resized.push(state);
+        },
+        onCaptureDraw: () => step.promise
+      });
+      await host.ready;
+
+      const capture = host.captureFrame({ format: "rgba8" });
+      await Promise.resolve();
+      await Promise.resolve();
+      host.setResolution([4, 4]);
+      expect(resized).toHaveLength(0);
+      step.resolve();
+
+      const data = await capture;
+      expect(data).toHaveLength(2 * 3 * 4);
+      expect(resized).toHaveLength(1);
+      expect([resized[0]!.width, resized[0]!.height]).toEqual([4, 4]);
+    });
+
+    it("skips realtime frames while the capture draw is pending", async () => {
+      const step = deferred();
+      const { host, frames } = create({
+        resolution: [2, 2],
+        onCaptureDraw: () => step.promise
+      });
+      await host.ready;
+      tick(0);
+      const drawn = frames.length;
+
+      const capture = host.captureFrame({ format: "rgba8" });
+      await Promise.resolve();
+      await Promise.resolve();
+      tick(16);
+      expect(frames).toHaveLength(drawn);
+
+      step.resolve();
+      await capture;
+      tick(32);
+      expect(frames).toHaveLength(drawn + 1);
+    });
+  });
+
   it("releases the render lock when drawing throws", async () => {
     let fail = true;
     const { host, frames } = create({

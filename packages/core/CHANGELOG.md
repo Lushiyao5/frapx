@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Shared program state for runtimes built on the host, moved here from `@frapx/fx-canvas` so `@frapx/fx-passes` can reuse it:
+  - Uniform helpers `normalizeUniform`, `applyUniform`, `applyProgramUniform`, `applyUniforms`, `collectUniformLocations` and `createUniformCache`, with the `NormalizedUniform` type and the uniform input types (`UniformInput`, `UniformInputMap`, `UniformRuntimeValue`, `ExplicitUniformInput`, `UniformType`, `UniformScalar`, `UniformVec2`–`UniformVec4`).
+  - `createTextureSet(inputs)`: named image textures with texture-unit allocation (`reserveUnit` also covers runtime-owned samplers), superseded-load handling, binding and disposal.
+  - `createFullscreenProgram(gl, fragment, vertex?)`: compiles a fragment shader with the matching fullscreen-quad vertex shader and exposes its uniform locations, `use()`, `draw()` and `dispose()`.
+- `rgba32f` render targets (`createRenderTarget` / `createPingPong`), with the same WebGL2 + `EXT_color_buffer_float` requirement as `rgba16f`. They sample with nearest filtering unless `OES_texture_float_linear` is available. `captureFrame({ format: "rgba16f" })` also reads an `rgba32f` capture source.
+- `onCaptureDraw(state, signal)` host option: draws the frame `captureFrame()` reads over several tasks (for example sample accumulation that waits for the GPU between draws). The host holds its render lock until it settles, so other frames do not interleave, and reads the result in the settling task. Resizes requested meanwhile apply after the frame is read, and a context lost (even if restored) meanwhile rejects the capture.
+- `signal` capture option: an aborted signal rejects `captureFrame()` before drawing and is passed to `onCaptureDraw`.
+- `waitForGpu(gl)`: resolves once the GPU has finished the submitted work by polling a fence between tasks, so long renders can yield and avoid the GPU watchdog. Resolves immediately on WebGL1.
+
 ## 0.3.0 - 2026-10-10
 
 ### Added
