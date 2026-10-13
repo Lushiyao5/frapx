@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Frapx Poolrooms</title>
+  </head>
+  <body>
+    <main class="app">
+      <section class="stage" data-stage></section>
+      <aside class="controls" aria-label="Poolrooms controls">
+        <div class="controls__header">
+          <div>
+            <p class="eyebrow">Example</p>
+            <h1>Poolrooms</h1>
+          </div>
+          <span class="status" data-status>Idle</span>
+        </div>
+
+        <div class="row">
+          <label class="control">
+            <span>Resolution</span>
+            <select data-resolution>
+              <option value="960x540">960 × 540</option>
+              <option value="1280x720" selected>1280 × 720</option>
+              <option value="1920x1080">1920 × 1080</option>
+              <option value="3840x2160">3840 × 2160 (4K)</option>
+            </select>
+          </label>
+          <label class="control">
+            <span>FPS</span>
+            <select data-fps>
+              <option value="24">24</option>
+              <option value="30" selected>30</option>
+              <option value="60">60</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="control">
+          <span>Render</span>
+          <select data-mode>
+            <option value="path" selected>Path traced</option>
+            <option value="preview">Fast preview</option>
+          </select>
+        </label>
+
+        <label class="control">
+          <span>
+            <span>Frame</span>
+            <output data-frame-output>0</output>
+          </span>
+          <input data-frame type="range" min="0" max="719" step="1" value="0" />
+        </label>
+
+        <div class="row">
+          <button class="toggle toggle--primary" data-play type="button">Play</button>
+          <span class="note" data-samples>0 samples</span>
+        </div>
+
+        <p class="note">
+          A paused frame refines to the export's sample count. Below 4K it looks grainier than
+          the export, so judge noise at 3840 × 2160.
+        </p>
+
+        <hr class="divider" />
+
+        <div class="row row--3">
+          <label class="control">
+            <span>Samples</span>
+            <input data-spp type="number" min="1" max="4096" step="1" value="192" />
+          </label>
+          <label class="control">
+            <span>First</span>
+            <input data-first type="number" min="0" step="1" value="0" />
+          </label>
+          <label class="control">
+            <span>Last</span>
+            <input data-last type="number" min="0" step="1" value="719" />
+          </label>
+        </div>
+
+        <p class="note" data-note></p>
+
+        <div class="row">
+          <button class="toggle toggle--primary" data-export type="button">
+            Export to folder
+          </button>
+          <button class="toggle" data-cancel type="button" disabled>Cancel</button>
+        </div>
+
+        <progress data-progress max="1" value="0"></progress>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
