@@ -141,6 +141,22 @@ importers:
         specifier: ^6.3.5
         version: 6.4.3(@types/node@24.13.2)(lightningcss@1.32.0)(yaml@2.9.0)
 
+  examples/vite-passes:
+    dependencies:
+      '@frapx/fx-canvas':
+        specifier: workspace:*
+        version: link:../../packages/fx-canvas
+      '@frapx/fx-passes':
+        specifier: workspace:*
+        version: link:../../packages/fx-passes
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.3.5
+        version: 6.4.3(@types/node@24.13.2)(lightningcss@1.32.0)(yaml@2.9.0)
+
   examples/vite-raymarch:
     dependencies:
       '@frapx/fx-canvas':
@@ -214,6 +230,12 @@ importers:
         version: 3.2.6(@types/debug@4.1.13)(@types/node@24.13.2)(jsdom@27.4.0)(lightningcss@1.32.0)(yaml@2.9.0)
 
   packages/fx-canvas:
+    dependencies:
+      '@frapx/core':
+        specifier: workspace:^
+        version: link:../core
+
+  packages/fx-passes:
     dependencies:
       '@frapx/core':
         specifier: workspace:^

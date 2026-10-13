@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Frapx Passes Example</title>
+  </head>
+  <body>
+    <main class="app">
+      <section class="stage" data-stage></section>
+      <aside class="controls" aria-label="Accumulation controls">
+        <div class="controls__header">
+          <div>
+            <p class="eyebrow">Example</p>
+            <h1>Passes</h1>
+          </div>
+          <span class="status" data-status>Running</span>
+        </div>
+
+        <label class="control">
+          <span>
+            <span>Samples</span>
+            <output data-samples-output>1</output>
+          </span>
+          <input data-samples type="range" min="0" max="7" step="1" value="5" />
+        </label>
+
+        <label class="control">
+          <span>
+            <span>Shutter</span>
+            <output data-shutter-output>0.50</output>
+          </span>
+          <input data-shutter type="range" min="0" max="1" step="0.05" value="0.5" />
+        </label>
+
+        <p class="note" data-progress>—</p>
+
+        <button class="toggle" data-toggle type="button">Pause</button>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

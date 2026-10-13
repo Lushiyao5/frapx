@@ -1,0 +1,45 @@
+{
+  "name": "@frapx/fx-passes",
+  "version": "0.1.0",
+  "description": "WebGL2 multipass shader runtime for video work: Shadertoy-style buffers, float outputs and deterministic sample accumulation for anti-aliasing and motion blur.",
+  "keywords": [
+    "webgl2",
+    "shader",
+    "glsl",
+    "multipass",
+    "accumulation",
+    "motion-blur",
+    "offline-rendering"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@frapx/core": "workspace:^"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kramhash/frapx.git",
+    "directory": "packages/fx-passes"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
