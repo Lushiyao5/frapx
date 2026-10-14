@@ -31,6 +31,8 @@ export type CaptureTarget = {
     signal?: AbortSignal;
   }): Promise<Blob | Float32Array>;
   resetFeedback?(): void;
+  /** Used by `@frapx/tool-render` to override the export size. */
+  setResolution?(resolution: readonly [number, number] | null): void;
 };
 
 /**
@@ -78,4 +80,50 @@ export type CaptureSequenceOptions<TResult = void> = {
   /** Runs after the time is set and before the frame is drawn. */
   onBeforeFrame?: (info: FrameInfo) => void | Promise<void>;
   onProgress?: (progress: CaptureProgress) => void;
+};
+
+export type RenderPrepareContext = {
+  /** `--set key=value` pairs from the command line, as strings. */
+  params: Readonly<Record<string, string>>;
+  fps: number;
+  format: SequenceFormat;
+  /** The `--resolution` override, applied right after `prepare()`, or `null` for the page's own size. */
+  resolution: readonly [number, number] | null;
+};
+
+export type RenderTargetOptions = {
+  /** Default frame rate. `frapx-render --fps` overrides it. */
+  fps: number;
+  /** Default length in seconds; the default range is `round(duration * fps)` frames. */
+  duration: number;
+  /**
+   * Runs before each render job, e.g. to apply `params` as sample counts or
+   * uniforms. May replace the target when `registerRenderTarget()` was given a
+   * getter; the resolution override is applied to the target afterwards.
+   */
+  prepare?: (context: RenderPrepareContext) => void | Promise<void>;
+};
+
+/** One contiguous range for `RenderHost.render()`. */
+export type RenderJob = {
+  startFrame: number;
+  frameCount: number;
+  fps: number;
+  format: SequenceFormat;
+  resolution: readonly [number, number] | null;
+  params: Readonly<Record<string, string>>;
+  /** Frames are POSTed to `${endpoint}/frame/<file name>` with the PNG as the body. */
+  endpoint: string;
+};
+
+/**
+ * What `registerRenderTarget()` puts on `globalThis.__frapxRender` for
+ * `@frapx/tool-render`. The protocol between the page and the CLI.
+ */
+export type RenderHost = {
+  readonly version: 1;
+  describe(): { fps: number; duration: number };
+  render(job: RenderJob): Promise<{ width: number; height: number }>;
+  /** Stops the running job between frames (or samples). */
+  abort(): void;
 };

@@ -313,6 +313,19 @@ importers:
         specifier: workspace:*
         version: link:../fx-canvas
 
+  packages/tool-render:
+    dependencies:
+      playwright-core:
+        specifier: ^1.60.0
+        version: 1.60.0
+    devDependencies:
+      '@frapx/fx-canvas':
+        specifier: workspace:*
+        version: link:../fx-canvas
+      '@frapx/tool-capture':
+        specifier: workspace:*
+        version: link:../tool-capture
+
 packages:
 
   '@acemir/cssom@0.9.31':

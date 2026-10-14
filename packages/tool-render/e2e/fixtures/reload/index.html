@@ -1,0 +1,10 @@
+<!doctype html>
+<script>
+  // Reloads after frame 1, like a dev server's full reload.
+  window.onFrame = (frame) => {
+    if (frame !== 2) return;
+    location.reload();
+    return "hang";
+  };
+</script>
+<script src="../protocol.js"></script>

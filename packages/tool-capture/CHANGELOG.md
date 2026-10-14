@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `registerRenderTarget(target, { fps, duration, prepare })` makes a page renderable by `@frapx/tool-render` (`frapx-render`). It publishes the render protocol on `globalThis.__frapxRender`; `prepare()` receives the command line's `params`, `fps`, `format` and `resolution` before each job. Accepts a getter for pages that replace their instance.
+- `CaptureTarget.setResolution()` (optional), used for the `--resolution` override. fx-canvas and fx-passes instances already have it.
+- `examples/vite-capture` registers itself.
+
 ## 0.1.0 - 2026-10-13
 
 ### Added

@@ -24,6 +24,7 @@ Packages are named by category, so the prefix tells you what kind of package it 
 
 **Tools** — export and production utilities built on the runtimes:
 - [`@frapx/tool-capture`](./packages/tool-capture) - Deterministic PNG sequence export (8-bit or 16-bit) to a folder or a ZIP, in the browser.
+- [`@frapx/tool-render`](./packages/tool-render) - `frapx-render` CLI: renders a page in headless Chrome to a resumable PNG sequence, with optional ProRes/H.264 encoding.
 
 **Internal engine** — not installed directly; pulled in automatically as a dependency:
 - [`@frapx/core`](./packages/core) - Shared WebGL runtime host used internally by `@frapx/fx-canvas` and `@frapx/fx-passes`.

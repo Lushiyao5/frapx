@@ -15,6 +15,10 @@ Oct 10, 2026 · @mark
 7. **float が使えないときは、既定では警告して rgba8 に落とす。厳密モード（`formatFallback: false`）では `UnsupportedError` にする。** 実際の形式は instance から読める。tool-capture と fx-passes の蓄積は常に厳密モードを使う。float は WebGL2 + `EXT_color_buffer_float` のみ対応する。
 8. **SDF は2パッケージに分ける。** `@frapx/glsl-sdf` は 2D・3D の距離関数の部品、`@frapx/glsl-raymarch` はレイマーチのループ・法線・AO・ソフトシャドウ・カメラ（旧案の `glsl-camera` を吸収）。2026-07-12 の判断「`glsl-sdf` は 2D のみ、3D レイマーチは対象外」は**覆す**。
 
+### 2026-10-14 追記（順序変更）
+
+9. **`@frapx/tool-render` を tool-capture の動画対応より先に作る。** 実際の書き出しは PNG 連番 → ffmpeg（ProRes）であり、ブラウザ内の WebCodecs は品質で劣る。長時間レンダをタブ常駐なしで回し、中断から再開できることを優先する。ページ側は tool-capture の `registerRenderTarget(target, { fps, duration, prepare })` で `globalThis.__frapxRender` に登録し、CLI はページ内で `captureSequence` を回してフレームを Node 側へ受け取る。動画エンコードは CLI の `--encode`（PATH 上の ffmpeg）で行い、tool-capture の WebCodecs 対応は 0.3.0 以降に回す。
+
 ## 目的と背景
 
 frapx に「オフライン書き出し」と「SDF映像制作」の機能を追加し、3D SDF のレイマーチング作品を高品質な連番・動画として書き出せるようにする。

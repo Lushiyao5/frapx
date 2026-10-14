@@ -1,0 +1,12 @@
+<!doctype html>
+<canvas></canvas>
+<script>
+  // Loses the WebGL context on frame 2, every time the page opens.
+  window.onFrame = (frame) => {
+    if (frame !== 2) return;
+    const gl = document.querySelector("canvas").getContext("webgl");
+    gl.getExtension("WEBGL_lose_context").loseContext();
+    return "hang";
+  };
+</script>
+<script src="../protocol.js"></script>
