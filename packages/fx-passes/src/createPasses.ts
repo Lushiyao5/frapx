@@ -109,6 +109,8 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
   // The last source of each pass that compiled, by pass index, to fall back
   // on when a source swapped in while the context was lost fails to compile.
   private lastGoodFragments: Array<string | null> = [];
+  // bindUniforms() additions and removals made during a capture.
+  private pendingBindingChanges: Array<() => void> = [];
   // Programs swapped in during a capture, by pass index.
   private pendingPrograms = new Map<number, FullscreenProgram>();
   private pendingReset = false;
@@ -327,12 +329,28 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
   }
 
   bindUniforms(source: UniformSource): () => void {
-    const remove = this.bindings.add(source);
-    this.invalidate();
+    let remove: (() => void) | null = null;
+    let removed = false;
+    // Every sample of a capture sees the same inputs, so binding changes made
+    // while one draws wait for it like setUniform().
+    this.changeBindings(() => {
+      if (!removed) remove = this.bindings.add(source);
+    });
     return () => {
-      remove();
-      if (!this.destroyed) this.invalidate();
+      if (removed) return;
+      removed = true;
+      this.changeBindings(() => remove?.());
     };
+  }
+
+  private changeBindings(change: () => void): void {
+    if (this.destroyed) return;
+    if (this.capturing) {
+      this.pendingBindingChanges.push(change);
+      return;
+    }
+    change();
+    this.invalidate();
   }
 
   // Swaps a pass' program. Uniforms, textures and inputs are bound on every
@@ -500,8 +518,13 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
       if (this.passes[index]) this.installProgram(index, program);
       else program.dispose();
     }
+    for (const change of this.pendingBindingChanges) change();
     const changed =
-      this.pendingUniforms.size > 0 || this.pendingPrograms.size > 0 || this.pendingReset;
+      this.pendingUniforms.size > 0 ||
+      this.pendingPrograms.size > 0 ||
+      this.pendingBindingChanges.length > 0 ||
+      this.pendingReset;
+    this.pendingBindingChanges = [];
     this.pendingUniforms.clear();
     this.pendingPrograms.clear();
     if (this.pendingReset) {

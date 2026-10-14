@@ -752,3 +752,36 @@ test("a bound source that changes for the same time restarts the samples", async
   expect(drawn.unchanged).toBe(4);
   expect(drawn.after).toBe(1);
 });
+
+test("binding a source during a capture applies from the next frame", async ({ page }) => {
+  await open(page);
+  const result = await page.evaluate(async (fragment) => {
+    const fx = (window as Win).__frapx.createPasses({
+      clock: "manual",
+      resolution: [64, 64],
+      accumulation: { samples: 256 },
+      uniforms: { level: 0.25 },
+      passes: [{ name: "image", fragment, accumulate: true, format: "rgba32f" }]
+    });
+    await fx.ready;
+    const capturing = fx.captureFrame({ format: "rgba16f" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const drawnAtBind = fx.samplesDrawn;
+    const unbind = fx.bindUniforms({ get: () => ({ level: 0.75 }) });
+    const during = (await capturing)[0]!;
+    const bound = (await fx.captureFrame({ format: "rgba16f" }))[0]!;
+    const capturingAgain = fx.captureFrame({ format: "rgba16f" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    unbind();
+    const duringUnbind = (await capturingAgain)[0]!;
+    const unbound = (await fx.captureFrame({ format: "rgba16f" }))[0]!;
+    fx.destroy();
+    return { drawnAtBind, during, bound, duringUnbind, unbound };
+  }, solid(0, 0, 0).replace("uniform float u_sampleIndex;", "uniform float u_sampleIndex;\nuniform float u_level;").replace("vec4(0.000", "vec4(u_level"));
+  expect(result.drawnAtBind).toBeGreaterThan(0);
+  expect(result.drawnAtBind).toBeLessThan(256);
+  expect(result.during).toBe(0.25);
+  expect(result.bound).toBe(0.75);
+  expect(result.duringUnbind).toBe(0.75);
+  expect(result.unbound).toBe(0.25);
+});
