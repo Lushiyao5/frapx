@@ -10,6 +10,7 @@
 ### Fixed
 
 - `createProgram()` no longer leaks the compiled vertex shader when the fragment shader fails to compile.
+- After a WebGL context is restored, an instance that was not running (stopped, or on a manual clock) returns to its previous status instead of staying `"context-lost"`, and a stopped realtime instance redraws.
 
 ## 0.4.0 - 2026-10-13
 

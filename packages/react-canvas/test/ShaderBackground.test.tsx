@@ -1,7 +1,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ShaderBackground, type ShaderBackgroundHandle } from "../src";
+import { ShaderBackground, useShaderBackground, type ShaderBackgroundHandle } from "../src";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean })
   .IS_REACT_ACT_ENVIRONMENT = true;
@@ -271,6 +271,40 @@ describe("ShaderBackground", () => {
     });
     expect(onShaderError).toHaveBeenCalledWith(failure);
     expect(shaderMock.createShaderBackground).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps an unsupported or lost-context error when a swap is only deferred", async () => {
+    const Probe = ({ fragment }: { fragment: string }) => {
+      const { ref, error } = useShaderBackground({ fragment });
+      return <div ref={ref} data-error={error?.message ?? ""} />;
+    };
+    const shownError = () => container.querySelector("[data-error]")!.getAttribute("data-error");
+
+    await act(async () => {
+      root.render(<Probe fragment="a" />);
+    });
+    const [options] = shaderMock.createShaderBackground.mock.calls[0] as unknown as [
+      { onError(error: Error): void }
+    ];
+    shaderMock.instance.status = "context-lost";
+    await act(async () => {
+      options.onError(new Error("WebGL context lost."));
+    });
+    expect(shownError()).toBe("WebGL context lost.");
+
+    // Deferred until the context returns: setFragment() returns null without swapping.
+    await act(async () => {
+      root.render(<Probe fragment="b" />);
+    });
+    expect(shaderMock.instance.setFragment).toHaveBeenCalledWith("b");
+    expect(shownError()).toBe("WebGL context lost.");
+
+    // A swap on a working instance clears it.
+    shaderMock.instance.status = "running";
+    await act(async () => {
+      root.render(<Probe fragment="c" />);
+    });
+    expect(shownError()).toBe("");
   });
 
   it("recreates an instance whose first shader failed when the fragment changes", async () => {

@@ -151,7 +151,9 @@ export const useShaderBackground = <
       setGeneration((current) => current + 1);
       return;
     }
-    if (!fx.setFragment(fragment)) setError(null);
+    // null also means "kept for later" before initialization or while the
+    // context is lost; only a swap on a working instance clears the error.
+    if (!fx.setFragment(fragment) && SWAPPABLE.has(fx.status)) setError(null);
   }, [options.fragment]);
 
   useEffect(() => {
@@ -205,6 +207,8 @@ export const useShaderBackground = <
 
   return { ref, instance, status, error };
 };
+
+const SWAPPABLE = new Set<ShaderStatus>(["ready", "running", "paused"]);
 
 const toError = (value: unknown): Error =>
   value instanceof Error ? value : new Error(String(value));

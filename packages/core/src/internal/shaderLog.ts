@@ -1,6 +1,6 @@
 import type { ShaderErrorLine } from "./errors";
 
-// ANGLE, Mesa, SwiftShader and Apple: "ERROR: 0:12: 'x' : undeclared identifier".
+// Browsers translate shaders through ANGLE: "ERROR: 0:12: 'x' : undeclared identifier".
 const ANGLE_STYLE = /^\s*ERROR:\s*\d+:(\d+):\s*(.*)$/;
 // Native NVIDIA-style drivers: "0(12) : error C1008: undefined variable".
 const NVIDIA_STYLE = /^\s*\d+\((\d+)\)\s*:\s*error\s*\w*\s*:\s*(.*)$/i;

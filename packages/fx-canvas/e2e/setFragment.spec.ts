@@ -2,6 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 type Instance = {
   ready: Promise<void>;
+  status: string;
+  gl: WebGLRenderingContext | WebGL2RenderingContext | null;
   canvas: HTMLCanvasElement | null;
   setTime(seconds: number): void;
   render(): void;
@@ -116,4 +118,46 @@ test("keeps the feedback history across a swap", async ({ page }) => {
   );
   expect(error).toBeNull();
   expect(await renderPixel(page)).toEqual([0, 0, 255, 255]);
+});
+
+const green100 = "precision mediump float;\nvoid main() { gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0); }\n";
+
+// Loses the context, runs `during` while it is lost, then restores it.
+const loseAndRestore = async (page: Page, during: string | null) => {
+  await page.evaluate(async (fragment) => {
+    const fx = (window as Win).__frapxShader!;
+    const extension = fx.gl!.getExtension("WEBGL_lose_context")!;
+    const canvas = fx.canvas!;
+    await new Promise<void>((resolve) => {
+      canvas.addEventListener("webglcontextlost", () => resolve(), { once: true });
+      extension.loseContext();
+    });
+    if (fragment !== null) (window as unknown as { swapResult: unknown }).swapResult = fx.setFragment(fragment);
+    // Restoring is allowed only once the lost event has finished dispatching.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    extension.restoreContext();
+  }, during);
+  await page.waitForFunction(() => {
+    const status = (window as Win).__frapxShader!.status;
+    return status !== "context-lost" && status !== "loading";
+  });
+};
+
+test("a WebGL2 instance swapped to GLSL ES 1.00 survives a context restore", async ({ page }) => {
+  await open(page, "&webgl2=1");
+  expect(await page.evaluate((fragment) => (window as Win).__frapxShader!.setFragment(fragment), green100)).toBeNull();
+  await loseAndRestore(page, null);
+  expect(await page.evaluate(() => (window as Win).__frapxShader!.status)).not.toBe("error");
+  expect(await renderPixel(page)).toEqual([0, 255, 0, 255]);
+});
+
+test("a broken shader swapped in during a context loss falls back to the last working one", async ({
+  page
+}) => {
+  await open(page);
+  await page.evaluate((fragment) => (window as Win).__frapxShader!.setFragment(fragment), green100);
+  await loseAndRestore(page, green100.replace("gl_FragColor", "gl_FragColour"));
+  expect(await page.evaluate(() => (window as unknown as { swapResult: unknown }).swapResult)).toBeNull();
+  expect(await page.evaluate(() => (window as Win).__frapxShader!.status)).not.toBe("error");
+  expect(await renderPixel(page)).toEqual([0, 255, 0, 255]);
 });

@@ -645,3 +645,35 @@ test("a swap during a capture applies from the next frame", async ({ page }) => 
   expect(result.during).toEqual([1, 0, 0, 1]);
   expect(result.next).toEqual([0, 1, 0, 1]);
 });
+
+test("in demand mode a swap during a capture redraws once the capture settles", async ({ page }) => {
+  await open(page);
+  const previews = await page.evaluate(
+    async ({ red, green }) => {
+      let previewDraws = 0;
+      const fx = (window as Win).__frapx.createPasses({
+        renderMode: "demand",
+        resolution: [64, 64],
+        accumulation: { samples: 256 },
+        passes: [{ name: "image", fragment: red, accumulate: true, format: "rgba32f" }],
+        onSample: ({ capturing }) => {
+          if (!capturing) previewDraws += 1;
+        }
+      });
+      await fx.ready;
+      // Let the first demand draw finish refining.
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const capturing = fx.captureFrame({ format: "rgba16f" });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      fx.setFragment("image", green);
+      await capturing;
+      const before = previewDraws;
+      for (let i = 0; i < 3; i++) await new Promise((resolve) => requestAnimationFrame(resolve));
+      const after = previewDraws;
+      fx.destroy();
+      return { before, after };
+    },
+    { red: solid(1, 0, 0), green: solid(0, 1, 0) }
+  );
+  expect(previews.after).toBeGreaterThan(previews.before);
+});

@@ -64,6 +64,7 @@ class RuntimeHost implements RuntimeHostInstance {
   private removeListeners: Array<() => void> = [];
   private currentStatus: ShaderStatus = "idle";
   private contextRestoredShouldRun = false;
+  private statusBeforeLoss: ShaderStatus = "idle";
   private clockMode: ClockMode;
   private manualDelta = 0;
   private lastManualTime: number | null = null;
@@ -717,6 +718,7 @@ class RuntimeHost implements RuntimeHostInstance {
     const onLost = (event: Event) => {
       event.preventDefault();
       this.contextRestoredShouldRun = this.running;
+      this.statusBeforeLoss = this.currentStatus;
       this.cancelFrame();
       this.context = null;
       this.currentStatus = "context-lost";
@@ -733,6 +735,9 @@ class RuntimeHost implements RuntimeHostInstance {
       const afterRestore = async () => {
         try {
           await this.options.onContextRestored?.(gl, this.width, this.height);
+          // A stopped or manual-clock instance would otherwise stay
+          // "context-lost", and render() would refuse to draw.
+          if (this.currentStatus === "context-lost") this.currentStatus = this.statusBeforeLoss;
           if (this.contextRestoredShouldRun) this.start();
           else if (!this.isManual) this.render();
         } catch (error) {
