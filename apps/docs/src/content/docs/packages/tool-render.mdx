@@ -1,0 +1,76 @@
+---
+title: "@frapx/tool-render"
+description: The frapx-render CLI — renders a page in headless Chrome to a resumable PNG sequence, with optional ProRes or H.264 encoding through ffmpeg.
+---
+
+import { Badge } from "@astrojs/starlight/components";
+
+<Badge text="tool-* — tool" variant="note" /> A Node command; the page it renders uses `@frapx/tool-capture`.
+
+Renders long frame sequences without keeping a browser tab open.
+`frapx-render` opens your page in headless Chrome, renders a frame range
+through `@frapx/tool-capture`, and writes the PNGs to a folder. An interrupted
+render resumes where it stopped, and the frames can be encoded with ffmpeg at
+the end.
+
+```sh
+pnpm add -D @frapx/tool-render
+```
+
+Needs Node 20+, an installed Google Chrome (or `npx playwright install chromium`
+with `--browser chromium`), and `ffmpeg` on `PATH` for `--encode`.
+
+## Register the page
+
+```ts
+import { registerRenderTarget } from "@frapx/tool-capture";
+
+registerRenderTarget(fx, {
+  fps: 30,
+  duration: 24, // the default range is frames 0..719
+  prepare({ params }) {
+    fx.setAccumulation({ samples: Number(params.spp ?? 64) });
+  }
+});
+```
+
+`prepare({ params, fps, format, resolution })` runs before each render job.
+Pass `() => fx` when the page replaces its instance.
+
+## Render
+
+```sh
+vite build
+frapx-render dist --out renders/loop --resolution 3840x2160 --set spp=192 --encode prores
+# interrupted? continue with the same settings:
+frapx-render dist --out renders/loop --resolution 3840x2160 --set spp=192 --encode prores --resume
+```
+
+| Option | Default | |
+| --- | --- | --- |
+| `--out <dir>` | required | Output directory. |
+| `--range <a-b>` | the page's `duration` | Inclusive frame range. |
+| `--fps <n>` | the page's `fps` | |
+| `--resolution <WxH>` | the page's size | e.g. `2560x1440`, `2048x1080`. |
+| `--format <png\|png16>` | `png` | 16-bit needs a float buffer in the page. |
+| `--set <key=value>` | | Passed to `prepare()`; repeatable. |
+| `--resume` | | Render only the missing frames; the settings must match. |
+| `--encode <prores\|h264>` | | ProRes 422 HQ `.mov` or H.264 `.mp4`, BT.709. |
+| `--browser <chrome\|chromium>` | `chrome` | |
+| `--headed` | | Show the window. |
+| `--allow-software` | | Allow SwiftShader and other software renderers. |
+
+## What it guards against
+
+- **Truncated frames** — each PNG is written to a temporary file and renamed.
+- **Mixed settings** — `frapx-render.json` in the output folder records the
+  source, fps, format, resolution and params; `--resume` refuses when they differ.
+- **Crashes and lost contexts** — the page is opened again and the render
+  continues; the frame written right before a lost context is redone. Three
+  failures in a row without progress stop it.
+- **Hot reloads** — a reload or navigation mid-render stops it, because later
+  frames would come from different code. Render a production build.
+- **Silent software rendering** — it prints the WebGL renderer and stops on
+  SwiftShader or llvmpipe unless you pass `--allow-software`.
+
+Full reference: [README](https://github.com/kramhash/frapx/blob/main/packages/tool-render/README.md) on GitHub.

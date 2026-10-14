@@ -5,7 +5,8 @@ import {
   captureSequence,
   createZipSink,
   downloadBlob,
-  pickDirectorySink
+  pickDirectorySink,
+  registerRenderTarget
 } from "@frapx/tool-capture";
 import type { CaptureProgress, SequenceFormat } from "@frapx/tool-capture";
 import "./styles.css";
@@ -334,6 +335,21 @@ window.__frapxCapture = {
   captureSequence,
   createZipSink
 };
+
+// `frapx-render` (@frapx/tool-render) renders this page headlessly. The getter
+// follows switchFormat(), which replaces the instance.
+registerRenderTarget(() => fx, {
+  fps: Number(fpsSelect.value),
+  duration: Number(durationInput.value),
+  async prepare({ format }) {
+    if (formatSelect.value === format) return;
+    formatSelect.value = format;
+    await switchFormat(format);
+    if (formatSelect.value !== format) {
+      throw new Error("16-bit export needs WebGL2 with EXT_color_buffer_float.");
+    }
+  }
+});
 
 describe();
 void fx.ready.then(preview, () => {

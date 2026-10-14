@@ -2,7 +2,7 @@
 
 Browser frame export for `@frapx/fx-canvas` and `@frapx/fx-passes`: render a deterministic PNG sequence (8-bit, or 16-bit from a float buffer) and write it to a folder or a single ZIP. No dependencies.
 
-It drives an instance through `setTime()` and `captureFrame()`, so frame `n` always shows the scene at `n / fps` seconds no matter how slow the GPU is. Video encoding (WebCodecs + a muxer) is planned for a later version.
+It drives an instance through `setTime()` and `captureFrame()`, so frame `n` always shows the scene at `n / fps` seconds no matter how slow the GPU is. To render from the command line instead of a browser tab, see [`@frapx/tool-render`](../tool-render). In-browser video encoding (WebCodecs + a muxer) is planned for a later version.
 
 ## Install
 
@@ -68,6 +68,28 @@ await captureSequence(fx, { sink, fps: 30, frameCount: 90, format: "png16" });
 ```
 
 The buffer is half float, so the precision near 1.0 is about 11 bits; near black it is finer. Values are clamped to 0–1 and stored as the shader wrote them, with no color conversion. Encoding is CPU work: a 4K frame took about 0.7 s and 4 MB, against 0.08 s and 1.8 MB for 8-bit (Apple Silicon, Chrome).
+
+### Rendering from the command line
+
+`registerRenderTarget()` lets [`@frapx/tool-render`](../tool-render) render the page headlessly with `frapx-render`, resuming interrupted renders and encoding with ffmpeg. It only sets a global, so it can stay in production builds:
+
+```ts
+import { registerRenderTarget } from "@frapx/tool-capture";
+
+registerRenderTarget(fx, {
+  fps: 30,
+  duration: 24,
+  prepare({ params }) {
+    fx.setUniform("quality", Number(params.quality ?? 1));
+  }
+});
+```
+
+```sh
+frapx-render dist --out frames --resolution 3840x2160 --set quality=2
+```
+
+`prepare({ params, fps, format, resolution })` runs before each render job. Pass a getter (`() => fx`) when the page replaces its instance. Registering again replaces the previous registration; the returned function removes it.
 
 ## API
 

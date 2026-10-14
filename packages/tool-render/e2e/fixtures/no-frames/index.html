@@ -1,0 +1,10 @@
+<!doctype html>
+<script>
+  globalThis.__frapxRender = {
+    version: 1,
+    describe: () => ({ fps: 10, duration: 1 }),
+    // Returns without posting anything.
+    render: async () => ({ width: 1, height: 1 }),
+    abort() {}
+  };
+</script>

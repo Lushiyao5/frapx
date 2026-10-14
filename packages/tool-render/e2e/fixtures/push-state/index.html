@@ -1,0 +1,9 @@
+<!doctype html>
+<script>
+  // Same-document navigation is not a reload.
+  window.onFrame = (frame) => {
+    history.pushState(null, "", `?frame=${frame}`);
+    location.hash = `f${frame}`;
+  };
+</script>
+<script src="../protocol.js"></script>

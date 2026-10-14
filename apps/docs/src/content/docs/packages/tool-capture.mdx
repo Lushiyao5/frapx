@@ -10,7 +10,7 @@ import { Badge } from "@astrojs/starlight/components";
 Renders a shader as a numbered PNG sequence for video editing. Frame `n`
 always shows the scene at `n / fps` seconds, however slow the GPU is, because
 the instance runs on its manual clock and every frame is drawn and read back
-explicitly. No dependencies; video encoding is planned for a later version.
+explicitly. No dependencies; in-browser video encoding is planned for a later version.
 
 ```sh
 pnpm add @frapx/fx-canvas @frapx/tool-capture
@@ -90,5 +90,11 @@ the CPU: roughly 0.7 s per 4K frame, against 0.08 s for 8-bit.
 | `signal` | | `AbortSignal`; aborting rejects with its reason. |
 | `onBeforeFrame` | | `({ frame, time })`, after the time is set and before drawing — e.g. to set uniforms. |
 | `onProgress` | | `({ frame, time, completed, total })`. |
+
+## Rendering from the command line
+
+`registerRenderTarget(fx, { fps, duration, prepare })` lets
+[`@frapx/tool-render`](/frapx/packages/tool-render/) render the page headlessly
+with `frapx-render`. It only sets a global, so it can stay in production builds.
 
 Full reference: [README](https://github.com/kramhash/frapx/blob/main/packages/tool-capture/README.md) on GitHub.
