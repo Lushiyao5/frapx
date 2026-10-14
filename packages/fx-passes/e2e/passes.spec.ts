@@ -539,3 +539,109 @@ test("exports accumulated frames with tool-capture's captureSequence", async ({ 
   // captureSequence restores the realtime clock it found.
   expect(result.clock).toBe("realtime");
 });
+
+const solid = (r: number, g: number, b: number) => `#version 300 es
+precision highp float;
+uniform float u_sampleIndex;
+out vec4 fragColor;
+void main() { fragColor = vec4(${r.toFixed(3)}, ${g.toFixed(3)}, ${b.toFixed(3)}, 1.0); }
+`;
+
+test("setFragment swaps one pass, keeps the others and restarts the samples", async ({ page }) => {
+  await open(page);
+  const result = await page.evaluate(
+    async ({ red, green }) => {
+      const fx = (window as Win).__frapx.createPasses({
+        clock: "manual",
+        resolution: [8, 8],
+        accumulation: { samples: 4 },
+        passes: [
+          { name: "scene", fragment: red, accumulate: true, format: "rgba32f" },
+          {
+            name: "post",
+            inputs: ["scene"],
+            fragment: `#version 300 es
+precision highp float;
+uniform sampler2D u_scene;
+uniform vec2 u_resolution;
+out vec4 fragColor;
+void main() { fragColor = texture(u_scene, gl_FragCoord.xy / u_resolution).bgra; }
+`
+          }
+        ]
+      });
+      await fx.ready;
+      const before = Array.from((await fx.captureFrame({ format: "rgba16f" })).subarray(0, 4));
+      fx.render();
+      const drawnBefore = fx.samplesDrawn;
+      const error = fx.setFragment("scene", green);
+      const drawnAfterSwap = fx.samplesDrawn;
+      const after = Array.from((await fx.captureFrame({ format: "rgba16f" })).subarray(0, 4));
+      let unknown = "";
+      try {
+        fx.setFragment("missing", green);
+      } catch (thrown) {
+        unknown = (thrown as Error).name;
+      }
+      fx.destroy();
+      return { before, after, error, drawnBefore, drawnAfterSwap, unknown };
+    },
+    { red: solid(1, 0, 0), green: solid(0, 1, 0) }
+  );
+  // The post pass swaps red and blue, so it still runs on the new scene.
+  expect(result.before).toEqual([0, 0, 1, 1]);
+  expect(result.after).toEqual([0, 1, 0, 1]);
+  expect(result.error).toBeNull();
+  expect(result.drawnBefore).toBeGreaterThan(0);
+  expect(result.drawnAfterSwap).toBe(0);
+  expect(result.unknown).toBe("RangeError");
+});
+
+test("setFragment keeps the working pass on a compile error", async ({ page }) => {
+  await open(page);
+  const result = await page.evaluate(async (red) => {
+    const fx = (window as Win).__frapx.createPasses({
+      clock: "manual",
+      resolution: [8, 8],
+      passes: [{ name: "image", fragment: red }]
+    });
+    await fx.ready;
+    const error = fx.setFragment("image", red.replace("fragColor =", "fragColour ="));
+    const pixel = Array.from((await fx.captureFrame({ format: "rgba16f" })).subarray(0, 4));
+    fx.destroy();
+    return { name: error?.name, stage: error?.stage, line: error?.lines[0]?.line, pixel };
+  }, solid(1, 0, 0));
+  expect(result).toMatchObject({ name: "ShaderCompileError", stage: "fragment", line: 5 });
+  expect(result.pixel).toEqual([1, 0, 0, 1]);
+});
+
+test("a swap during a capture applies from the next frame", async ({ page }) => {
+  await open(page);
+  const result = await page.evaluate(
+    async ({ red, green }) => {
+      const fx = (window as Win).__frapx.createPasses({
+        clock: "manual",
+        resolution: [64, 64],
+        accumulation: { samples: 256 },
+        passes: [{ name: "image", fragment: red, accumulate: true, format: "rgba32f" }]
+      });
+      await fx.ready;
+      const capturing = fx.captureFrame({ format: "rgba16f" });
+      // Lets the capture start drawing before the swap.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const drawnAtSwap = fx.samplesDrawn;
+      const error = fx.setFragment("image", green);
+      const during = Array.from((await capturing).subarray(0, 4));
+      const next = Array.from((await fx.captureFrame({ format: "rgba16f" })).subarray(0, 4));
+      fx.destroy();
+      return { error, during, next, drawnAtSwap };
+    },
+    { red: solid(1, 0, 0), green: solid(0, 1, 0) }
+  );
+  expect(result.error).toBeNull();
+  // The swap really landed mid-capture.
+  expect(result.drawnAtSwap).toBeGreaterThan(0);
+  expect(result.drawnAtSwap).toBeLessThan(256);
+  expect(result.during).toEqual([1, 0, 0, 1]);
+  expect(result.next).toEqual([0, 1, 0, 1]);
+});

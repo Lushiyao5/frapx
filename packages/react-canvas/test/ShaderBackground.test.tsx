@@ -26,7 +26,8 @@ const shaderMock = vi.hoisted(() => {
     setClock: vi.fn(),
     setResolution: vi.fn(),
     captureFrame: vi.fn(() => Promise.resolve(new Uint8Array(4))),
-    resetFeedback: vi.fn()
+    resetFeedback: vi.fn(),
+    setFragment: vi.fn((): Error | null => null)
   };
 
   return {
@@ -240,6 +241,54 @@ describe("ShaderBackground", () => {
     expect(shaderMock.instance.setClock).toHaveBeenLastCalledWith("realtime");
     expect(shaderMock.instance.setResolution).toHaveBeenLastCalledWith(null);
     expect(shaderMock.createShaderBackground).toHaveBeenCalledTimes(1);
+  });
+
+  it("swaps a new fragment in place and reports a compile error", async () => {
+    const onShaderError = vi.fn();
+    await act(async () => {
+      root.render(<ShaderBackground fragment="void main() {}" onShaderError={onShaderError} />);
+    });
+    expect(shaderMock.instance.setFragment).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.render(<ShaderBackground fragment="void main() { }" onShaderError={onShaderError} />);
+    });
+    expect(shaderMock.instance.setFragment).toHaveBeenCalledWith("void main() { }");
+    expect(shaderMock.createShaderBackground).toHaveBeenCalledTimes(1);
+    expect(shaderMock.instance.destroy).not.toHaveBeenCalled();
+
+    // The instance reports its compile error through onError, as the runtime does.
+    const [options] = shaderMock.createShaderBackground.mock.calls[0] as unknown as [
+      { onError(error: Error): void }
+    ];
+    const failure = new Error("ERROR: 0:1: 'x' : undeclared identifier");
+    shaderMock.instance.setFragment.mockImplementationOnce(() => {
+      options.onError(failure);
+      return failure;
+    });
+    await act(async () => {
+      root.render(<ShaderBackground fragment="void main() { x; }" onShaderError={onShaderError} />);
+    });
+    expect(onShaderError).toHaveBeenCalledWith(failure);
+    expect(shaderMock.createShaderBackground).toHaveBeenCalledTimes(1);
+  });
+
+  it("recreates an instance whose first shader failed when the fragment changes", async () => {
+    await act(async () => {
+      root.render(<ShaderBackground fragment="broken" />);
+    });
+    shaderMock.instance.status = "error";
+
+    await act(async () => {
+      root.render(<ShaderBackground fragment="void main() {}" />);
+    });
+    shaderMock.instance.status = "running";
+
+    expect(shaderMock.instance.setFragment).not.toHaveBeenCalled();
+    expect(shaderMock.createShaderBackground).toHaveBeenCalledTimes(2);
+    expect(shaderMock.createShaderBackground).toHaveBeenLastCalledWith(
+      expect.objectContaining({ fragment: "void main() {}" })
+    );
   });
 
   it("exposes clock and resolution controls on the imperative handle", async () => {

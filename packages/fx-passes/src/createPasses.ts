@@ -1,5 +1,6 @@
 import {
   DestroyedError,
+  ShaderCompileError,
   TextureLoadError,
   UnsupportedError,
   applyUniform,
@@ -98,6 +99,8 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
   private lastFrameTime: number | null = null;
   private refineId = 0;
   private pendingUniforms = new Map<string, NormalizedUniform>();
+  // Programs swapped in during a capture, by pass index.
+  private pendingPrograms = new Map<number, FullscreenProgram>();
   private pendingReset = false;
 
   constructor(options: CreatePassesOptions<TUniforms>) {
@@ -162,6 +165,8 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
 
       onContextLost: () => {
         this.cancelRefine();
+        // Their sources are already in the plans, compiled again on restore.
+        this.pendingPrograms.clear();
         this.passes = [];
         this.blitter = null;
         this.context = null;
@@ -267,10 +272,63 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
     this.invalidate();
   }
 
+  setFragment(name: string, fragment: string): ShaderCompileError | null {
+    const index = this.plans.findIndex((plan) => plan.name === name);
+    if (index < 0) throw new RangeError(`Unknown pass: ${name}`);
+    if (this.destroyed) return null;
+    if (this.host.status === "error") {
+      return new ShaderCompileError(
+        "These passes failed to start, so they cannot swap shaders. Create a new instance."
+      );
+    }
+    const plan: PassPlan = { ...this.plans[index]!, fragment };
+    const gl = this.context;
+    // Before initialization or while the context is lost, the new source is
+    // compiled when the passes are (re)built.
+    if (!gl || this.passes.length === 0 || gl.isContextLost()) {
+      this.plans[index] = plan;
+      return null;
+    }
+
+    let program: FullscreenProgram;
+    try {
+      program = createFullscreenProgram(gl, fragment, plan.vertex);
+    } catch (error) {
+      const failure =
+        error instanceof ShaderCompileError
+          ? error
+          : new ShaderCompileError(error instanceof Error ? error.message : String(error));
+      this.options.onError?.(failure);
+      return failure;
+    }
+    this.plans[index] = plan;
+    this.passes[index]!.plan = plan;
+    if (this.capturing) {
+      // Every sample of a capture uses the same shaders.
+      this.pendingPrograms.get(index)?.dispose();
+      this.pendingPrograms.set(index, program);
+      return null;
+    }
+    this.installProgram(index, program);
+    this.invalidate();
+    return null;
+  }
+
+  // Swaps a pass' program. Uniforms, textures and inputs are bound on every
+  // draw, so they carry over.
+  private installProgram(index: number, program: FullscreenProgram): void {
+    const pass = this.passes[index]!;
+    pass.program.dispose();
+    pass.program = program;
+    this.warnedUniforms.clear();
+  }
+
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
     this.cancelRefine();
+    for (const program of this.pendingPrograms.values()) program.dispose();
+    this.pendingPrograms.clear();
     if (this.context) {
       this.textureSet.dispose(this.context);
       this.disposeGl();
@@ -417,8 +475,13 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
     for (const [name, uniform] of this.pendingUniforms) {
       this.uniformCache.set(name, uniform);
     }
-    const changed = this.pendingUniforms.size > 0;
+    for (const [index, program] of this.pendingPrograms) {
+      if (this.passes[index]) this.installProgram(index, program);
+      else program.dispose();
+    }
+    const changed = this.pendingUniforms.size > 0 || this.pendingPrograms.size > 0;
     this.pendingUniforms.clear();
+    this.pendingPrograms.clear();
     if (this.pendingReset) {
       this.pendingReset = false;
       this.resetFeedback();

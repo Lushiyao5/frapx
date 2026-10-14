@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `setFragment(name, fragment)` swaps one pass' fragment shader in place, keeping its buffers, the time, uniforms and textures, and restarting the frame's samples. A compile error is returned (and passed to `onError`) and the previous shader keeps drawing. A swap during `captureFrame()` applies from the next frame.
+- Re-exports the `ShaderErrorLine` and `ShaderStage` types; `ShaderCompileError` has `stage` and `lines`.
+
 ## 0.1.0 - 2026-10-13
 
 ### Added

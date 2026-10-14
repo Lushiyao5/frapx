@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- A new `fragment` swaps the shader in place with `setFragment()` instead of recreating the instance, so time, uniforms and feedback survive edits and React Fast Refresh. A compile error goes to `error` / `onShaderError` while the previous shader keeps drawing. An instance whose first shader failed is recreated instead.
+
 ## 0.5.0 - 2026-10-10
 
 ### Added

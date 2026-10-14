@@ -1,4 +1,5 @@
 import type {
+  ShaderCompileError,
   UniformInput,
   UniformInputMap,
   UniformRuntimeValue,
@@ -228,6 +229,16 @@ export type ShaderBackgroundInstance<
    * from an empty history. Re-renders in demand mode; otherwise does not draw.
    */
   resetFeedback(): void;
+  /**
+   * Swaps the fragment shader in place, keeping the time, uniforms, textures
+   * and feedback history (call `resetFeedback()` to clear it). On a compile
+   * error it returns a `ShaderCompileError` (also passed to `onError`) and keeps
+   * drawing with the previous shader; it never throws for one. Returns an error
+   * too for an instance whose first shader failed (create a new one) and for a
+   * GLSL ES 3.00 shader on a WebGL1 context. Re-renders in demand mode;
+   * otherwise the next frame shows it.
+   */
+  setFragment(fragment: string): ShaderCompileError | null;
   setTexture(name: string, input: TextureInput): Promise<void>;
   setTextures(values: TextureMap): Promise<void>;
   setUniform<K extends keyof TUniforms & string>(

@@ -388,6 +388,7 @@ fx.setResolution([1920, 1080]); // or null to follow the target
 await fx.captureFrame({ format: "png" });
 fx.feedbackFormat; // "rgba8" | "rgba16f" | null
 fx.resetFeedback();
+fx.setFragment(nextFragment); // ShaderCompileError | null
 await fx.setTexture("image", "/next-hero.webp");
 await fx.setTextures({ image: "/next-hero.webp" });
 fx.setUniform("progress", 0.5);
@@ -395,6 +396,26 @@ fx.setUniforms({ progress: 0.5, color: [1, 0, 0] });
 ```
 
 Unsupported environments return a no-op instance. `ready` rejects and `debug: true` prints warnings.
+
+### Hot reloading
+
+`setFragment(source)` swaps the fragment shader without recreating the instance: the time, uniforms, textures and feedback history carry over (call `resetFeedback()` to clear the history). A compile error never throws. It is returned and passed to `onError`, and the previous shader keeps drawing, so a typo mid-edit does not blank the page:
+
+```ts
+import { fragment } from "./scene.glsl";
+
+if (import.meta.hot) {
+  import.meta.hot.accept("./scene.glsl", (module) => {
+    if (fx.status === "error") return import.meta.hot!.invalidate(); // the first shader never compiled
+    const error = module && fx.setFragment(module.fragment);
+    if (error) console.error(error.lines);
+  });
+}
+```
+
+`ShaderCompileError.lines` lists the errors the driver located: `{ line, message, source, context }`, where `line` counts lines of the compiled source (after `glsl` interpolation) and `context` holds two lines either side. `stage` says whether the vertex or fragment shader failed. `@frapx/tool-dev`'s `createErrorOverlay()` shows them on the page.
+
+`setFragment()` returns an error instead of swapping for an instance whose first shader failed (`status: "error"`; create a new one) and for a GLSL ES 3.00 shader on an instance that runs on WebGL1. It re-renders in demand mode; otherwise the next frame shows the new shader.
 
 ## GLSL Helpers
 
