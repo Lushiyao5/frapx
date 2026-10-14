@@ -52,6 +52,9 @@ type Session = {
   close(): Promise<void>;
 };
 
+// Read through a call: TypeScript keeps a property narrowed across awaits.
+const failureOf = (session: Session): Error | null => session.failure;
+
 type SessionHandlers = {
   timeout: number;
   onPageError(message: string): void;
@@ -88,7 +91,11 @@ const openSession = async (
   url: string,
   handlers: SessionHandlers
 ): Promise<Session> => {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  // A service worker would answer the frame POSTs before page.route() sees them.
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 720 },
+    serviceWorkers: "block"
+  });
   const page = await context.newPage();
   let reject!: (error: Error) => void;
   const failed = new Promise<never>((_, rejectFailed) => {
@@ -117,11 +124,6 @@ const openSession = async (
 
   page.on("crash", () => fail(new RecoverableError("the page crashed")));
   page.on("close", () => fail(new RecoverableError("the page closed")));
-  page.on("framenavigated", (frame) => {
-    if (loaded && frame === page.mainFrame()) {
-      fail(navigationError());
-    }
-  });
   page.on("pageerror", (error) => handlers.onPageError(error.message));
   page.on("console", (message) => {
     if (message.type() === "error") handlers.onPageError(message.text());
@@ -130,7 +132,14 @@ const openSession = async (
   await page.exposeFunction("__frapxRenderContextLost", () =>
     fail(new RecoverableError("the WebGL context was lost", true))
   );
+  // Runs once per new document, so history.pushState() and hash changes pass.
+  await page.exposeFunction("__frapxRenderDocument", () => {
+    if (loaded) fail(navigationError());
+  });
   await page.addInitScript(() => {
+    if (window === window.top) {
+      void (globalThis as unknown as { __frapxRenderDocument(): Promise<void> }).__frapxRenderDocument();
+    }
     // Capture phase: the event does not bubble from the canvas.
     addEventListener(
       "webglcontextlost",
@@ -181,7 +190,7 @@ const readRenderer = (page: Page): Promise<string> =>
 const classify = (error: unknown, session: Session): Error => {
   if (session.failure) return session.failure;
   const message = error instanceof Error ? error.message : String(error);
-  // The evaluation can fail before "framenavigated" arrives.
+  // The evaluation can fail before the new document reports itself.
   if (/Execution context was destroyed/i.test(message)) return navigationError();
   if (session.page.isClosed() || /Target (page, context or browser )?(has been )?closed|crashed/i.test(message)) {
     return new RecoverableError("the page crashed");
@@ -277,6 +286,13 @@ export const render = async (
           await route.fulfill({ status: 500, body: error instanceof Error ? error.message : String(error) });
           return;
         }
+        // The context may have been lost while this frame was being written.
+        const lateFailure = failureOf(current);
+        if (lateFailure) {
+          await rm(join(out, name), { force: true });
+          await route.fulfill({ status: 409, body: lateFailure.message });
+          return;
+        }
         expected.delete(frame);
         current.written++;
         current.lastWritten = frame;
@@ -349,6 +365,11 @@ export const render = async (
           );
           evaluation.catch(() => {});
           await Promise.race([evaluation, current.failed, stopped]);
+          for (let frame = startFrame; frame < startFrame + frameCount; frame++) {
+            if (expected.has(frame)) {
+              throw new Error(`The page's render() finished without writing frame ${frame}.`);
+            }
+          }
         }
       } catch (error) {
         if (signal?.aborted) throw abortError(signal);

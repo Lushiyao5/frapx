@@ -137,6 +137,19 @@ test("stops when the page reloads during the render", async () => {
   expect(await frameFiles(out)).toEqual(["frame_00000.png", "frame_00001.png"]);
 });
 
+test("keeps rendering through same-document navigation", async () => {
+  const out = await tempDir();
+  const { result } = await renderCollecting(options(`${fixtureServer.url}push-state/`, out, { range: [0, 3] }));
+  expect(result.rendered).toBe(4);
+});
+
+test("stops when the page's render() writes nothing", async () => {
+  const out = await tempDir();
+  await expect(render(options(`${fixtureServer.url}no-frames/`, out))).rejects.toThrow(
+    "The page's render() finished without writing frame 0."
+  );
+});
+
 test("reports a page that never registers", async () => {
   const out = await tempDir();
   await expect(

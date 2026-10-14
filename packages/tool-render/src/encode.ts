@@ -5,9 +5,10 @@ import type { Encoder } from "./types";
 // Full-range RGB PNGs to limited-range BT.709 video, tagged so players agree.
 // setparams tags the frames too: ffmpeg 8 lets untagged frame properties
 // override -color_primaries / -color_trc, which then come out "unknown".
+// Chroma subsampling needs even sizes, so an odd edge gains one black pixel.
 const SCALE = [
   "-vf",
-  "scale=out_color_matrix=bt709:out_range=tv,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv"
+  "pad=ceil(iw/2)*2:ceil(ih/2)*2,scale=out_color_matrix=bt709:out_range=tv,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv"
 ];
 const COLOR_TAGS = [
   "-colorspace",
@@ -90,7 +91,8 @@ export const encodeVideo = async (
   range: readonly [number, number]
 ): Promise<string> => {
   const output = videoFileName(out, encoder);
-  const { code, stderr } = await run(ffmpegArgs(encoder, fps, range, basename(output)), out);
+  // "./" keeps a name starting with "-" from reading as an option.
+  const { code, stderr } = await run(ffmpegArgs(encoder, fps, range, `./${basename(output)}`), out);
   if (code !== 0) throw new Error(`ffmpeg (${encoder}) exited with ${code}:\n${stderr.trim()}`);
   return output;
 };

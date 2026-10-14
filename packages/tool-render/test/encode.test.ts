@@ -21,7 +21,10 @@ describe("ffmpegArgs", () => {
     ]);
     expect(args).toContain("prores_ks");
     expect(args).toContain("yuv422p10le");
-    expect(args[args.indexOf("-vf") + 1]).toContain("setparams=color_primaries=bt709:color_trc=bt709");
+    const filter = args[args.indexOf("-vf") + 1]!;
+    // Odd sizes are padded to even ones for chroma subsampling.
+    expect(filter.startsWith("pad=ceil(iw/2)*2:ceil(ih/2)*2,")).toBe(true);
+    expect(filter).toContain("setparams=color_primaries=bt709:color_trc=bt709");
     expect(args[args.length - 1]).toBe("frames.mov");
   });
 

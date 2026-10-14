@@ -65,7 +65,8 @@ Progress goes to stderr with the time per frame and an estimate of the time left
 - Each frame is written to a temporary file and renamed, so an interrupted render never leaves a truncated PNG.
 - `--out` gets a `frapx-render.json` with the settings that decide what a frame looks like: the source, `fps`, `format`, `resolution` and `params`. `--resume` renders only the frames of the range that are missing, and refuses when any of those settings differ. Without `--resume`, a folder that already holds frames is refused.
 - When the page crashes or loses its WebGL context, `frapx-render` opens it again and continues with the next missing frame. The frame written just before a lost context is rendered again, since it may be blank. Three failures in a row without progress stop the render.
-- A page that reloads or navigates stops the render.
+- A page that reloads or navigates to a new document stops the render; `history.pushState()` and hash changes do not.
+- Frame requests bypass service workers, so PWA builds render too.
 
 Split a long render across runs or machines with `--range`: frame numbers set both the file names and the time, so for shaders that depend only on time the parts line up (feedback history does not carry over between runs).
 
@@ -75,7 +76,7 @@ Split a long render across runs or machines with `--range`: frame numbers set bo
 
 ### Encoding
 
-`--encode prores` writes `<out>/<folder name>.mov` (ProRes 422 HQ, 10-bit 4:2:2), and `--encode h264` writes `<out>/<folder name>.mp4` (CRF 16, `yuv420p`, `+faststart`). Both convert the full-range RGB frames to limited-range BT.709 and tag the stream as BT.709. Run ffmpeg yourself for anything else:
+`--encode prores` writes `<out>/<folder name>.mov` (ProRes 422 HQ, 10-bit 4:2:2), and `--encode h264` writes `<out>/<folder name>.mp4` (CRF 16, `yuv420p`, `+faststart`). Both convert the full-range RGB frames to limited-range BT.709 and tag the stream as BT.709. An odd width or height gains one row or column of black, since 4:2:0 and 4:2:2 video need even sizes. Run ffmpeg yourself for anything else:
 
 ```sh
 ffmpeg -framerate 30 -i frame_%05d.png \
