@@ -54,3 +54,12 @@ export {
   UnsupportedError,
 } from "./internal/errors";
 export type { ShaderErrorLine, ShaderStage } from "@frapx/core";
+export { keyframes } from "@frapx/core";
+export type {
+  Ease,
+  Keyframe,
+  KeyframeOptions,
+  KeyframeTrack,
+  KeyframeValue,
+  UniformSource
+} from "@frapx/core";

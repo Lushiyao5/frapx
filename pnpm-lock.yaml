@@ -267,6 +267,28 @@ importers:
         specifier: ^6.3.5
         version: 6.4.3(@types/node@24.13.2)(lightningcss@1.32.0)(yaml@2.9.0)
 
+  examples/vite-timeline:
+    dependencies:
+      '@frapx/fx-passes':
+        specifier: workspace:*
+        version: link:../../packages/fx-passes
+      '@frapx/glsl-raymarch':
+        specifier: workspace:*
+        version: link:../../packages/glsl-raymarch
+      '@frapx/glsl-sdf':
+        specifier: workspace:*
+        version: link:../../packages/glsl-sdf
+      '@frapx/tool-capture':
+        specifier: workspace:*
+        version: link:../../packages/tool-capture
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.3.5
+        version: 6.4.3(@types/node@24.13.2)(lightningcss@1.32.0)(yaml@2.9.0)
+
   packages/core:
     devDependencies:
       vitest:
@@ -3846,7 +3868,7 @@ snapshots:
       '@types/hast': 3.0.5
       '@types/mdast': 4.0.4
       js-yaml: 4.3.0
-      picomatch: 4.0.4
+      picomatch: 4.0.5
       retext-smartypants: 6.2.0
       shiki: 4.3.1
       smol-toml: 1.7.0
@@ -4724,7 +4746,7 @@ snapshots:
     dependencies:
       '@types/estree': 1.0.9
       estree-walker: 2.0.2
-      picomatch: 4.0.4
+      picomatch: 4.0.5
     optionalDependencies:
       rollup: 4.61.1
 

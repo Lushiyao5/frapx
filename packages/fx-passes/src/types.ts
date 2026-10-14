@@ -9,6 +9,7 @@ import type {
   Resolution,
   ShaderCompileError,
   ShaderLayer,
+  UniformSource,
   ShaderStatus,
   TextureInput,
   TextureMap,
@@ -176,6 +177,16 @@ export type PassesInstance<
    * frame. Throws `RangeError` for an unknown pass.
    */
   setFragment(name: string, fragment: string): ShaderCompileError | null;
+  /**
+   * Drives uniforms from `source`, such as `keyframes()`. In accumulating
+   * passes `source.get()` runs for every sample at the sample's time within
+   * the shutter, so values it animates get motion blur like `u_time`; later
+   * passes see the frame's time. Values override `setUniform()` for the same
+   * names, and a later source wins over an earlier one. A source that returns
+   * different values for the same time (an edited timeline) restarts the
+   * frame's samples on the next `render()`. Returns the removal function.
+   */
+  bindUniforms(source: UniformSource): () => void;
   setTexture(name: string, input: TextureInput): Promise<void>;
   setTextures(values: TextureMap): Promise<void>;
   setUniform<K extends keyof TUniforms & string>(

@@ -234,6 +234,41 @@ window.addEventListener("scroll", () => {
 });
 ```
 
+## Timelines
+
+`bindUniforms(source)` drives uniforms from anything with a `get(time)` method. It runs before every draw with the same time as `u_time` (the `setTime()` value under a manual clock), so keyframed values stay in step with exported frames. Bound values override `setUniform()` for the same names, a later source wins over an earlier one, and the returned function removes the binding.
+
+`keyframes()` is a small, dependency-free source. Floats and vec2–vec4 tuples interpolate per component; keys may come in any order, and times outside them hold the end values:
+
+```ts
+import { createShaderBackground, keyframes } from "@frapx/fx-canvas";
+
+fx.bindUniforms(
+  keyframes(
+    {
+      camPos: [[0, [0, 1, 6]], [4, [3, 1.5, 2]]],
+      glow: { keys: [[0, 0], [1, 1], [4, 0]], ease: "smooth" }
+    },
+    { ease: "linear" } // default for tracks without their own: "linear" | "smooth" | "step" | (t) => number
+  )
+);
+```
+
+A timeline library needs only a thin adapter. For example, with Theatre.js (a sketch, not tested in this repository):
+
+```ts
+const camera = sheet.object("Camera", { x: 0, y: 1, z: 6 });
+fx.bindUniforms({
+  get(time) {
+    sheet.sequence.position = time;
+    const { x, y, z } = camera.value;
+    return { camPos: [x, y, z] };
+  }
+});
+```
+
+In `@frapx/fx-passes`, accumulating passes evaluate the source for every sample at the sample's time, so keyframed motion is motion blurred like `u_time`.
+
 ## Render Modes
 
 ```ts
@@ -389,6 +424,7 @@ await fx.captureFrame({ format: "png" });
 fx.feedbackFormat; // "rgba8" | "rgba16f" | null
 fx.resetFeedback();
 fx.setFragment(nextFragment); // ShaderCompileError | null
+const unbind = fx.bindUniforms(keyframes({ glow: [[0, 0], [2, 1]] }));
 await fx.setTexture("image", "/next-hero.webp");
 await fx.setTextures({ image: "/next-hero.webp" });
 fx.setUniform("progress", 0.5);

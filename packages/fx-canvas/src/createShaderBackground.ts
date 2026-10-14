@@ -25,6 +25,7 @@ import {
   createFullscreenProgram,
   createRuntimeHost,
   createTextureSet,
+  createUniformBindings,
   createUniformCache,
   isGLSL300,
   isWebGL2Context,
@@ -37,7 +38,9 @@ import type {
   LoadedTexture,
   NormalizedUniform,
   RuntimeHostInstance,
-  TextureSet
+  TextureSet,
+  UniformBindings,
+  UniformSource
 } from "@frapx/core";
 import {
   bindFeedbackForRead,
@@ -70,6 +73,7 @@ class ShaderBackground<TUniforms extends UniformInputMap>
 
   private readonly options: CreateShaderBackgroundOptions<TUniforms>;
   private readonly uniformCache: Map<string, NormalizedUniform>;
+  private readonly bindings: UniformBindings = createUniformBindings();
   private readonly warnedUniforms = new Set<string>();
   private readonly host: RuntimeHostInstance;
 
@@ -298,6 +302,24 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     return null;
   }
 
+  bindUniforms(source: UniformSource): () => void {
+    const remove = this.bindings.add(source);
+    if (this.shouldRenderOnDemand) this.host.render();
+    return () => {
+      remove();
+      if (this.shouldRenderOnDemand && !this.shaderDestroyed) this.host.render();
+    };
+  }
+
+  // Bound sources are evaluated at the frame's time and override setUniform()
+  // values for the same names.
+  private applyBoundUniforms(gl: GLContext, time: number): void {
+    if (this.bindings.size === 0 || !this.shaderProgram) return;
+    applyUniforms(gl, this.shaderProgram.locations, this.bindings.evaluate(time), (name) =>
+      this.warnUnknownUniform(name)
+    );
+  }
+
   private reportSwapError(error: ShaderCompileError): ShaderCompileError {
     this.options.onError?.(error);
     return error;
@@ -426,6 +448,7 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     // corrupt the core draw. resetFeedback() from the hook unbinds the FBO.
     this.bindDrawTarget(gl, state.width, state.height);
     this.prepareDrawState(gl);
+    this.applyBoundUniforms(gl, state.time);
 
     this.shaderProgram!.draw();
     this.options.onAfterRender?.(renderState);

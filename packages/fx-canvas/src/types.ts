@@ -1,5 +1,6 @@
 import type {
   ShaderCompileError,
+  UniformSource,
   UniformInput,
   UniformInputMap,
   UniformRuntimeValue,
@@ -239,6 +240,14 @@ export type ShaderBackgroundInstance<
    * otherwise the next frame shows it.
    */
   setFragment(fragment: string): ShaderCompileError | null;
+  /**
+   * Drives uniforms from `source`, such as `keyframes()` or a timeline
+   * library adapter. `source.get(time)` runs before every draw with the same
+   * time as `u_time` (the `setTime()` value under a manual clock), and its
+   * values override `setUniform()` for the same names; a later source wins
+   * over an earlier one. Returns a function that removes the binding.
+   */
+  bindUniforms(source: UniformSource): () => void;
   setTexture(name: string, input: TextureInput): Promise<void>;
   setTextures(values: TextureMap): Promise<void>;
   setUniform<K extends keyof TUniforms & string>(

@@ -13,6 +13,16 @@ export {
 } from "./internal/errors";
 export type { ShaderErrorLine, ShaderStage } from "./internal/errors";
 export { parseShaderLog } from "./internal/shaderLog";
+export { createUniformBindings, keyframes } from "./internal/bindings";
+export type {
+  Ease,
+  Keyframe,
+  KeyframeOptions,
+  KeyframeTrack,
+  KeyframeValue,
+  UniformBindings,
+  UniformSource
+} from "./internal/bindings";
 export { toUniformName, fromUniformName } from "./internal/names";
 export {
   setupCanvas,

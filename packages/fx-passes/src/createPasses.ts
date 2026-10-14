@@ -11,6 +11,7 @@ import {
   createRenderTarget,
   createRuntimeHost,
   createTextureSet,
+  createUniformBindings,
   createUniformCache,
   normalizeUniform,
   supportsRenderTargetFormat,
@@ -27,7 +28,9 @@ import type {
   PingPong,
   RenderTarget,
   RuntimeHostInstance,
-  TextureSet
+  TextureSet,
+  UniformBindings,
+  UniformSource
 } from "@frapx/core";
 import { Accumulator } from "./internal/accumulator";
 import { resolveAccumulation } from "./internal/accumulation";
@@ -85,6 +88,10 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
   private readonly plans: PassPlan[];
   private readonly host: RuntimeHostInstance;
   private readonly uniformCache: Map<string, NormalizedUniform>;
+  private readonly bindings: UniformBindings = createUniformBindings();
+  // The bound values at the last frame's time, to restart the samples when a
+  // source changes them without the time moving (an edited timeline).
+  private lastBindingSignature = "";
   private readonly textureSet: TextureSet;
   private readonly warnedUniforms = new Set<string>();
   private settings: ResolvedAccumulation;
@@ -319,6 +326,15 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
     return null;
   }
 
+  bindUniforms(source: UniformSource): () => void {
+    const remove = this.bindings.add(source);
+    this.invalidate();
+    return () => {
+      remove();
+      if (!this.destroyed) this.invalidate();
+    };
+  }
+
   // Swaps a pass' program. Uniforms, textures and inputs are bound on every
   // draw, so they carry over.
   private installProgram(index: number, program: FullscreenProgram): void {
@@ -518,6 +534,12 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
       reset = true;
     }
 
+    const signature = this.bindings.signature(state.time);
+    if (signature !== this.lastBindingSignature) {
+      this.lastBindingSignature = signature;
+      reset = true;
+    }
+
     if (state.time !== this.lastFrameTime) {
       for (const pass of this.passes) {
         if ("swap" in pass.output) pass.output.swap();
@@ -543,12 +565,14 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
     const total = settings.samples;
     const time = sampleTime(state.time, sample, settings.shutter, settings.fps ?? 1);
     this.cacheFrameUniforms(state);
+    // Evaluated at the sample's own time, so bound motion blurs too.
+    const bound = this.evaluateBindings(time);
 
     for (const pass of this.passes) {
       if (!pass.plan.accumulate) break;
       const accumulator = pass.accumulator!;
       accumulator.beginSample();
-      this.preparePass(gl, pass, time);
+      this.preparePass(gl, pass, time, bound);
       this.setPassUniform(gl, pass, "u_sampleIndex", index);
       this.setPassUniform(gl, pass, "u_sampleCount", total);
       this.setPassUniform(gl, pass, "u_jitter", sample.jitter);
@@ -561,6 +585,7 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
   private finishFrame(state: HostFrameState): void {
     const gl = this.context!;
     this.cacheFrameUniforms(state);
+    const bound = this.evaluateBindings(state.time);
 
     for (const pass of this.passes) {
       if (pass.accumulator) {
@@ -570,7 +595,7 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
       const target = currentOf(pass);
       gl.bindFramebuffer(gl.FRAMEBUFFER, target.framebuffer);
       gl.viewport(0, 0, pass.width, pass.height);
-      this.preparePass(gl, pass, state.time);
+      this.preparePass(gl, pass, state.time, bound);
       this.setPassUniform(gl, pass, "u_sampleIndex", 0);
       this.setPassUniform(gl, pass, "u_sampleCount", 1);
       this.setPassUniform(gl, pass, "u_jitter", [0, 0]);
@@ -583,7 +608,16 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
 
   // Binds a pass' program, textures, inputs and uniforms. The caller has bound
   // the framebuffer and viewport.
-  private preparePass(gl: WebGL2RenderingContext, pass: PassState, time: number): void {
+  private evaluateBindings(time: number): ReadonlyMap<string, NormalizedUniform> | null {
+    return this.bindings.size > 0 ? this.bindings.evaluate(time) : null;
+  }
+
+  private preparePass(
+    gl: WebGL2RenderingContext,
+    pass: PassState,
+    time: number,
+    bound: ReadonlyMap<string, NormalizedUniform> | null
+  ): void {
     const { program } = pass;
     program.use();
     this.textureSet.bind(gl, program.locations);
@@ -597,6 +631,7 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
       this.setPassUniform(gl, pass, input.sizeUniformName, [source.width, source.height]);
     }
     applyUniforms(gl, program.locations, this.uniformCache);
+    if (bound) applyUniforms(gl, program.locations, bound);
     this.setPassUniform(gl, pass, "u_time", time);
     this.setPassUniform(gl, pass, "u_resolution", [pass.width, pass.height]);
   }
