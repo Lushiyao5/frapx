@@ -413,7 +413,7 @@ if (import.meta.hot) {
 }
 ```
 
-`ShaderCompileError.lines` lists the errors the driver located: `{ line, message, source, context }`, where `line` counts lines of the compiled source (after `glsl` interpolation) and `context` holds two lines either side. `stage` says whether the vertex or fragment shader failed.
+`ShaderCompileError.lines` lists the errors the driver located: `{ line, message, source, context }`, where `line` counts lines of the compiled source (after `glsl` interpolation) and `context` holds two lines either side. `stage` says whether the vertex or fragment shader failed. `@frapx/tool-dev`'s `createErrorOverlay()` shows them on the page.
 
 `setFragment()` returns an error instead of swapping for an instance whose first shader failed (`status: "error"`; create a new one) and for a GLSL ES 3.00 shader on an instance that runs on WebGL1. It re-renders in demand mode; otherwise the next frame shows the new shader.
 
