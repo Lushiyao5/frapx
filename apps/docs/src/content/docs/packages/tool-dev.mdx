@@ -1,0 +1,53 @@
+---
+title: "@frapx/tool-dev"
+description: Development helpers — an on-page overlay for shader compile errors, for hot reloading with setFragment().
+---
+
+import { Badge } from "@astrojs/starlight/components";
+
+<Badge text="tool-* — tool" variant="note" /> For development; keep it out of production code paths.
+
+Edit a shader, save, and see the change without a page reload. `fx-canvas` and
+`fx-passes` swap shaders in place with `setFragment()`, keeping the time,
+uniforms and feedback. On a compile error they keep drawing the last working
+shader, and `createErrorOverlay()` shows where the error is.
+
+```sh
+pnpm add -D @frapx/tool-dev
+```
+
+```ts
+import { createErrorOverlay } from "@frapx/tool-dev";
+import { fragment } from "./scene.glsl";
+
+const fx = createShaderBackground({ target: ".stage", fragment });
+
+if (import.meta.hot) {
+  const overlay = createErrorOverlay();
+  fx.ready.catch((error) => overlay.show(error));
+
+  import.meta.hot.accept("./scene.glsl", (module) => {
+    const next = module?.["fragment"];
+    if (typeof next !== "string") return;
+    if (fx.status === "error") return import.meta.hot!.invalidate();
+    const error = fx.setFragment(next);
+    error ? overlay.show(error) : overlay.clear();
+  });
+}
+```
+
+The overlay lists each error the GPU driver located, with the failing line
+highlighted among two lines of context either side. Line numbers count lines of
+the compiled source, after `glsl` interpolation, so lines from snippets such as
+`@frapx/glsl-sdf` count too.
+
+| Option | Default | |
+| --- | --- | --- |
+| `parent` | `document.body` | Where the overlay is attached. |
+| `position` | `"top"` | `"top"` or `"bottom"`. |
+
+`show(error)`, `clear()`, `destroy()` and `visible`. The errors themselves come
+from `ShaderCompileError.lines` (`{ line, message, source, context }`) and
+`stage`, which you can also log or display yourself.
+
+Full reference: [README](https://github.com/kramhash/frapx/blob/main/packages/tool-dev/README.md) on GitHub.

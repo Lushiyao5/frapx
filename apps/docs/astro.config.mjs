@@ -35,6 +35,7 @@ export default defineConfig({
             { label: "@frapx/glsl-raymarch", slug: "packages/glsl-raymarch" },
             { label: "@frapx/tool-capture", slug: "packages/tool-capture" },
             { label: "@frapx/tool-render", slug: "packages/tool-render" },
+            { label: "@frapx/tool-dev", slug: "packages/tool-dev" },
             { label: "@frapx/core", slug: "packages/core" },
           ],
         },

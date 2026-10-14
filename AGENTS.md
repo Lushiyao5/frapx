@@ -21,6 +21,7 @@
 - The multipass and sample-accumulation runtime is `@frapx/fx-passes` in `packages/fx-passes` (WebGL2 only, shares the `@frapx/core` host with fx-canvas).
 - The browser frame export tool is `@frapx/tool-capture` in `packages/tool-capture`.
 - The Node rendering CLI (`frapx-render`) is `@frapx/tool-render` in `packages/tool-render`.
+- The development helpers (shader error overlay for hot reloading) are `@frapx/tool-dev` in `packages/tool-dev`.
 - The example app is `@frapx/example-vite-basic` in `examples/vite-basic`.
 - Prefer the repository's established patterns over adding new abstractions.
 

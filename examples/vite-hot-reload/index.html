@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Frapx Hot Reload Example</title>
+  </head>
+  <body>
+    <main class="app">
+      <section class="stage" data-stage></section>
+      <aside class="caption">
+        <p class="eyebrow">Example · Hot reload</p>
+        <p>
+          Edit <code>src/scene.glsl.ts</code> and save. The shader swaps in without a reload
+          and the clock keeps running. A compile error shows on top while the last working
+          shader keeps drawing.
+        </p>
+        <p class="clock">t = <output data-time>0.00</output> s</p>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
