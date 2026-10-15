@@ -1,6 +1,6 @@
 {
   "name": "@frapx/tool-capture",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Browser frame export for @frapx/fx-canvas and @frapx/fx-passes — deterministic PNG sequences (8-bit or 16-bit) written to a folder or a ZIP, with no dependencies.",
   "keywords": [
     "webgl",
