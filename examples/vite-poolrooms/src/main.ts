@@ -4,7 +4,8 @@ import {
   canPickDirectory,
   captureSequence,
   createZipSink,
-  pickDirectorySink
+  pickDirectorySink,
+  registerRenderTarget
 } from "@frapx/tool-capture";
 import type { CaptureProgress, FrameSink } from "@frapx/tool-capture";
 import { LOOP_SECONDS, display, scene } from "./scene.glsl";
@@ -319,6 +320,28 @@ window.__poolrooms = {
   exportSequence,
   createZipSink
 };
+
+// `frapx-render` (@frapx/tool-render) renders this page without the UI:
+// --set spp=N sets the samples per frame (default: the Samples field) and
+// --set mode=preview the fast preview shading.
+registerRenderTarget(fx, {
+  fps: fps(),
+  duration: LOOP_SECONDS,
+  prepare({ params, fps: renderFps }) {
+    const samples = Number(params.spp ?? targetSamples());
+    if (!Number.isInteger(samples) || samples < 1) {
+      throw new RangeError(`spp must be a positive integer, got "${params.spp}"`);
+    }
+    const mode = params.mode ?? "path";
+    if (mode !== "path" && mode !== "preview") {
+      throw new RangeError(`mode must be path or preview, got "${mode}"`);
+    }
+    setPlaying(false);
+    fx.setUniform("fps", renderFps);
+    fx.setUniform("preview", mode === "preview" ? 1 : 0);
+    fx.setAccumulation({ samples });
+  }
+});
 
 frameInput.value = String(frame % loopFrames());
 frameOutput.value = String(frame % loopFrames());
