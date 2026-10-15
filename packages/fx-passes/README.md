@@ -57,6 +57,10 @@ Because `u_time` moves within the shutter, a shader that depends only on time ge
 
 Accumulating passes must come first in the list. They may only read passes listed after them, which gives those passes' previous-frame output.
 
+## Hot reloading
+
+`setFragment(name, source)` swaps one pass' fragment shader. The pass keeps its buffers, format and inputs, and the time, uniforms and textures carry over; the frame's samples start over. Like `@frapx/fx-canvas`, a compile error is returned (and passed to `onError`) rather than thrown, with the located lines in `error.lines`, and the previous shader keeps drawing. A swap during `captureFrame()` applies from the next frame. Changing the pass list, formats or inputs needs a new instance.
+
 ## Requirements
 
 WebGL2 with `EXT_color_buffer_float`. Without it, `status` is `"unsupported"` and `ready` rejects with `UnsupportedError`. Shaders may be GLSL ES 1.00 or 3.00, chosen per pass. Samples are summed with additive blending when `EXT_float_blend` is available, and with an extra pass otherwise.

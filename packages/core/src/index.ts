@@ -11,6 +11,8 @@ export {
   TextureLoadError,
   UnsupportedError
 } from "./internal/errors";
+export type { ShaderErrorLine, ShaderStage } from "./internal/errors";
+export { parseShaderLog } from "./internal/shaderLog";
 export { toUniformName, fromUniformName } from "./internal/names";
 export {
   setupCanvas,

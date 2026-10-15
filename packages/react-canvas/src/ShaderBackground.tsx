@@ -97,6 +97,7 @@ const _assertComplete: _MissingOptionKey extends never ? true : never = true;
 // Keys that are runtime-updated (ref-identity diffed inside the hook). Changing
 // them does NOT recreate the underlying instance.
 const RUNTIME_KEYS = new Set([
+  "fragment",
   "uniforms",
   "textures",
   "clock",

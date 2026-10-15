@@ -42,6 +42,10 @@ export const useShaderBackground = <
   const mountedRef = useRef(false);
   const lastUniformsRef = useRef<TUniforms | undefined>(undefined);
   const lastTexturesRef = useRef<TextureMap | undefined>(undefined);
+  const lastFragmentRef = useRef<string | undefined>(undefined);
+  // Bumped to recreate an instance whose first shader failed, which cannot
+  // swap shaders in place.
+  const [generation, setGeneration] = useState(0);
   const latestOptionsRef = useLatestRef(options);
 
   const ref = useCallback((node: HTMLElement | null) => {
@@ -103,6 +107,7 @@ export const useShaderBackground = <
     instanceRef.current = fx;
     lastUniformsRef.current = uniforms;
     lastTexturesRef.current = textures;
+    lastFragmentRef.current = latest.fragment;
     setInstance(fx);
     setStatus(fx.status);
     setError(null);
@@ -126,12 +131,30 @@ export const useShaderBackground = <
         instanceRef.current = null;
         lastUniformsRef.current = undefined;
         lastTexturesRef.current = undefined;
+        lastFragmentRef.current = undefined;
         setInstance(null);
         setStatus("destroyed");
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target, ...recreateDeps]);
+  }, [target, generation, ...recreateDeps]);
+
+  // A new fragment swaps in place, keeping time, uniforms and feedback. A
+  // compile error reaches `error` through onError and the old shader keeps
+  // drawing.
+  useEffect(() => {
+    const fragment = options.fragment;
+    const fx = instanceRef.current;
+    if (!fx || lastFragmentRef.current === fragment) return;
+    lastFragmentRef.current = fragment;
+    if (fx.status === "error") {
+      setGeneration((current) => current + 1);
+      return;
+    }
+    // null also means "kept for later" before initialization or while the
+    // context is lost; only a swap on a working instance clears the error.
+    if (!fx.setFragment(fragment) && SWAPPABLE.has(fx.status)) setError(null);
+  }, [options.fragment]);
 
   useEffect(() => {
     const uniforms = options.uniforms;
@@ -184,6 +207,8 @@ export const useShaderBackground = <
 
   return { ref, instance, status, error };
 };
+
+const SWAPPABLE = new Set<ShaderStatus>(["ready", "running", "paused"]);
 
 const toError = (value: unknown): Error =>
   value instanceof Error ? value : new Error(String(value));

@@ -45,9 +45,13 @@ Core shader options pass through as props, including `feedback`:
 <ShaderBackground fragment={feedbackFragment} feedback />;
 ```
 
-Initialization options such as `fragment`, `vertex`, `feedback`, `renderMode`,
-`dpr`, and canvas settings recreate the underlying shader instance when they
-change. Runtime `uniforms` and `textures` update the existing instance.
+Initialization options such as `vertex`, `feedback`, `renderMode`, `dpr`, and
+canvas settings recreate the underlying shader instance when they change.
+Runtime `uniforms` and `textures` update the existing instance, and a new
+`fragment` is swapped in place (`setFragment`), keeping the time, uniforms and
+feedback across edits and Fast Refresh. A compile error goes to `error` /
+`onShaderError` while the previous shader keeps drawing; an instance whose first
+shader failed is recreated.
 
 ## Hook
 
@@ -63,7 +67,7 @@ export function ShaderPanel({ intensity }: { intensity: number }) {
       uniforms,
       feedback: true
     },
-    [fragment, true]
+    [true]
   );
 
   return <div ref={ref} />;
@@ -71,9 +75,10 @@ export function ShaderPanel({ intensity }: { intensity: number }) {
 ```
 
 Pass recreation dependencies as the second argument. `uniforms` and `textures`
-are updated on the existing instance with `setUniforms()` and `setTextures()`;
-shader source and other initialization options, including `feedback`, should be
-included in the recreation dependency array when they change.
+are updated on the existing instance with `setUniforms()` and `setTextures()`,
+and a new `fragment` is swapped in with `setFragment()`; other initialization
+options, including `feedback` and `vertex`, should be included in the
+recreation dependency array when they change.
 
 ## Imperative Handle
 

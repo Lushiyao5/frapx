@@ -7,6 +7,7 @@ import type {
   RenderMode,
   RenderTargetFormat,
   Resolution,
+  ShaderCompileError,
   ShaderLayer,
   ShaderStatus,
   TextureInput,
@@ -165,6 +166,16 @@ export type PassesInstance<
   ): Promise<CaptureResult<F>>;
   /** Clears the previous-frame outputs, so the next frame starts from empty history. */
   resetFeedback(): void;
+  /**
+   * Swaps the fragment shader of pass `name` in place. The pass keeps its
+   * buffers, format and inputs (change those by creating a new instance), and
+   * the time, uniforms and textures carry over; the frame's samples start over.
+   * On a compile error it returns a `ShaderCompileError` (also passed to
+   * `onError`) and keeps drawing with the previous shader. During
+   * `captureFrame()` the new shader is compiled at once and used from the next
+   * frame. Throws `RangeError` for an unknown pass.
+   */
+  setFragment(name: string, fragment: string): ShaderCompileError | null;
   setTexture(name: string, input: TextureInput): Promise<void>;
   setTextures(values: TextureMap): Promise<void>;
   setUniform<K extends keyof TUniforms & string>(

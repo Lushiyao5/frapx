@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `ShaderCompileError` carries `stage` (`"vertex"`, `"fragment"`, `"link"` or `null`) and `lines`: each error the driver's info log locates, with its line number, message, that source line and two lines of context either side (`ShaderErrorLine`). The message is still the raw log.
+- `parseShaderLog(log, source)` for runtimes that compile their own shaders.
+
+### Fixed
+
+- `createProgram()` no longer leaks the compiled vertex shader when the fragment shader fails to compile.
+- After a WebGL context is restored, an instance that was not running (stopped, or on a manual clock) returns to its previous status instead of staying `"context-lost"`, and a stopped realtime instance redraws.
+
 ## 0.4.0 - 2026-10-13
 
 ### Added

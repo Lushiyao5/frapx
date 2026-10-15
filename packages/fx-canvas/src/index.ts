@@ -53,3 +53,4 @@ export {
   TextureLoadError,
   UnsupportedError,
 } from "./internal/errors";
+export type { ShaderErrorLine, ShaderStage } from "@frapx/core";

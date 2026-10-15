@@ -1,5 +1,6 @@
 import type { GLContext } from "../types";
 import { ShaderCompileError } from "./errors";
+import { parseShaderLog } from "./shaderLog";
 
 export const defaultVertexShader = `
 attribute vec2 a_position;
@@ -36,7 +37,13 @@ export const createProgram = (
   fragmentSource: string
 ): WebGLProgram => {
   const vertex = compileShader(gl, gl.VERTEX_SHADER, vertexSource);
-  const fragment = compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
+  let fragment: WebGLShader;
+  try {
+    fragment = compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
+  } catch (error) {
+    gl.deleteShader(vertex);
+    throw error;
+  }
   const program = gl.createProgram();
 
   if (!program) {
@@ -52,7 +59,7 @@ export const createProgram = (
     gl.deleteProgram(program);
     gl.deleteShader(vertex);
     gl.deleteShader(fragment);
-    throw new ShaderCompileError(log);
+    throw new ShaderCompileError(log, { stage: "link" });
   }
 
   gl.deleteShader(vertex);
@@ -101,7 +108,10 @@ const compileShader = (
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
     const log = gl.getShaderInfoLog(shader) ?? "Unknown shader compile error.";
     gl.deleteShader(shader);
-    throw new ShaderCompileError(log);
+    throw new ShaderCompileError(log, {
+      stage: type === gl.VERTEX_SHADER ? "vertex" : "fragment",
+      lines: parseShaderLog(log, source)
+    });
   }
 
   return shader;

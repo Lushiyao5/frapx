@@ -17,6 +17,7 @@ import type {
   UniformRuntimeValue
 } from "./types";
 import {
+  ShaderCompileError,
   TextureLoadError,
   UnsupportedError,
   applyProgramUniform,
@@ -26,6 +27,7 @@ import {
   createTextureSet,
   createUniformCache,
   isGLSL300,
+  isWebGL2Context,
   normalizeUniform,
   toUniformName
 } from "@frapx/core";
@@ -78,9 +80,16 @@ class ShaderBackground<TUniforms extends UniformInputMap>
   private feedbackOptions: NormalizedFeedbackOptions | null = null;
   private feedbackState: FeedbackState | null = null;
   private shaderDestroyed = false;
+  // The current fragment source; setFragment() replaces it, and a restored
+  // context compiles it again.
+  private fragment: string;
+  // The last source that compiled, to fall back on when a source swapped in
+  // while the context was lost fails once it is restored.
+  private lastGoodFragment: string | null = null;
 
   constructor(options: CreateShaderBackgroundOptions<TUniforms>) {
     this.options = options;
+    this.fragment = options.fragment;
     this.uniformCache = createUniformCache(options.uniforms);
     this.textureSet = createTextureSet(options.textures);
 
@@ -103,7 +112,9 @@ class ShaderBackground<TUniforms extends UniformInputMap>
       ...(options.debug !== undefined && { debug: options.debug }),
 
       createContext: (canvas) => {
-        const want300 = isGLSL300(options.fragment);
+        // A restored context keeps its first kind: asking a WebGL2 canvas for
+        // "webgl" returns null, and GLSL ES 1.00 swapped in runs on WebGL2.
+        const want300 = this._gl ? isWebGL2Context(this._gl) : isGLSL300(this.fragment);
         const attrs = {
           alpha: true,
           antialias: false,
@@ -237,6 +248,59 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     if (this.shouldRenderOnDemand) {
       this.host.render();
     }
+  }
+
+  setFragment(fragment: string): ShaderCompileError | null {
+    if (this.shaderDestroyed) return null;
+    if (this.host.status === "error") {
+      return new ShaderCompileError(
+        "This instance failed to start, so it cannot swap shaders. Create a new one."
+      );
+    }
+    const gl = this._gl;
+    // Before initialization or while the context is lost, the new source is
+    // compiled when the program is (re)built; a restore that fails to compile
+    // it reports the error and falls back to the last working source.
+    if (!gl || !this.shaderProgram || gl.isContextLost()) {
+      this.fragment = fragment;
+      return null;
+    }
+    if (isGLSL300(fragment) && !isWebGL2Context(gl)) {
+      return this.reportSwapError(
+        new ShaderCompileError(
+          "A GLSL ES 3.00 shader needs WebGL2, but this instance runs on WebGL1 because its first shader was GLSL ES 1.00. Create a new instance.",
+          { stage: "fragment" }
+        )
+      );
+    }
+
+    let program: FullscreenProgram;
+    try {
+      program = createFullscreenProgram(gl, fragment, this.options.vertex);
+    } catch (error) {
+      return this.reportSwapError(
+        error instanceof ShaderCompileError
+          ? error
+          : new ShaderCompileError(error instanceof Error ? error.message : String(error))
+      );
+    }
+    // Built before the old one is released, so a failure never leaves the
+    // instance without a program. Uniforms, textures and feedback are bound
+    // again on every draw, so they carry over.
+    this.shaderProgram.dispose();
+    this.shaderProgram = program;
+    this.fragment = fragment;
+    this.lastGoodFragment = fragment;
+    this.warnedUniforms.clear();
+    if (this.shouldRenderOnDemand) {
+      this.host.render();
+    }
+    return null;
+  }
+
+  private reportSwapError(error: ShaderCompileError): ShaderCompileError {
+    this.options.onError?.(error);
+    return error;
   }
 
   destroy(): void {
@@ -388,11 +452,18 @@ class ShaderBackground<TUniforms extends UniformInputMap>
     deleteFeedbackState(this.feedbackState);
     this.feedbackState = null;
 
-    this.shaderProgram = createFullscreenProgram(
-      gl,
-      this.options.fragment,
-      this.options.vertex
-    );
+    try {
+      this.shaderProgram = createFullscreenProgram(gl, this.fragment, this.options.vertex);
+    } catch (error) {
+      const fallback = this.lastGoodFragment;
+      if (fallback === null || fallback === this.fragment || !(error instanceof ShaderCompileError)) {
+        throw error;
+      }
+      this.options.onError?.(error);
+      this.fragment = fallback;
+      this.shaderProgram = createFullscreenProgram(gl, fallback, this.options.vertex);
+    }
+    this.lastGoodFragment = this.fragment;
   }
 
   private bindDrawTarget(gl: GLContext, width: number, height: number): void {
