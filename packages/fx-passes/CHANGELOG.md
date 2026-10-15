@@ -5,6 +5,8 @@
 ### Added
 
 - `setFragment(name, fragment)` swaps one pass' fragment shader in place, keeping its buffers, the time, uniforms and textures, and restarting the frame's samples. A compile error is returned (and passed to `onError`) and the previous shader keeps drawing. A swap during `captureFrame()` applies from the next frame.
+- `bindUniforms(source)`: accumulating passes evaluate the source at every sample's time within the shutter, so keyframed motion gets motion blur; later passes use the frame's time. A source whose values change for the same time restarts the frame's samples. `keyframes()` is re-exported.
+- `examples/vite-timeline`: a camera flying along keyframes, motion blurred, renderable with `frapx-render`.
 - Re-exports the `ShaderErrorLine` and `ShaderStage` types; `ShaderCompileError` has `stage` and `lines`.
 
 ## 0.1.0 - 2026-10-13

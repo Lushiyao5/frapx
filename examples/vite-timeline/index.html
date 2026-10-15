@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Frapx Timeline Example</title>
+  </head>
+  <body>
+    <main class="app">
+      <section class="stage" data-stage></section>
+      <aside class="caption">
+        <p class="eyebrow">Example · Timeline</p>
+        <p>
+          The camera flies along keyframes bound with <code>bindUniforms()</code>. Each
+          accumulated sample reads the keyframes at its own moment in the shutter, so the
+          camera move itself is motion blurred.
+        </p>
+        <label>
+          <button type="button" data-play>Play</button>
+          <input data-time type="range" min="0" max="8" step="0.01" value="1.6" />
+          <output data-time-output>1.60 s</output>
+        </label>
+        <label>
+          Samples <input data-samples type="range" min="1" max="64" step="1" value="32" />
+          <output data-samples-output>32</output>
+        </label>
+        <label>
+          Shutter <input data-shutter type="range" min="0" max="1" step="0.05" value="0.5" />
+          <output data-shutter-output>0.5</output>
+        </label>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

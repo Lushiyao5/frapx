@@ -5,6 +5,7 @@
 ### Added
 
 - `setFragment(fragment)` swaps the fragment shader in place for hot reloading. The time, uniforms, textures and feedback history carry over. A compile error is returned (and passed to `onError`) instead of thrown, and the previous shader keeps drawing.
+- `bindUniforms(source)` drives uniforms from a `{ get(time) }` source evaluated at the frame's time before every draw, overriding `setUniform()` values; `keyframes()` (re-exported from `@frapx/core`) is a dependency-free source.
 - `ShaderCompileError` now has `stage` and `lines` (the located errors with their source lines); re-exports the `ShaderErrorLine` and `ShaderStage` types.
 
 ## 0.9.0 - 2026-10-13

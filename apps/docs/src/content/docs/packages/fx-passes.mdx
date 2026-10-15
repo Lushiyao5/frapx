@@ -67,6 +67,12 @@ A shader that depends only on time gets motion blur without changes. Samples fol
 
 Accumulating passes come first and may only read passes listed after them, which gives those passes' previous-frame output.
 
+## Timelines
+
+`fx.bindUniforms(keyframes({ ... }))` evaluates the keyframes at every sample's
+time in accumulating passes, so a keyframed camera is motion blurred like
+`u_time`. See `examples/vite-timeline`.
+
 ## Hot reloading
 
 `fx.setFragment(passName, source)` swaps one pass' shader in place, keeping its

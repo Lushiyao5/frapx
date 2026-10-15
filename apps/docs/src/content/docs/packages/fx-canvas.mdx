@@ -118,6 +118,18 @@ returned (and sent to `onError`) instead of thrown, with the located lines in
 [`@frapx/tool-dev`](/frapx/packages/tool-dev/) shows those errors on the page
 and has the Vite HMR wiring.
 
+## Timelines
+
+`fx.bindUniforms(source)` drives uniforms from any `{ get(time) }` source,
+evaluated with the same time as `u_time` before every draw. `keyframes()` is a
+dependency-free one:
+
+```ts
+import { keyframes } from "@frapx/fx-canvas";
+
+fx.bindUniforms(keyframes({ camPos: [[0, [0, 1, 6]], [4, [3, 1.5, 2]]] }));
+```
+
 ## Depends on
 
 `@frapx/fx-canvas` depends on [`@frapx/core`](/frapx/packages/core/), the

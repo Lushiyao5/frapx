@@ -6,6 +6,8 @@
 
 - `ShaderCompileError` carries `stage` (`"vertex"`, `"fragment"`, `"link"` or `null`) and `lines`: each error the driver's info log locates, with its line number, message, that source line and two lines of context either side (`ShaderErrorLine`). The message is still the raw log.
 - `parseShaderLog(log, source)` for runtimes that compile their own shaders.
+- `keyframes(tracks, { ease })`: a dependency-free `UniformSource` that interpolates float and vec2–vec4 keyframes per component, with `"linear"`, `"smooth"`, `"step"` or custom eases.
+- `createUniformBindings()`: ordered `UniformSource`s merged into normalized uniforms for a time, for runtimes that implement `bindUniforms()`.
 
 ### Fixed
 

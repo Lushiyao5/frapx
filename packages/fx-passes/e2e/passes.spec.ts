@@ -677,3 +677,111 @@ test("in demand mode a swap during a capture redraws once the capture settles", 
   );
   expect(previews.after).toBeGreaterThan(previews.before);
 });
+
+test("bound uniforms follow each sample's time in accumulating passes and the frame's after", async ({
+  page
+}) => {
+  await open(page);
+  const result = await page.evaluate(async () => {
+    const scene = `#version 300 es
+precision highp float;
+uniform float u_bound;
+uniform float u_time;
+out vec4 fragColor;
+void main() { fragColor = vec4(u_bound - u_time, u_bound, u_time, 1.0); }
+`;
+    const post = `#version 300 es
+precision highp float;
+uniform sampler2D u_scene;
+uniform float u_bound;
+out vec4 fragColor;
+void main() { fragColor = vec4(texelFetch(u_scene, ivec2(gl_FragCoord.xy), 0).xyz, u_bound); }
+`;
+    const fx = (window as Win).__frapx.createPasses({
+      clock: "manual",
+      resolution: [4, 4],
+      accumulation: { samples: 64, shutter: 0.5, fps: 10 },
+      passes: [
+        { name: "scene", fragment: scene, accumulate: true, format: "rgba32f" },
+        { name: "post", fragment: post, inputs: ["scene"], format: "rgba32f" }
+      ]
+    });
+    await fx.ready;
+    fx.bindUniforms({ get: (time) => ({ bound: time }) });
+    fx.setTime(4);
+    const pixel = Array.from((await fx.captureFrame({ format: "rgba16f" })).subarray(0, 4));
+    fx.destroy();
+    return pixel;
+  });
+  const [difference, bound, time, frame] = result;
+  // Every sample saw its own time, so the bound mean equals the u_time mean.
+  expect(Math.abs(difference!)).toBeLessThan(1e-3);
+  expect(Math.abs(bound! - time!)).toBeLessThan(2e-3);
+  expect(time!).toBeGreaterThan(4);
+  expect(time!).toBeLessThan(4.05);
+  // The post pass ran once, at the frame's time.
+  expect(frame).toBe(4);
+});
+
+test("a bound source that changes for the same time restarts the samples", async ({ page }) => {
+  await open(page);
+  const drawn = await page.evaluate(async (fragment) => {
+    let level = 0.25;
+    const fx = (window as Win).__frapx.createPasses({
+      clock: "manual",
+      resolution: [4, 4],
+      accumulation: { samples: 16 },
+      passes: [{ name: "image", fragment, accumulate: true, format: "rgba32f" }]
+    });
+    await fx.ready;
+    fx.bindUniforms({ get: () => ({ level }) });
+    fx.setTime(1);
+    fx.render();
+    fx.render();
+    fx.render();
+    const before = fx.samplesDrawn;
+    fx.render();
+    const unchanged = fx.samplesDrawn;
+    level = 0.75;
+    fx.render();
+    const after = fx.samplesDrawn;
+    fx.destroy();
+    return { before, unchanged, after };
+  }, solid(0, 0, 0).replace("uniform float u_sampleIndex;", "uniform float u_sampleIndex;\nuniform float u_level;").replace("vec4(0.000", "vec4(u_level"));
+  expect(drawn.before).toBe(3);
+  expect(drawn.unchanged).toBe(4);
+  expect(drawn.after).toBe(1);
+});
+
+test("binding a source during a capture applies from the next frame", async ({ page }) => {
+  await open(page);
+  const result = await page.evaluate(async (fragment) => {
+    const fx = (window as Win).__frapx.createPasses({
+      clock: "manual",
+      resolution: [64, 64],
+      accumulation: { samples: 256 },
+      uniforms: { level: 0.25 },
+      passes: [{ name: "image", fragment, accumulate: true, format: "rgba32f" }]
+    });
+    await fx.ready;
+    const capturing = fx.captureFrame({ format: "rgba16f" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const drawnAtBind = fx.samplesDrawn;
+    const unbind = fx.bindUniforms({ get: () => ({ level: 0.75 }) });
+    const during = (await capturing)[0]!;
+    const bound = (await fx.captureFrame({ format: "rgba16f" }))[0]!;
+    const capturingAgain = fx.captureFrame({ format: "rgba16f" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    unbind();
+    const duringUnbind = (await capturingAgain)[0]!;
+    const unbound = (await fx.captureFrame({ format: "rgba16f" }))[0]!;
+    fx.destroy();
+    return { drawnAtBind, during, bound, duringUnbind, unbound };
+  }, solid(0, 0, 0).replace("uniform float u_sampleIndex;", "uniform float u_sampleIndex;\nuniform float u_level;").replace("vec4(0.000", "vec4(u_level"));
+  expect(result.drawnAtBind).toBeGreaterThan(0);
+  expect(result.drawnAtBind).toBeLessThan(256);
+  expect(result.during).toBe(0.25);
+  expect(result.bound).toBe(0.75);
+  expect(result.duringUnbind).toBe(0.75);
+  expect(result.unbound).toBe(0.25);
+});
