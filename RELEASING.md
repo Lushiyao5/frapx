@@ -16,6 +16,7 @@ released, tagged, and documented on its own.
 | `@frapx/fx-passes` | `packages/fx-passes` | `@frapx/fx-passes@0.1.0` | Depends on `@frapx/core`. Publish after it. |
 | `@frapx/tool-capture` | `packages/tool-capture` | `@frapx/tool-capture@0.1.0` | Browser export tool. Structurally typed; no runtime dependency on `@frapx/fx-canvas`. |
 | `@frapx/tool-render` | `packages/tool-render` | `@frapx/tool-render@0.1.0` | Node CLI (`frapx-render`). Depends only on `playwright-core`; renders pages that use `@frapx/tool-capture`. |
+| `@frapx/tool-dev` | `packages/tool-dev` | `@frapx/tool-dev@0.1.0` | Development helpers (shader error overlay). No dependencies. |
 | `@frapx/core` | `packages/core` | `@frapx/core@0.2.0` | Shared runtime. Publish before `@frapx/fx-canvas`. |
 
 These packages were renamed on 2026-07-12 (formerly `@frapx/runtime`, `@frapx/shader`,
