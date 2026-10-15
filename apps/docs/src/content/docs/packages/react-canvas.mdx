@@ -40,7 +40,10 @@ The component renders a wrapper `div` (`position: relative`, `overflow: hidden`
 by default) and mounts the shader canvas into it. Most `createShaderBackground`
 options — including `feedback` — pass straight through as props, and changing
 them recreates the underlying instance. `uniforms` and `textures` update the
-existing instance instead of recreating it.
+existing instance instead of recreating it, and a new `fragment` is swapped in
+place with `setFragment()`, so edits and Fast Refresh keep the time and
+feedback. A compile error goes to `error` / `onShaderError` while the previous
+shader keeps drawing.
 
 ## Hook
 
@@ -52,7 +55,7 @@ export function ShaderPanel({ intensity }: { intensity: number }) {
   const uniforms = useMemo(() => ({ intensity }), [intensity]);
   const { ref, instance, error } = useShaderBackground(
     { fragment, uniforms, feedback: true },
-    [fragment, true]
+    [true]
   );
 
   return <div ref={ref} />;
@@ -60,8 +63,8 @@ export function ShaderPanel({ intensity }: { intensity: number }) {
 ```
 
 The second argument is the recreation dependency array — include anything
-that should tear down and rebuild the shader instance (source, `feedback`,
-etc.).
+that should tear down and rebuild the shader instance (`feedback`, `vertex`,
+etc.). The fragment source does not need to be there: it is swapped in place.
 
 ## Imperative handle
 

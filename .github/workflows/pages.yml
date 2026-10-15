@@ -17,6 +17,7 @@ on:
       - "packages/glsl-raymarch/**"
       - "packages/tool-capture/**"
       - "packages/tool-render/**"
+      - "packages/tool-dev/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 

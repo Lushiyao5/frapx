@@ -1,0 +1,44 @@
+{
+  "name": "@frapx/tool-dev",
+  "version": "0.1.0",
+  "description": "Development helpers for @frapx/fx-canvas and @frapx/fx-passes: an on-page overlay for shader compile errors with their source lines, for hot reloading with setFragment().",
+  "keywords": [
+    "webgl",
+    "shader",
+    "glsl",
+    "hot-reload",
+    "error-overlay",
+    "devtools"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@frapx/fx-canvas": "workspace:*",
+    "jsdom": "^27.3.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kramhash/frapx.git",
+    "directory": "packages/tool-dev"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

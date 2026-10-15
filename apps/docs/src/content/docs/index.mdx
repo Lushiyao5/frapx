@@ -49,6 +49,8 @@ never need to guess:
 		renders deterministic 8-bit or 16-bit PNG sequences to a folder or a ZIP
 		in the browser, and **[`@frapx/tool-render`](/frapx/packages/tool-render/)**
 		renders the same page from the command line, resumably, without a tab open.
+		**[`@frapx/tool-dev`](/frapx/packages/tool-dev/)** shows shader compile
+		errors on the page while you hot reload.
 	</Card>
 	<Card title="core — internal engine" icon="setting">
 		**[`@frapx/core`](/frapx/packages/core/)** is the shared WebGL lifecycle
@@ -69,6 +71,7 @@ never need to guess:
 | Raymarch a 3D scene with shadows, occlusion and a camera | `@frapx/glsl-raymarch` + `@frapx/glsl-sdf` |
 | Export my shader as a PNG sequence for video | `@frapx/fx-canvas` + `@frapx/tool-capture` |
 | Render hours-long frame sequences from the command line, then encode with ffmpeg | `@frapx/tool-capture` in the page + `@frapx/tool-render` |
+| Edit shaders with hot reload and see compile errors on the page | `setFragment()` (built in) + `@frapx/tool-dev` |
 | Chain passes (bloom, trails) or render anti-aliased, motion-blurred frames | `@frapx/fx-passes` (+ `@frapx/tool-capture` to export) |
 | Build a *different* effect runtime (not a background shader) | Nothing yet — see the [roadmap](https://github.com/kramhash/frapx) for `@frapx/fx-particles` |
 

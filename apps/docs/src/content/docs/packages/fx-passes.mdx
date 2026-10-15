@@ -67,6 +67,13 @@ A shader that depends only on time gets motion blur without changes. Samples fol
 
 Accumulating passes come first and may only read passes listed after them, which gives those passes' previous-frame output.
 
+## Hot reloading
+
+`fx.setFragment(passName, source)` swaps one pass' shader in place, keeping its
+buffers, the time and uniforms, and restarting the frame's samples. A compile
+error is returned rather than thrown and the previous shader keeps drawing —
+see [`@frapx/tool-dev`](/frapx/packages/tool-dev/) for an on-page error overlay.
+
 ## Requirements
 
 WebGL2 with `EXT_color_buffer_float`, otherwise `status` is `"unsupported"`. Each pass may use GLSL ES 1.00 or 3.00. With `EXT_float_blend`, samples are summed by additive blending; without it, by an extra pass.
