@@ -4,7 +4,7 @@ import {
   ShaderBackground,
   type ShaderBackgroundHandle
 } from "@frapx/react-canvas";
-import { glsl, hexToRgb } from "@frapx/fx-canvas";
+import { glsl, hexToRgb, type UniformSource } from "@frapx/fx-canvas";
 import "./styles.css";
 
 const fragment = glsl`
@@ -27,9 +27,15 @@ void main() {
 }
 `;
 
+// Overrides the slider's intensity while bound; unbinding hands it back.
+const pulse: UniformSource = {
+  get: (time) => ({ intensity: 0.75 + 0.75 * Math.sin(time * 2) })
+};
+
 const App = () => {
   const shaderRef = useRef<ShaderBackgroundHandle>(null);
   const [intensity, setIntensity] = useState(0.75);
+  const [pulsing, setPulsing] = useState(false);
   const uniforms = useMemo(
     () => ({
       intensity,
@@ -45,6 +51,7 @@ const App = () => {
         className="shader"
         fragment={fragment}
         uniforms={uniforms}
+        uniformSources={pulsing ? [pulse] : undefined}
       />
       <section className="panel" aria-label="Shader controls">
         <div>
@@ -60,6 +67,14 @@ const App = () => {
             step="0.01"
             value={intensity}
             onChange={(event) => setIntensity(Number(event.currentTarget.value))}
+          />
+        </label>
+        <label className="control">
+          <span>Pulse</span>
+          <input
+            type="checkbox"
+            checked={pulsing}
+            onChange={(event) => setPulsing(event.currentTarget.checked)}
           />
         </label>
         <div className="actions">

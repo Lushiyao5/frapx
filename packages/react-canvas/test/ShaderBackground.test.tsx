@@ -1,4 +1,4 @@
-import { act } from "react";
+import { act, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ShaderBackground, useShaderBackground, type ShaderBackgroundHandle } from "../src";
@@ -27,11 +27,17 @@ const shaderMock = vi.hoisted(() => {
     setResolution: vi.fn(),
     captureFrame: vi.fn(() => Promise.resolve(new Uint8Array(4))),
     resetFeedback: vi.fn(),
-    setFragment: vi.fn((): Error | null => null)
+    setFragment: vi.fn((): Error | null => null),
+    bindUniforms: vi.fn((source: { get(time: number): object }) => {
+      const remove = vi.fn();
+      shaderMock.removers.set(source, remove);
+      return remove;
+    })
   };
 
   return {
     instance,
+    removers: new Map<object, ReturnType<typeof vi.fn>>(),
     createShaderBackground: vi.fn(() => instance)
   };
 });
@@ -49,6 +55,7 @@ describe("ShaderBackground", () => {
     document.body.append(container);
     root = createRoot(container);
     vi.clearAllMocks();
+    shaderMock.removers.clear();
   });
 
   afterEach(() => {
@@ -355,5 +362,94 @@ describe("ShaderBackground", () => {
 
     expect(shaderMock.instance.captureFrame).toHaveBeenCalledWith({ format: "rgba8" });
     expect(shaderMock.instance.resetFeedback).toHaveBeenCalledTimes(1);
+  });
+
+  it("binds uniformSources in order and rebinds only when the sources change", async () => {
+    const a = { get: () => ({ glow: 1 }) };
+    const b = { get: () => ({ glow: 2 }) };
+    const bind = shaderMock.instance.bindUniforms;
+
+    await act(async () => {
+      root.render(<ShaderBackground fragment="void main() {}" uniformSources={[a, b]} />);
+    });
+    expect(bind.mock.calls.map(([source]) => source)).toEqual([a, b]);
+
+    // A new array with the same sources does not rebind.
+    await act(async () => {
+      root.render(<ShaderBackground fragment="void main() {}" uniformSources={[a, b]} />);
+    });
+    expect(bind).toHaveBeenCalledTimes(2);
+
+    // Reordering removes both and binds again in the new order.
+    const firstRemovers = [shaderMock.removers.get(a), shaderMock.removers.get(b)];
+    await act(async () => {
+      root.render(<ShaderBackground fragment="void main() {}" uniformSources={[b, a]} />);
+    });
+    for (const remove of firstRemovers) expect(remove).toHaveBeenCalledTimes(1);
+    expect(bind.mock.calls.slice(2).map(([source]) => source)).toEqual([b, a]);
+
+    const secondRemovers = [shaderMock.removers.get(a), shaderMock.removers.get(b)];
+    await act(async () => {
+      root.render(<ShaderBackground fragment="void main() {}" />);
+    });
+    for (const remove of secondRemovers) expect(remove).toHaveBeenCalledTimes(1);
+    expect(bind).toHaveBeenCalledTimes(4);
+    expect(shaderMock.createShaderBackground).toHaveBeenCalledTimes(1);
+  });
+
+  it("binds uniformSources again on a recreated instance", async () => {
+    const source = { get: () => ({ glow: 1 }) };
+
+    await act(async () => {
+      root.render(
+        <ShaderBackground fragment="void main() {}" uniformSources={[source]} debug={false} />
+      );
+    });
+    await act(async () => {
+      root.render(
+        <ShaderBackground fragment="void main() {}" uniformSources={[source]} debug />
+      );
+    });
+
+    expect(shaderMock.createShaderBackground).toHaveBeenCalledTimes(2);
+    expect(shaderMock.instance.bindUniforms).toHaveBeenCalledTimes(2);
+    // The destroyed instance drops its bindings itself; nothing is removed by hand.
+    expect(shaderMock.removers.get(source)).not.toHaveBeenCalled();
+    expect(shaderMock.createShaderBackground).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ uniformSources: expect.anything() })
+    );
+  });
+
+  it("forwards bindUniforms on the imperative handle", async () => {
+    const ref = { current: null as ShaderBackgroundHandle | null };
+    const source = { get: () => ({ glow: 1 }) };
+
+    await act(async () => {
+      root.render(<ShaderBackground ref={ref} fragment="void main() {}" />);
+    });
+
+    const remove = ref.current?.bindUniforms(source);
+    expect(shaderMock.instance.bindUniforms).toHaveBeenCalledWith(source);
+    remove?.();
+    expect(shaderMock.removers.get(source)).toHaveBeenCalledTimes(1);
+  });
+
+  it("binds uniformSources once on the surviving instance under StrictMode", async () => {
+    const source = { get: () => ({ glow: 1 }) };
+
+    await act(async () => {
+      root.render(
+        <StrictMode>
+          <ShaderBackground fragment="void main() {}" uniformSources={[source]} />
+        </StrictMode>
+      );
+    });
+
+    const created = shaderMock.createShaderBackground.mock.calls.length;
+    const destroyed = shaderMock.instance.destroy.mock.calls.length;
+    // One binding per created instance; the discarded one is destroyed, not unbound.
+    expect(created - destroyed).toBe(1);
+    expect(shaderMock.instance.bindUniforms).toHaveBeenCalledTimes(created);
+    expect(shaderMock.removers.get(source)).not.toHaveBeenCalled();
   });
 });

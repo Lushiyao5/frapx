@@ -123,6 +123,27 @@ const png = await ref.current?.captureFrame(); // rejects while nothing is mount
 The handle also forwards `resetFeedback()`. See the `@frapx/fx-canvas` README ("Deterministic Rendering") for the
 semantics.
 
+### Timelines
+
+`uniformSources` binds `UniformSource`s such as `keyframes()` with
+`bindUniforms()`. They are applied in array order, so a later source wins for
+the same uniform, and their values override `uniforms`. Sources are compared by
+identity: an inline array of the same sources does not rebind, a changed list
+rebinds on the existing instance, and a recreated instance is bound again.
+Create each source once (module scope or `useMemo`).
+
+```tsx
+import { keyframes } from "@frapx/fx-canvas";
+
+const timeline = keyframes({ glow: [[0, 0], [2, 1]] });
+
+<ShaderBackground fragment={fragment} uniformSources={[timeline]} />;
+```
+
+The handle's `bindUniforms(source)` binds one more source on the current
+instance and returns its removal; it is not rebound when the instance is
+recreated.
+
 ## Notes
 
 - React 18 and newer are supported.

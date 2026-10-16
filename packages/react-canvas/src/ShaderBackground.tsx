@@ -9,7 +9,8 @@ import {
   type TextureMap,
   type UniformInput,
   type UniformInputMap,
-  type UniformRuntimeValue
+  type UniformRuntimeValue,
+  type UniformSource
 } from "@frapx/fx-canvas";
 import {
   forwardRef,
@@ -42,6 +43,12 @@ export type ShaderBackgroundHandle<
     options?: CaptureOptions<F>
   ): Promise<CaptureResult<F>>;
   resetFeedback(): void;
+  /**
+   * Binds one more source on the current instance; it is not rebound if the
+   * instance is recreated (use the `uniformSources` prop for that). Returns
+   * the removal function, a no-op while no instance is mounted.
+   */
+  bindUniforms(source: UniformSource): () => void;
   setTexture(name: string, input: TextureInput): Promise<void>;
   setTextures(values: TextureMap): Promise<void>;
   setUniform<K extends keyof TUniforms & string>(
@@ -87,6 +94,7 @@ const OPTION_KEYS = [
   "onResize",
   "onShaderReady",
   "onShaderError",
+  "uniformSources",
 ] as const satisfies readonly (keyof UseShaderBackgroundOptions)[];
 
 // Fails to compile if any UseShaderBackgroundOptions key is absent from OPTION_KEYS.
@@ -107,12 +115,15 @@ const RUNTIME_KEYS = new Set([
   "onBeforeRender",
   "onAfterRender",
   "onResize",
+  "uniformSources",
 ]);
 
 // Derived once at module scope so recreateDeps always has a stable length.
 const STATIC_KEYS = OPTION_KEYS.filter(k => !RUNTIME_KEYS.has(k));
 
 const OPTION_KEY_SET = new Set<string>(OPTION_KEYS);
+
+const noop = (): void => {};
 
 const defaultStyle: CSSProperties = {
   position: "relative",
@@ -171,6 +182,7 @@ const ShaderBackgroundInner = <
           ? instance.captureFrame(options)
           : Promise.reject(new Error("No shader instance is mounted.")),
       resetFeedback: () => instance?.resetFeedback(),
+      bindUniforms: (source) => instance?.bindUniforms(source) ?? noop,
       setTexture: (name, input) =>
         instance?.setTexture(name, input) ?? Promise.resolve(),
       setTextures: (values) =>

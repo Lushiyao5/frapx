@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `uniformSources` prop / hook option: `UniformSource`s such as `keyframes()` bound with `bindUniforms()` in array order. Sources are compared by identity; a changed list rebinds on the existing instance and a recreated instance is bound again.
+- `bindUniforms` on the imperative handle.
+
 ## 0.6.0 - 2026-10-15
 
 ### Changed
