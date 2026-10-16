@@ -14,6 +14,7 @@ released, tagged, and documented on its own.
 | `@frapx/glsl-sdf` | `packages/glsl-sdf` | `@frapx/glsl-sdf@0.1.0` | |
 | `@frapx/glsl-raymarch` | `packages/glsl-raymarch` | `@frapx/glsl-raymarch@0.1.0` | |
 | `@frapx/fx-passes` | `packages/fx-passes` | `@frapx/fx-passes@0.1.0` | Depends on `@frapx/core`. Publish after it. |
+| `@frapx/fx-particles` | `packages/fx-particles` | `@frapx/fx-particles@0.1.0` | Depends on `@frapx/core` and `@frapx/glsl-noise`. Publish after them. |
 | `@frapx/tool-capture` | `packages/tool-capture` | `@frapx/tool-capture@0.1.0` | Browser export tool. Structurally typed; no runtime dependency on `@frapx/fx-canvas`. |
 | `@frapx/tool-render` | `packages/tool-render` | `@frapx/tool-render@0.1.0` | Node CLI (`frapx-render`). Depends only on `playwright-core`; renders pages that use `@frapx/tool-capture`. |
 | `@frapx/tool-dev` | `packages/tool-dev` | `@frapx/tool-dev@0.1.0` | Development helpers (shader error overlay). No dependencies. |
@@ -76,6 +77,7 @@ Each public package owns its changelog:
 - `packages/glsl-raymarch/CHANGELOG.md`
 - `packages/tool-capture/CHANGELOG.md`
 - `packages/fx-passes/CHANGELOG.md`
+- `packages/fx-particles/CHANGELOG.md`
 
 Use this format:
 
