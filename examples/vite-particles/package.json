@@ -1,0 +1,20 @@
+{
+  "name": "@frapx/example-vite-particles",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@frapx/fx-canvas": "workspace:*",
+    "@frapx/fx-particles": "workspace:*",
+    "@frapx/tool-capture": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5",
+    "typescript": "^5.8.3"
+  }
+}

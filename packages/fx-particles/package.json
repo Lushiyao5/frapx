@@ -1,0 +1,49 @@
+{
+  "name": "@frapx/fx-particles",
+  "version": "0.1.0",
+  "description": "WebGL2 GPU particle runtime for website backgrounds: declarative presets, transform-feedback simulation, and deterministic fixed-step playback for frame export.",
+  "keywords": [
+    "webgl2",
+    "particles",
+    "gpu",
+    "transform-feedback",
+    "background",
+    "snow",
+    "confetti"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@frapx/core": "workspace:^",
+    "@frapx/glsl-noise": "workspace:^"
+  },
+  "devDependencies": {
+    "@frapx/tool-capture": "workspace:*"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kramhash/frapx.git",
+    "directory": "packages/fx-particles"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

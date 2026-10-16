@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Frapx Particles Example</title>
+  </head>
+  <body>
+    <main class="app">
+      <section class="stage" data-stage></section>
+      <aside class="controls" aria-label="Particle controls">
+        <div class="controls__header">
+          <div>
+            <p class="eyebrow">Example</p>
+            <h1>Particles</h1>
+          </div>
+          <span class="status" data-status>Running</span>
+        </div>
+
+        <fieldset class="presets" data-presets>
+          <legend>Preset</legend>
+        </fieldset>
+
+        <label class="check">
+          <input data-pointer type="checkbox" checked />
+          <span>Pointer pushes particles</span>
+        </label>
+
+        <p class="note" data-info>—</p>
+
+        <button class="toggle" data-toggle type="button">Pause</button>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

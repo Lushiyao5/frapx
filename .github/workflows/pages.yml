@@ -10,6 +10,7 @@ on:
       - "packages/core/**"
       - "packages/fx-canvas/**"
       - "packages/fx-passes/**"
+      - "packages/fx-particles/**"
       - "packages/react-canvas/**"
       - "packages/glsl-flowmap/**"
       - "packages/glsl-noise/**"
