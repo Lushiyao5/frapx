@@ -104,6 +104,11 @@ await fx.setTexture("image", "/next-hero.webp");
 await fx.setTextures({ image: "/next-hero.webp" });
 ```
 
+`hexToRgb("#7dd3fc")` and `hexToRgba("#0f172acc")` turn hex colors into
+`vec3` / `vec4` uniform values, and `glslUtils` (from `@frapx/fx-canvas/glsl`)
+holds small GLSL snippets such as `glslUtils.coverUv` for cover-fitting an
+image texture.
+
 For the full option list, GLSL helpers, color-uniform helpers, and feedback
 details, see the [package README](https://github.com/kramhash/frapx/blob/main/packages/fx-canvas/README.md)
 and [CHANGELOG](https://github.com/kramhash/frapx/blob/main/packages/fx-canvas/CHANGELOG.md)

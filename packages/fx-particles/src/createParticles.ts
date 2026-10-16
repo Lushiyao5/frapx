@@ -423,10 +423,12 @@ class Particles implements ParticlesInstance {
 
     const rate = (bound?.get("u_rate") ?? this.uniforms.get("u_rate"))?.value[0] ?? 0;
     const spawn = this.spawns.next(rate, 1 / config.simulationRate, particles.pool);
-    if (spawn.overflow && !this.warnedOverflow) {
+    // The ring reuses the oldest slot, so beyond this live particles are
+    // recycled before their lifetime ends.
+    if (!this.warnedOverflow && rate * config.lifetime[1] > particles.pool) {
       this.warnedOverflow = true;
       this.warn(
-        `rate ${rate} spawns more than the pool of ${particles.pool} holds in one step; raise maxParticles.`
+        `rate ${rate} keeps up to ${Math.ceil(rate * config.lifetime[1])} particles alive, more than the pool of ${particles.pool}; the oldest are recycled early. Raise maxParticles.`
       );
     }
     const set = (name: string, apply: (location: WebGLUniformLocation) => void) => {

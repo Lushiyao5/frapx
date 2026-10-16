@@ -1,6 +1,6 @@
 # @frapx/glsl-flowmap
 
-GLSL flowmap helpers for [`@frapx/fx-canvas`](https://github.com/kramhash/frapx).
+GLSL flowmap helpers for frapx shaders, such as [`@frapx/fx-canvas`](https://github.com/kramhash/frapx) backgrounds.
 
 Provides GLSL ES 3.00 snippet strings that decode frapx-convention RG flowmap
 textures and apply three-phase advection distortion to a base texture.

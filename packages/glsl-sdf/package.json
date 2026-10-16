@@ -1,7 +1,7 @@
 {
   "name": "@frapx/glsl-sdf",
   "version": "0.1.0",
-  "description": "GLSL signed distance functions for @frapx/fx-canvas — 2D and 3D primitives, smooth booleans and domain operators.",
+  "description": "GLSL signed distance functions for frapx shaders — 2D and 3D primitives, smooth booleans and domain operators.",
   "keywords": [
     "webgl",
     "shader",

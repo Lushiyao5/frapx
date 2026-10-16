@@ -5,20 +5,20 @@ released, tagged, and documented on its own.
 
 ## Packages
 
-| Package | Directory | Tag format | Notes |
+| Package | Directory | Latest tag | Notes |
 | --- | --- | --- | --- |
-| `@frapx/fx-canvas` | `packages/fx-canvas` | `@frapx/fx-canvas@0.7.0` | Depends on `@frapx/core`. Publish after it. |
-| `@frapx/react-canvas` | `packages/react-canvas` | `@frapx/react-canvas@0.4.0` | Depends on `@frapx/fx-canvas`. Publish after it. |
-| `@frapx/glsl-noise` | `packages/glsl-noise` | `@frapx/glsl-noise@0.2.0` | |
-| `@frapx/glsl-flowmap` | `packages/glsl-flowmap` | `@frapx/glsl-flowmap@0.4.0` | |
+| `@frapx/fx-canvas` | `packages/fx-canvas` | `@frapx/fx-canvas@0.10.0` | Depends on `@frapx/core`. Publish after it. |
+| `@frapx/react-canvas` | `packages/react-canvas` | `@frapx/react-canvas@0.6.0` | Depends on `@frapx/fx-canvas`. Publish after it. |
+| `@frapx/glsl-noise` | `packages/glsl-noise` | `@frapx/glsl-noise@0.3.0` | |
+| `@frapx/glsl-flowmap` | `packages/glsl-flowmap` | `@frapx/glsl-flowmap@0.4.1` | |
 | `@frapx/glsl-sdf` | `packages/glsl-sdf` | `@frapx/glsl-sdf@0.1.0` | |
 | `@frapx/glsl-raymarch` | `packages/glsl-raymarch` | `@frapx/glsl-raymarch@0.1.0` | |
-| `@frapx/fx-passes` | `packages/fx-passes` | `@frapx/fx-passes@0.1.0` | Depends on `@frapx/core`. Publish after it. |
+| `@frapx/fx-passes` | `packages/fx-passes` | `@frapx/fx-passes@0.2.0` | Depends on `@frapx/core`. Publish after it. |
 | `@frapx/fx-particles` | `packages/fx-particles` | `@frapx/fx-particles@0.1.0` | Depends on `@frapx/core` and `@frapx/glsl-noise`. Publish after them. |
-| `@frapx/tool-capture` | `packages/tool-capture` | `@frapx/tool-capture@0.1.0` | Browser export tool. Structurally typed; no runtime dependency on `@frapx/fx-canvas`. |
+| `@frapx/tool-capture` | `packages/tool-capture` | `@frapx/tool-capture@0.2.0` | Browser export tool. Structurally typed; no runtime dependency on `@frapx/fx-canvas`. |
 | `@frapx/tool-render` | `packages/tool-render` | `@frapx/tool-render@0.1.0` | Node CLI (`frapx-render`). Depends only on `playwright-core`; renders pages that use `@frapx/tool-capture`. |
 | `@frapx/tool-dev` | `packages/tool-dev` | `@frapx/tool-dev@0.1.0` | Development helpers (shader error overlay). No dependencies. |
-| `@frapx/core` | `packages/core` | `@frapx/core@0.2.0` | Shared runtime. Publish before `@frapx/fx-canvas`. |
+| `@frapx/core` | `packages/core` | `@frapx/core@0.5.0` | Shared runtime. Publish before the `fx-*` packages. |
 
 These packages were renamed on 2026-07-12 (formerly `@frapx/runtime`, `@frapx/shader`,
 `@frapx/shader-react`, `@frapx/shader-noise`, `@frapx/shader-flowmap`). The old npm
@@ -33,8 +33,10 @@ also change package metadata or published package contents.
 
 ### Internal (workspace) dependencies
 
-Packages that depend on another package in this repo (`@frapx/fx-canvas` on
-`@frapx/core`, `@frapx/react-canvas` on `@frapx/fx-canvas`) declare that
+Packages that depend on another package in this repo (`@frapx/fx-canvas`,
+`@frapx/fx-passes` and `@frapx/fx-particles` on `@frapx/core`,
+`@frapx/fx-particles` also on `@frapx/glsl-noise`, `@frapx/react-canvas` on
+`@frapx/fx-canvas`) declare that
 dependency as `workspace:^` in `package.json`. Publish with `pnpm publish`,
 which rewrites `workspace:^` to the caret range of the dependency's current
 published version (e.g. `^0.6.1`) at pack time. Do **not** use `npm publish`
@@ -42,12 +44,13 @@ for these packages: `npm` does not understand the `workspace:` protocol and
 will publish the literal string `workspace:^` as the dependency range, which
 breaks `npm install` for consumers. (This happened to `@frapx/react-canvas@0.2.0`;
 it shipped with an unresolved `"@frapx/fx-canvas": "workspace:*"` dependency and
-was fixed in `0.3.0`.) Packages with no internal dependencies (`@frapx/core`,
-`@frapx/glsl-noise`, `@frapx/glsl-flowmap`) are unaffected, but use
+was fixed in `0.3.0`.) Packages with no internal dependencies (`@frapx/core`, the `glsl-*`
+packages and the `tool-*` packages) are unaffected, but use
 `pnpm publish` throughout for consistency.
 
 Always publish internal dependencies in dependency order (e.g. `@frapx/core`
-before `@frapx/fx-canvas`, `@frapx/fx-canvas` before `@frapx/react-canvas`) so the
+before the `fx-*` packages, `@frapx/glsl-noise` before `@frapx/fx-particles`,
+`@frapx/fx-canvas` before `@frapx/react-canvas`) so the
 caret range resolves to an already-published version.
 
 ## Versioning
@@ -78,6 +81,8 @@ Each public package owns its changelog:
 - `packages/tool-capture/CHANGELOG.md`
 - `packages/fx-passes/CHANGELOG.md`
 - `packages/fx-particles/CHANGELOG.md`
+- `packages/tool-render/CHANGELOG.md`
+- `packages/tool-dev/CHANGELOG.md`
 
 Use this format:
 

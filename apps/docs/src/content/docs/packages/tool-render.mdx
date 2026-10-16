@@ -73,4 +73,12 @@ frapx-render dist --out renders/loop --resolution 3840x2160 --set spp=192 --enco
 - **Silent software rendering** — it prints the WebGL renderer and stops on
   SwiftShader or llvmpipe unless you pass `--allow-software`.
 
+## API
+
+The CLI is a thin wrapper around `render(options, { signal, onEvent })`,
+exported for scripts. `options` mirrors the flags, `onEvent` reports progress,
+and it resolves with the frames rendered and any videos encoded.
+`parseCliArgs(argv)` parses `frapx-render` arguments into those options and
+throws `UsageError` for invalid ones.
+
 Full reference: [README](https://github.com/kramhash/frapx/blob/main/packages/tool-render/README.md) on GitHub.

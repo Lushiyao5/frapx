@@ -39,8 +39,8 @@
 
 - `@frapx/fx-canvas` is a lightweight WebGL shader background runtime for websites.
 - It should remain safe to import during SSR.
-- Keep the current v1 behavior compatible with WebGL1 / GLSL ES 1.00.
-- Future WebGL2 support should be additive, capability-detected, and should not break existing WebGL1 users or public APIs.
+- Keep its default behavior compatible with WebGL1 / GLSL ES 1.00. Its WebGL2 support (`#version 300 es` shaders, float feedback) is additive and capability-detected; keep any further WebGL2 features that way, without breaking WebGL1 users or public APIs.
+- `@frapx/fx-passes` and `@frapx/fx-particles` are WebGL2-only by design and report `unsupported` without it.
 - Do not turn the package into a scene, camera, mesh, or full rendering-engine abstraction.
 - Do not add new production dependencies without explicit user approval.
 

@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@frapx/glsl-noise.svg)](https://www.npmjs.com/package/@frapx/glsl-noise)
 
-Lightweight GLSL 3D noise helpers for `@frapx/fx-canvas`.
+Lightweight GLSL 3D noise helpers for frapx fragment shaders, such as `@frapx/fx-canvas` backgrounds. `@frapx/fx-particles` builds its curl-noise force on `curl3d`.
 
 This package is intentionally separate from `@frapx/fx-canvas` so the core runtime stays small. It exports GLSL strings that can be embedded in fragment shaders.
 

@@ -57,9 +57,28 @@ Because `u_time` moves within the shutter, a shader that depends only on time ge
 
 Accumulating passes must come first in the list. They may only read passes listed after them, which gives those passes' previous-frame output.
 
+## Timelines
+
+`bindUniforms(source)` drives uniforms from a timeline such as `keyframes()`, re-exported here. Accumulating passes evaluate it at every sample's time within the shutter, so a keyframed camera is motion blurred like `u_time`; later passes see the frame's time. Values override `setUniform()`, and a later source wins over an earlier one. See `examples/vite-timeline`.
+
 ## Hot reloading
 
 `setFragment(name, source)` swaps one pass' fragment shader. The pass keeps its buffers, format and inputs, and the time, uniforms and textures carry over; the frame's samples start over. Like `@frapx/fx-canvas`, a compile error is returned (and passed to `onError`) rather than thrown, with the located lines in `error.lines`, and the previous shader keeps drawing. A swap during `captureFrame()` applies from the next frame. Changing the pass list, formats or inputs needs a new instance.
+
+## Instance
+
+| Member | |
+| --- | --- |
+| `canvas`, `gl`, `status`, `supported`, `ready`, `clock` | As in `@frapx/fx-canvas` |
+| `accumulation`, `samplesDrawn` | The resolved accumulation settings, and the samples of the current frame drawn so far |
+| `start()`, `stop()`, `render()`, `resize()`, `destroy()` | Lifecycle. `render()` at an unchanged time adds the next sample |
+| `setTime(seconds)`, `setClock(clock)`, `setResolution(size)` | Clock and size, as in `@frapx/fx-canvas` |
+| `setAccumulation(options)` | Changes `samples`, `shutter` or `fps` and restarts the frame's samples |
+| `captureFrame(options)` | Draws every sample of the current frame and reads the last pass |
+| `resetFeedback()` | Clears the previous-frame outputs |
+| `setFragment(name, source)` | Swaps one pass' shader (see Hot reloading) |
+| `bindUniforms(source)` | Drives uniforms from a timeline such as `keyframes()` (see Timelines) |
+| `setUniform()`, `setUniforms()`, `setTexture()`, `setTextures()` | Change user uniforms and textures. Uniforms set during a capture apply to the next frame; a texture applies once it loads |
 
 ## Requirements
 

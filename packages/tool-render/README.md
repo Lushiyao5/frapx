@@ -1,6 +1,6 @@
 # @frapx/tool-render
 
-Command-line rendering for pages built with `@frapx/fx-canvas` or `@frapx/fx-passes`: `frapx-render` opens the page in headless Chrome, renders a frame range through `@frapx/tool-capture`, and writes `frame_00000.png`, `frame_00001.png`, … to a folder. No browser tab has to stay open, an interrupted render picks up where it stopped, and the frames can be encoded to ProRes or H.264 with ffmpeg at the end.
+Command-line rendering for pages built with `@frapx/fx-canvas`, `@frapx/fx-passes` or `@frapx/fx-particles`: `frapx-render` opens the page in headless Chrome, renders a frame range through `@frapx/tool-capture`, and writes `frame_00000.png`, `frame_00001.png`, … to a folder. No browser tab has to stay open, an interrupted render picks up where it stopped, and the frames can be encoded to ProRes or H.264 with ffmpeg at the end.
 
 ## Install
 
@@ -89,6 +89,8 @@ ffmpeg -framerate 30 -i frame_%05d.png \
 ## API
 
 The CLI is a thin wrapper around `render(options, { signal, onEvent })`, exported for scripts. `options` mirrors the flags (`source`, `out`, `range`, `fps`, `resolution`, `format`, `params`, `resume`, `encode`, `browser`, `headed`, `allowSoftware`, `timeout`); `onEvent` receives `start`, `frame`, `retry`, `page-error` and `encode` events. It resolves with `{ out, range, rendered, videos }`.
+
+`parseCliArgs(argv)` turns `frapx-render` arguments into `{ kind: "run", options }` (or `{ kind: "help" }` / `{ kind: "version" }`) for scripts that accept the same flags, and throws `UsageError` for invalid ones.
 
 ## Example
 

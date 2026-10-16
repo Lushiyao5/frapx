@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- The `debug` warning about the pool now fires when `rate` times the longest lifetime exceeds `maxParticles`, the point where particles are recycled before their lifetime ends. It used to fire only when one step spawned more than the whole pool.
+
 ## 0.1.0 - 2026-10-16
 
 ### Added
@@ -8,7 +14,7 @@
 - `createParticles(options)`: a transform-feedback simulation in a fixed-size ring pool, drawn as instanced quads into a transparent canvas. Six presets (`dust`, `snow`, `sparkles`, `bubbles`, `fireflies`, `confetti`), merged under the other options.
 - Forces compiled from config: `gravity`, `drag`, `curl` (divergence-free curl noise from `@frapx/glsl-noise`) and `pointer`. Over-life color and alpha through a lookup texture, a per-particle `palette`, `sizeOverLife` curves, `spin`, `tumble`, `twinkle`, five procedural sprites or an image, `additive` or `normal` blending, and 2.5D depth with `perspective`.
 - Fixed-step time: the frame at `t` is the state after `floor(t * simulationRate)` steps from a `prewarm`ed start. A manual clock runs every step and replays from the start when going back, so frames are reproducible and split renders line up; a realtime frame that falls far behind drops time instead of stalling.
-- `setUniform()` / `bindUniforms()` for `rate`, force strengths, `opacity`, `twinkle` and `perspective`. Bound timelines are evaluated at every step's time; under a manual clock a change replays from the start. `keyframes()` is re-exported.
+- `setUniform()` / `bindUniforms()` for `rate`, the force values (`gravity`, `drag`, `curlStrength` / `curlScale` / `curlSpeed`, `pointerStrength` / `pointerRadius`), `perspective`, and the drawing-only `opacity` and `twinkle`. Bound timelines evaluate simulation uniforms at every step's time; under a manual clock changing a simulation uniform, a binding or the canvas size replays from the start. `keyframes()` is re-exported.
 - `captureFrame()` catches up in batches with GPU waits. `format: "rgba16f"` draws into a half-float buffer for 16-bit export, and `"png"` / `"rgba16f"` captures are straight alpha.
 - `setColor()`, `setPalette()`, `setBlend()`, `reset()`, `maxParticles` and `simulationRate`.
 - `examples/vite-particles`: every preset over an `fx-canvas` background, with a pointer push, renderable with `frapx-render` (`--set preset=<name>`).

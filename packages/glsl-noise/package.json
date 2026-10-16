@@ -1,7 +1,7 @@
 {
   "name": "@frapx/glsl-noise",
   "version": "0.3.0",
-  "description": "Lightweight GLSL noise helpers for @frapx/fx-canvas.",
+  "description": "Lightweight GLSL noise helpers for frapx fragment shaders: simplex, Perlin, fBm and curl noise.",
   "keywords": [
     "webgl",
     "shader",

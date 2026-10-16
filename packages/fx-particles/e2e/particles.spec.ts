@@ -293,6 +293,32 @@ test("rgba16f captures straight alpha at full precision", async ({ page }) => {
   expect(result.worst).toBeLessThan(0.02);
 });
 
+test("debug warns once when the rate outgrows the pool", async ({ page }) => {
+  await open(page);
+  const warnings = await page.evaluate(async (base) => {
+    const { createParticles } = (window as Win).__frapx;
+    const messages: string[] = [];
+    const warn = console.warn;
+    console.warn = (...args: unknown[]) => messages.push(args.join(" "));
+    try {
+      // 10 per second living 2 seconds keeps 20 alive: more than the 16 slots,
+      // though no single step spawns more than the pool.
+      const fx = createParticles({ ...base, rate: 10, lifetime: [2, 2], maxParticles: 16, debug: true });
+      await fx.ready;
+      fx.setTime(1);
+      await fx.captureFrame({ format: "rgba8" });
+      fx.setTime(2);
+      await fx.captureFrame({ format: "rgba8" });
+      fx.destroy();
+    } finally {
+      console.warn = warn;
+    }
+    return messages.filter((message) => message.includes("pool"));
+  }, BASE);
+  expect(warnings).toHaveLength(1);
+  expect(warnings[0]).toContain("Raise maxParticles");
+});
+
 test("is unsupported without WebGL2", async ({ page }) => {
   await page.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.getContext;
