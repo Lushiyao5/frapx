@@ -1,10 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 - 2026-10-16
 
 ### Fixed
 
 - The `debug` warning about the pool now fires when `rate` times the longest lifetime exceeds `maxParticles`, the point where particles are recycled before their lifetime ends. It used to fire only when one step spawned more than the whole pool.
+- README: separates the simulation uniforms from the drawing-only `opacity` and `twinkle` (only the former replay under a manual clock), notes that force uniforms need their force, and documents how the pool is sized.
 
 ## 0.1.0 - 2026-10-16
 
