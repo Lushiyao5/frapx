@@ -1,8 +1,24 @@
 import { hexToRgba } from "@frapx/core";
+import type { Rgba } from "@frapx/core";
 import type { ColorStop } from "../types";
-import { parseColorStops } from "./config";
 
+/** Texels per row; also the most palette colors the second row holds. */
 export const LUT_WIDTH = 256;
+
+/** Parses color stops into sorted `[offset, rgba]`, validating every color. */
+export const parseColorStops = (color: string | readonly ColorStop[]): Array<[number, Rgba]> => {
+  const stops = typeof color === "string" ? [color] : color;
+  if (stops.length === 0) throw new RangeError("color needs at least one stop");
+  const last = Math.max(stops.length - 1, 1);
+  return stops
+    .map((stop, index): [number, Rgba] => {
+      if (typeof stop === "string") return [stops.length === 1 ? 0 : index / last, hexToRgba(stop)];
+      const offset = stop[0];
+      if (!Number.isFinite(offset)) throw new RangeError(`color offset must be a finite number, got ${offset}`);
+      return [Math.min(Math.max(offset, 0), 1), hexToRgba(stop[1])];
+    })
+    .sort((a, b) => a[0] - b[0]);
+};
 
 /**
  * Builds the 256x2 RGBA8 lookup texture: row 0 is the color over life

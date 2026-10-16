@@ -1,6 +1,7 @@
 import { hexToRgba, normalizeUniform } from "@frapx/core";
-import type { NormalizedUniform, Rgba, TextureInput, UniformInput } from "@frapx/core";
+import type { NormalizedUniform, TextureInput, UniformInput } from "@frapx/core";
 import { presets } from "../presets";
+import { LUT_WIDTH, parseColorStops } from "./lut";
 import type {
   BlendMode,
   ColorStop,
@@ -142,20 +143,6 @@ const vec3 = (name: string, value: Vec3): Vec3 => {
 const isSpriteShape = (sprite: unknown): sprite is SpriteShape =>
   typeof sprite === "string" && (SPRITE_SHAPES as readonly string[]).includes(sprite);
 
-/** Parses color stops into sorted `[offset, rgba]`, validating every color. */
-export const parseColorStops = (color: string | readonly ColorStop[]): Array<[number, Rgba]> => {
-  const stops = typeof color === "string" ? [color] : color;
-  if (stops.length === 0) throw new RangeError("color needs at least one stop");
-  const last = Math.max(stops.length - 1, 1);
-  return stops
-    .map((stop, index): [number, Rgba] =>
-      typeof stop === "string"
-        ? [stops.length === 1 ? 0 : index / last, hexToRgba(stop)]
-        : [Math.min(Math.max(finite("color offset", stop[0]), 0), 1), hexToRgba(stop[1])]
-    )
-    .sort((a, b) => a[0] - b[0]);
-};
-
 export const resolveConfig = (options: CreateParticlesOptions): ResolvedConfig => {
   const config = mergeConfig(resolvePreset(options.preset), pickConfig(options));
 
@@ -181,7 +168,9 @@ export const resolveConfig = (options: CreateParticlesOptions): ResolvedConfig =
   parseColorStops(color);
   const palette = config.palette && config.palette.length > 0 ? config.palette : null;
   palette?.forEach((entry) => hexToRgba(entry));
-  if (palette && palette.length > 256) throw new RangeError("palette holds at most 256 colors");
+  if (palette && palette.length > LUT_WIDTH) {
+    throw new RangeError(`palette holds at most ${LUT_WIDTH} colors`);
+  }
   const spriteInput = config.sprite ?? "soft";
   if (typeof spriteInput === "string" && !isSpriteShape(spriteInput) && /^[a-z]+$/.test(spriteInput)) {
     // A bare word is a mistyped shape, not an image URL.

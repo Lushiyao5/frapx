@@ -117,6 +117,60 @@ test("setUniform under a manual clock applies to the whole timeline", async ({ p
   expect(result.restored).toBe(true);
 });
 
+test("a uniform changed during a capture's catch-up restarts it with the new value", async ({ page }) => {
+  await open(page);
+  const same = await page.evaluate(async (base) => {
+    const { createParticles } = (window as Win).__frapx;
+    const sameBytes = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((v, i) => v === b[i]);
+    // Particles that live through the whole replay, so steps run before the
+    // change still show in the frame.
+    const options = { ...base, lifetime: [60, 60] as [number, number], prewarm: 0 };
+    const changed = createParticles(options);
+    const reference = createParticles({ ...options, forces: { ...base.forces, gravity: [0.2, 0.1, 0] } });
+    await Promise.all([changed.ready, reference.ready]);
+    changed.setTime(30);
+    reference.setTime(30);
+    // 1,800 steps in batches with GPU waits between them; the change lands
+    // in the second wait, mid-replay.
+    const gl = changed.gl!;
+    const fenceSync = gl.fenceSync.bind(gl);
+    let waits = 0;
+    gl.fenceSync = (condition, flags) => {
+      waits++;
+      if (waits === 2) changed.setUniform("gravity", [0.2, 0.1, 0]);
+      return fenceSync(condition, flags);
+    };
+    const result = await changed.captureFrame({ format: "rgba8" });
+    const expected = await reference.captureFrame({ format: "rgba8" });
+    changed.destroy();
+    reference.destroy();
+    return sameBytes(result, expected);
+  }, BASE);
+  expect(same).toBe(true);
+});
+
+test("a new size under a manual clock replays the timeline", async ({ page }) => {
+  await open(page);
+  const same = await page.evaluate(async (base) => {
+    const { createParticles } = (window as Win).__frapx;
+    const sameBytes = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((v, i) => v === b[i]);
+    const resized = createParticles(base);
+    const fresh = createParticles({ ...base, resolution: [90, 160] });
+    await Promise.all([resized.ready, fresh.ready]);
+    resized.setTime(1);
+    await resized.captureFrame({ format: "rgba8" });
+    resized.setResolution([90, 160]);
+    resized.setTime(1.5);
+    fresh.setTime(1.5);
+    const a = await resized.captureFrame({ format: "rgba8" });
+    const b = await fresh.captureFrame({ format: "rgba8" });
+    resized.destroy();
+    fresh.destroy();
+    return sameBytes(a, b);
+  }, BASE);
+  expect(same).toBe(true);
+});
+
 test("prewarm fills the first frame; prewarm 0 starts empty", async ({ page }) => {
   await open(page);
   const counts = await page.evaluate(async (base) => {

@@ -166,6 +166,9 @@ class Particles implements ParticlesInstance {
         this.drawFrame(state, false);
       },
 
+      // Spawns are placed by aspect ratio, so a new size changes the timeline.
+      onResize: () => this.simulationChanged(),
+
       onCaptureDraw: (state, signal) => this.drawCapture(state, signal),
 
       captureSource: () => this.resources?.straight ?? null,
@@ -367,7 +370,7 @@ class Particles implements ParticlesInstance {
     state: HostFrameState,
     signal: AbortSignal | undefined
   ): Promise<void> {
-    const plan = this.plan(state);
+    let plan = this.plan(state);
     while (this.next < plan.runTo) {
       const resources = this.resources;
       if (!resources) throw new UnsupportedError("The WebGL context was lost while capturing.");
@@ -378,6 +381,9 @@ class Particles implements ParticlesInstance {
         await waitForGpu(resources.gl);
         if (this.destroyed) throw new DestroyedError("Particles were destroyed.");
         signal?.throwIfAborted();
+        // A uniform or binding changed meanwhile: finishing with the new values
+        // would mix two timelines in one frame, so start over with them.
+        if (this.dirty && this.resources) plan = this.plan(state);
       }
     }
     this.next = Math.max(this.next, plan.skipTo);
