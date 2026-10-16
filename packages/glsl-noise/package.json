@@ -1,6 +1,6 @@
 {
   "name": "@frapx/glsl-noise",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Lightweight GLSL noise helpers for @frapx/fx-canvas.",
   "keywords": [
     "webgl",
