@@ -146,9 +146,11 @@ test("frapx_curl3d is divergence-free", async ({ page }) => {
   const worstDivergence = Math.max(...rows.map((row) => Math.abs(row[0]!)));
   const derivativeScale = rows.reduce((sum, row) => sum + row[1]!, 0) / COUNT;
   const magnitudes = rows.map((row) => row[2]!);
-  console.log(
-    `curl3d: |div| max ${worstDivergence.toExponential(2)}, mean |dCi/dxi| ${derivativeScale.toFixed(2)}, |curl| max ${Math.max(...magnitudes).toFixed(2)} mean ${(magnitudes.reduce((a, b) => a + b, 0) / COUNT).toFixed(2)}`
-  );
+  // Recorded in the report; the README quotes the curl's typical length.
+  test.info().annotations.push({
+    type: "measured",
+    description: `|div| max ${worstDivergence.toExponential(2)}, mean |dCi/dxi| ${derivativeScale.toFixed(2)}, |curl| max ${Math.max(...magnitudes).toFixed(2)} mean ${(magnitudes.reduce((a, b) => a + b, 0) / COUNT).toFixed(2)}`
+  });
   expect(derivativeScale).toBeGreaterThan(1);
   expect(worstDivergence / derivativeScale).toBeLessThan(1e-2);
 });
