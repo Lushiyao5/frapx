@@ -5,17 +5,30 @@ import {
   type ShaderBackgroundInstance,
   type ShaderStatus,
   type TextureMap,
-  type UniformInputMap
+  type UniformInputMap,
+  type UniformSource
 } from "@frapx/fx-canvas";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLatestRef } from "./internal/useLatestRef";
 import { omitUndefined } from "./internal/omitUndefined";
+import {
+  bindSources,
+  unbindSources,
+  useStableSources,
+  type BoundSources
+} from "./internal/uniformSources";
 
 export type UseShaderBackgroundOptions<
   TUniforms extends UniformInputMap = UniformInputMap
 > = Omit<CreateShaderBackgroundOptions<TUniforms>, "target" | "onReady" | "onError"> & {
   onShaderReady?: (instance: ShaderBackgroundInstance<TUniforms>) => void;
   onShaderError?: (error: Error) => void;
+  /**
+   * Bound with `bindUniforms()` in order, so a later source wins for the same
+   * uniform. Sources are compared by identity: changing the array's contents
+   * rebinds, and a recreated instance is bound again.
+   */
+  uniformSources?: readonly UniformSource[] | undefined;
 };
 
 export type UseShaderBackgroundResult<
@@ -43,10 +56,13 @@ export const useShaderBackground = <
   const lastUniformsRef = useRef<TUniforms | undefined>(undefined);
   const lastTexturesRef = useRef<TextureMap | undefined>(undefined);
   const lastFragmentRef = useRef<string | undefined>(undefined);
+  const boundSourcesRef = useRef<BoundSources | null>(null);
   // Bumped to recreate an instance whose first shader failed, which cannot
   // swap shaders in place.
   const [generation, setGeneration] = useState(0);
   const latestOptionsRef = useLatestRef(options);
+  const uniformSources = useStableSources(options.uniformSources);
+  const stableSourcesRef = useLatestRef(uniformSources);
 
   const ref = useCallback((node: HTMLElement | null) => {
     setTarget(node);
@@ -72,6 +88,7 @@ export const useShaderBackground = <
       onResize,
       uniforms,
       textures,
+      uniformSources,
       ...rest
     } = latest;
 
@@ -108,6 +125,8 @@ export const useShaderBackground = <
     lastUniformsRef.current = uniforms;
     lastTexturesRef.current = textures;
     lastFragmentRef.current = latest.fragment;
+    // Bound before the first frame, not after the re-render that sets `instance`.
+    boundSourcesRef.current = bindSources(fx, stableSourcesRef.current);
     setInstance(fx);
     setStatus(fx.status);
     setError(null);
@@ -129,6 +148,7 @@ export const useShaderBackground = <
       fx.destroy();
       if (instanceRef.current === fx) {
         instanceRef.current = null;
+        boundSourcesRef.current = null;
         lastUniformsRef.current = undefined;
         lastTexturesRef.current = undefined;
         lastFragmentRef.current = undefined;
@@ -184,6 +204,14 @@ export const useShaderBackground = <
       }
     );
   }, [options.textures]);
+
+  // A changed source list rebinds in order on the existing instance.
+  useEffect(() => {
+    const fx = instanceRef.current;
+    if (!fx || boundSourcesRef.current?.sources === uniformSources) return;
+    unbindSources(boundSourcesRef.current);
+    boundSourcesRef.current = bindSources(fx, uniformSources);
+  }, [uniformSources]);
 
   // clock and resolution switch in place instead of recreating the instance.
   const clock = options.clock ?? "realtime";

@@ -94,6 +94,22 @@ ref.current?.setTime(2);
 const png = await ref.current?.captureFrame();
 ```
 
+### Timelines
+
+`uniformSources` binds sources such as `keyframes()` in array order (a later
+one wins for the same uniform). Sources are compared by identity, so an inline
+array of the same sources does not rebind, and a recreated instance is bound
+again. `ref.current?.bindUniforms(source)` binds one more on the current
+instance and returns its removal.
+
+```tsx
+import { keyframes } from "@frapx/fx-canvas";
+
+const timeline = keyframes({ glow: [[0, 0], [2, 1]] });
+
+<ShaderBackground fragment={fragment} uniformSources={[timeline]} />;
+```
+
 ## Notes
 
 - React 18+ is supported.
