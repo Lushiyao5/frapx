@@ -1,7 +1,7 @@
 {
   "name": "@frapx/glsl-raymarch",
   "version": "0.1.0",
-  "description": "GLSL raymarching for @frapx/fx-canvas — sphere tracing, normals, soft shadows, ambient occlusion and camera rays around your own frapx_map().",
+  "description": "GLSL raymarching for frapx shaders — sphere tracing, normals, soft shadows, ambient occlusion and camera rays around your own frapx_map().",
   "keywords": [
     "webgl",
     "shader",

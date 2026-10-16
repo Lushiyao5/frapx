@@ -1,6 +1,6 @@
 # @frapx/glsl-raymarch
 
-GLSL raymarching for `@frapx/fx-canvas`: sphere tracing, normals, soft shadows, ambient occlusion and camera rays around a scene function you write.
+GLSL raymarching for frapx shaders (`@frapx/fx-canvas`, `@frapx/fx-passes`): sphere tracing, normals, soft shadows, ambient occlusion and camera rays around a scene function you write.
 
 Like `@frapx/glsl-noise` and `@frapx/glsl-sdf`, this package exports plain GLSL strings to concatenate into your own fragment shader. It stops at geometry and visibility: lighting, materials, fog and color grading stay in your shader. Pair it with [`@frapx/glsl-sdf`](../glsl-sdf) for distance functions.
 

@@ -56,8 +56,8 @@ Lengths are in viewport heights (1 is the canvas' height) and times in seconds. 
 | `velocity.min` / `max` | `[0, 0, 0]` | Initial velocity, random per axis |
 | `forces.gravity` | — | Constant acceleration `[x, y, z]` |
 | `forces.drag` | — | Velocity damping per second |
-| `forces.curl` | — | `{ strength, scale, speed }`: divergence-free swirl ([`curl3d`](/frapx/packages/glsl-noise/#curl-noise)) |
-| `forces.pointer` | — | `{ strength, radius }`: push from the pointer; negative strength pulls |
+| `forces.curl` | — | `{ strength, scale, speed }` (defaults 0.1, 1, 0.1): divergence-free swirl ([`curl3d`](/frapx/packages/glsl-noise/#curl-noise)) |
+| `forces.pointer` | — | `{ strength, radius }` (defaults 0.5, 0.2): push from the pointer; negative strength pulls |
 | `size` | `[0.01, 0.02]` | Diameter range |
 | `sizeOverLife` | `"constant"` | `"fadeIn"`, `"fadeOut"` or `"fadeInOut"` |
 | `color` | white | A hex color, or stops over life: `["#fff0", "#fff", "#fff0"]` or `[[0.2, "#fff"], ...]` |
@@ -69,7 +69,7 @@ Lengths are in viewport heights (1 is the canvas' height) and times in seconds. 
 | `twinkle` | 0 | Random flicker, 0–1 |
 | `blend` | `"additive"` | `"additive"` for light, `"normal"` to paint over |
 | `perspective` | 1.5 | Depth scale: `1 / (1 + depth * perspective)` |
-| `maxParticles` | rate × longest lifetime + headroom | Pool size, fixed at creation |
+| `maxParticles` | initial `rate` × longest lifetime × 1.25 (at least 16) | Pool size, fixed at creation. Raise it if you raise `rate` later: when the pool runs out, the oldest particles are recycled before their lifetime ends (`debug` warns once) |
 | `simulationRate` | 60 | Simulation steps per second |
 | `prewarm` | longest lifetime | Seconds simulated before time 0, so the first frame is already full; 0 starts empty |
 | `seed` | 1 | Seed for every random choice |
@@ -83,10 +83,20 @@ Which forces exist, the pool, the sprite, `sizeOverLife` and `tumble` are compil
 
 These values are uniforms. `setUniform(name, value)` changes one, and `bindUniforms(source)` drives them from a timeline such as `keyframes()` (re-exported here):
 
-`rate`, `gravity`, `drag`, `curlStrength`, `curlScale`, `curlSpeed`, `pointerStrength`, `pointerRadius`, `opacity`, `twinkle`, `perspective`
+- Simulation: `rate`, `gravity`, `drag`, `curlStrength`, `curlScale`, `curlSpeed`, `pointerStrength`, `pointerRadius`, `perspective`
+- Drawing only: `opacity`, `twinkle`
+
+A force's uniforms only exist when that force was configured at creation: without `forces.curl`, setting `curlStrength` has no effect (`debug` warns).
 
 ```ts
-import { keyframes } from "@frapx/fx-particles";
+import { createParticles, keyframes } from "@frapx/fx-particles";
+
+const particles = createParticles({
+  target: ".hero",
+  preset: "confetti",
+  // The pool is sized from the starting rate; leave room for the peak.
+  maxParticles: 1200
+});
 
 particles.bindUniforms(
   keyframes({
@@ -107,10 +117,10 @@ particles.bindUniforms(
 
 ## Time, determinism and export
 
-The simulation advances in fixed steps of `1 / simulationRate` seconds. The frame at time `t` shows the state after `floor(t * simulationRate)` steps from the prewarmed start, whatever the frame rate:
+The simulation advances in fixed steps of `1 / simulationRate` seconds, and the frame at time `t` shows the state after `floor(t * simulationRate)` steps from the prewarmed start, however many frames were drawn on the way. A manual clock always holds to this; a realtime clock does unless it has to drop time:
 
 - **Realtime clock.** Each frame runs the steps its elapsed time covers. A frame that falls far behind (a slow device, a restored context) runs up to 4 steps and drops the rest of the time instead of stalling. `setTime()` lands exactly; going back replays from the start.
-- **Manual clock.** `setTime(t)` then `render()` or `captureFrame()` runs every step up to `t`; going back replays from the start. A frame is therefore the same whether it was reached directly, frame by frame or after rewinding, so `@frapx/tool-render` can split a render into ranges. Uniform values apply to the whole timeline: changing one with `setUniform()` or `bindUniforms()` replays from the start, and so does a new canvas size, since spawns are placed by aspect ratio. Bound timelines are evaluated at every step's own time. The pointer has no effect, and switching to the manual clock starts over.
+- **Manual clock.** `setTime(t)` then `render()` or `captureFrame()` runs every step up to `t`; going back replays from the start. A frame is therefore the same whether it was reached directly, frame by frame or after rewinding, so `@frapx/tool-render` can split a render into ranges. Uniform values apply to the whole timeline: changing a simulation uniform with `setUniform()`, or binding or removing a source with `bindUniforms()`, replays from the start, and so does a new canvas size, since spawns are placed by aspect ratio. Changing `opacity` or `twinkle` only redraws. In a bound timeline, simulation uniforms are evaluated at every step's own time and drawing uniforms at the frame's time. The pointer has no effect, and switching to the manual clock starts over.
 
 Replaying is cheap per step but adds up: a frame 10 minutes in at 60 steps per second runs 36,000 steps. `captureFrame()` runs a long catch-up in batches with GPU waits in between, so it never trips the browser's GPU watchdog.
 

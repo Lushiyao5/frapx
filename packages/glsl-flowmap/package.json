@@ -1,7 +1,7 @@
 {
   "name": "@frapx/glsl-flowmap",
   "version": "0.4.1",
-  "description": "GLSL flowmap helpers for @frapx/fx-canvas — decode RG-encoded flow textures and apply three-phase advection.",
+  "description": "GLSL flowmap helpers for frapx shaders — decode RG-encoded flow textures and apply three-phase advection.",
   "keywords": [
     "webgl",
     "shader",

@@ -6,7 +6,7 @@ Oct 10, 2026 · @mark
 
 この仕様書を既存のロードマップと突き合わせた grill で、次のとおり確定した。本文はこの節に合わせて書き換え済みだが、食い違いが残っていればこの節を正とする。
 
-1. **映像書き出しを最優先にする。** FBO プリミティブ（float 形式を含む）は独立したマイルストーンにせず、A4 / B1 / B2 の土台として組み込む。`@frapx/fx-particles` は M2 完了まで凍結する。
+1. **映像書き出しを最優先にする。** FBO プリミティブ（float 形式を含む）は独立したマイルストーンにせず、A4 / B1 / B2 の土台として組み込む。`@frapx/fx-particles` は M2 完了まで凍結する（2026-10-16 に凍結を解除し、`@frapx/fx-particles` 0.1.0 を公開済み）。
 2. **マルチパス（B2）は新パッケージ `@frapx/fx-passes` に置く。** 2026-07-12 の判断「`@frapx/fx-canvas` はシングルパスを維持し、宣言的な passes API を持たない」は**維持する**。A1〜A3 は `@frapx/core` のランタイムホストに実装し、fx-canvas と fx-passes の両方から使う。uniform・テクスチャ管理は fx-passes 着手時に core へ移す。
 3. **サンプル蓄積（B1）も `@frapx/fx-passes` だけに置く。** fx-passes は1パスでも使える映像制作向けランタイムとする。fx-canvas は Web 背景向けのまま A1〜A4 だけを持つ。
 4. **書き出しパッケージは新カテゴリ `tool-*` にする。** ブラウザ用の `@frapx/tool-capture` と Node CLI の `@frapx/tool-render`（コマンド `frapx-render`）に分ける。CLI は Puppeteer ではなく `playwright-core` を使う。mux ライブラリは tool-capture 着手時に選定し、承認を得てから追加する。それまでは依存のない PNG 連番を先に作る。
@@ -115,7 +115,7 @@ createShaderBackground({ fragment, feedback: { format: "rgba16f" } }); // 既定
 
 ## 優先度B：品質と制作効率
 
-A の上に積む機能で、映像としての品質と日々の制作速度を決める。B1 と B2 は新パッケージ `@frapx/fx-passes` に実装する（決定事項 2・3）。B3 と B4 は M3 完了後に改めて設計を詰める。
+A の上に積む機能で、映像としての品質と日々の制作速度を決める。B1 と B2 は新パッケージ `@frapx/fx-passes` に実装する（決定事項 2・3）。B3 と B4 は M3 完了後に改めて設計を詰める（2026-10-14 に設計し、2026-10-15 に実装済み。B3 は `setFragment()` と `@frapx/tool-dev`、B4 は `bindUniforms()` と `keyframes()`）。
 
 ### B1. サンプル蓄積（AA・モーションブラー）
 
@@ -188,8 +188,8 @@ fx-canvas 本体に触れずに並行して作れる。いずれも命名規則�
 3. **並行作業（SDF）**：`glsl-sdf` は M1 と同時に着手してよい。続けて `glsl-raymarch`。
 4. **書き出し道具**：M2 完了後に `tool-capture`（PNG 連番 → mux の承認後に動画）、続けて `tool-render`。
 5. **M3 映像品質**：`@frapx/fx-passes` を新設し、B2（マルチパス）と B1（サンプル蓄積）を実装する。完了条件は、64サンプルのモーションブラー付きフレームをバンディングなしで書き出せること。
-6. **M4 制作効率**：B3（ホットリロード）、B4（タイムライン接続）、音声入力。置き場所と API は M3 完了後に改めて決める。
-7. **その後**：凍結していた `@frapx/fx-particles` を再開する。
+6. **M4 制作効率**：B3（ホットリロード）、B4（タイムライン接続）、音声入力。置き場所と API は M3 完了後に改めて決める。B3・B4 は 2026-10-15 にリリース済み（core 0.5.0 / fx-canvas 0.10.0 / fx-passes 0.2.0 / tool-dev 0.1.0）。音声入力は作品が出てから設計する。
+7. **その後**：凍結していた `@frapx/fx-particles` を再開する。2026-10-16 に `@frapx/fx-particles` 0.1.0 を公開済み。
 
 各マイルストーンで CHANGELOG を更新し、RELEASING.md の手順に従ってバージョンを上げる。破壊的変更はないため、いずれもマイナーバージョンでの追加とする。
 

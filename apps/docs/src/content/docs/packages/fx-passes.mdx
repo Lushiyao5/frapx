@@ -80,6 +80,21 @@ buffers, the time and uniforms, and restarting the frame's samples. A compile
 error is returned rather than thrown and the previous shader keeps drawing —
 see [`@frapx/tool-dev`](/frapx/packages/tool-dev/) for an on-page error overlay.
 
+## Instance API
+
+| Member | |
+| --- | --- |
+| `canvas`, `gl`, `status`, `supported`, `ready`, `clock` | As in `@frapx/fx-canvas` |
+| `accumulation`, `samplesDrawn` | The resolved accumulation settings, and the samples of the current frame drawn so far |
+| `start()`, `stop()`, `render()`, `resize()`, `destroy()` | Lifecycle. `render()` at an unchanged time adds the next sample |
+| `setTime(seconds)`, `setClock(clock)`, `setResolution(size)` | Clock and size, as in `@frapx/fx-canvas` |
+| `setAccumulation(options)` | Changes `samples`, `shutter` or `fps` and restarts the frame's samples |
+| `captureFrame(options)` | Draws every sample of the current frame and reads the last pass |
+| `resetFeedback()` | Clears the previous-frame outputs |
+| `setFragment(name, source)` | Swaps one pass' shader (see Hot reloading) |
+| `bindUniforms(source)` | Drives uniforms from a timeline such as `keyframes()` (see Timelines) |
+| `setUniform()`, `setUniforms()`, `setTexture()`, `setTextures()` | Change user uniforms and textures. Uniforms set during a capture apply to the next frame; a texture applies once it loads |
+
 ## Requirements
 
 WebGL2 with `EXT_color_buffer_float`, otherwise `status` is `"unsupported"`. Each pass may use GLSL ES 1.00 or 3.00. With `EXT_float_blend`, samples are summed by additive blending; without it, by an extra pass.

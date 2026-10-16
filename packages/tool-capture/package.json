@@ -1,7 +1,7 @@
 {
   "name": "@frapx/tool-capture",
   "version": "0.2.0",
-  "description": "Browser frame export for @frapx/fx-canvas and @frapx/fx-passes — deterministic PNG sequences (8-bit or 16-bit) written to a folder or a ZIP, with no dependencies.",
+  "description": "Browser frame export for @frapx/fx-canvas, @frapx/fx-passes and @frapx/fx-particles — deterministic PNG sequences (8-bit or 16-bit) written to a folder or a ZIP, with no dependencies.",
   "keywords": [
     "webgl",
     "shader",

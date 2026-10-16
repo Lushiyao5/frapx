@@ -28,7 +28,9 @@ never need to guess:
 		drives a full-screen WebGL fragment shader as a background or overlay.
 		This is what most people install first. **[`@frapx/fx-passes`](/frapx/packages/fx-passes/)**
 		chains passes and accumulates samples for anti-aliased, motion-blurred
-		video frames (WebGL2).
+		video frames (WebGL2). **[`@frapx/fx-particles`](/frapx/packages/fx-particles/)**
+		draws GPU particles — snow, dust, sparkles, confetti — from presets, with
+		reproducible frames for export (WebGL2).
 	</Card>
 	<Card title="react-* — framework bindings" icon="puzzle">
 		A thin React wrapper around an `fx-*` package. **[`@frapx/react-canvas`](/frapx/packages/react-canvas/)**
@@ -73,7 +75,8 @@ never need to guess:
 | Render hours-long frame sequences from the command line, then encode with ffmpeg | `@frapx/tool-capture` in the page + `@frapx/tool-render` |
 | Edit shaders with hot reload and see compile errors on the page | `setFragment()` (built in) + `@frapx/tool-dev` |
 | Chain passes (bloom, trails) or render anti-aliased, motion-blurred frames | `@frapx/fx-passes` (+ `@frapx/tool-capture` to export) |
-| Build a *different* effect runtime (not a background shader) | Nothing yet — see the [roadmap](https://github.com/kramhash/frapx) for `@frapx/fx-particles` |
+| Add falling snow, drifting dust, sparkles or confetti over a page | `@frapx/fx-particles` (WebGL2) |
+| Export a particle layer with alpha to composite over other footage | `@frapx/fx-particles` + `@frapx/tool-capture` (+ `@frapx/tool-render`) |
 
 Still not sure? Start with [Getting Started](/frapx/getting-started/) — it
 walks through the one package (`@frapx/fx-canvas`) that covers the common case.

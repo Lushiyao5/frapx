@@ -64,11 +64,15 @@ Run a specific example with a workspace filter:
 ```sh
 pnpm --filter @frapx/example-vite-basic dev
 pnpm --filter @frapx/example-vite-feedback dev
+pnpm --filter @frapx/example-vite-flowmap dev
 pnpm --filter @frapx/example-vite-capture dev
 pnpm --filter @frapx/example-vite-sdf dev
 pnpm --filter @frapx/example-vite-raymarch dev
+pnpm --filter @frapx/example-vite-passes dev
 pnpm --filter @frapx/example-vite-poolrooms dev
-pnpm --filter @frapx/example-vite-sdf-journey dev
+pnpm --filter @frapx/example-vite-timeline dev
+pnpm --filter @frapx/example-vite-hot-reload dev
+pnpm --filter @frapx/example-vite-particles dev
 pnpm --filter @frapx/example-vite-react dev
 ```
 

@@ -1,6 +1,6 @@
 # @frapx/glsl-sdf
 
-GLSL signed distance functions for `@frapx/fx-canvas`: 2D and 3D primitives, smooth booleans and domain operators.
+GLSL signed distance functions for frapx shaders (`@frapx/fx-canvas`, `@frapx/fx-passes`): 2D and 3D primitives, smooth booleans and domain operators.
 
 Like `@frapx/glsl-noise`, this package exports plain GLSL strings to concatenate into your own fragment shader. It contains no raymarching loop or lighting; for the loop, normals, shadows and camera rays, see [`@frapx/glsl-raymarch`](../glsl-raymarch).
 
@@ -71,4 +71,4 @@ Conventions:
 
 MIT © 2026 kramhash. See [LICENSE](./LICENSE).
 
-The distance functions are adapted from Inigo Quilez's Shadertoy shaders, each published under the MIT License (Copyright (c) 2013-2020 Inigo Quilez). [`LICENSES/iq-distfunctions-MIT.txt`](./LICENSES/iq-distfunctions-MIT.txt) lists the source shader for each function and includes the license text.
+The distance functions are adapted from Inigo Quilez's Shadertoy shaders, each published under the MIT License (Copyright (c) 2013-2020 Inigo Quilez). [`LICENSES/iq-distfunctions-MIT.txt`](./LICENSES/iq-distfunctions-MIT.txt) lists the source shader for each function and includes the license text. `sdf2d`, `sdf3d` and `sdfOps` (and so `sdf`) start with the `sdfLicense` attribution comment, also exported on its own.
