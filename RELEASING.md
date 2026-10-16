@@ -8,7 +8,8 @@ released, tagged, and documented on its own.
 | Package | Directory | Latest tag | Notes |
 | --- | --- | --- | --- |
 | `@frapx/fx-canvas` | `packages/fx-canvas` | `@frapx/fx-canvas@0.10.0` | Depends on `@frapx/core`. Publish after it. |
-| `@frapx/react-canvas` | `packages/react-canvas` | `@frapx/react-canvas@0.6.0` | Depends on `@frapx/fx-canvas`. Publish after it. |
+| `@frapx/react-canvas` | `packages/react-canvas` | `@frapx/react-canvas@0.7.0` | Depends on `@frapx/fx-canvas`. Publish after it. |
+| `@frapx/react-particles` | `packages/react-particles` | `@frapx/react-particles@0.1.0` | Depends on `@frapx/fx-particles`. Publish after it. |
 | `@frapx/glsl-noise` | `packages/glsl-noise` | `@frapx/glsl-noise@0.3.0` | |
 | `@frapx/glsl-flowmap` | `packages/glsl-flowmap` | `@frapx/glsl-flowmap@0.4.1` | |
 | `@frapx/glsl-sdf` | `packages/glsl-sdf` | `@frapx/glsl-sdf@0.1.0` | |
@@ -36,7 +37,7 @@ also change package metadata or published package contents.
 Packages that depend on another package in this repo (`@frapx/fx-canvas`,
 `@frapx/fx-passes` and `@frapx/fx-particles` on `@frapx/core`,
 `@frapx/fx-particles` also on `@frapx/glsl-noise`, `@frapx/react-canvas` on
-`@frapx/fx-canvas`) declare that
+`@frapx/fx-canvas`, `@frapx/react-particles` on `@frapx/fx-particles`) declare that
 dependency as `workspace:^` in `package.json`. Publish with `pnpm publish`,
 which rewrites `workspace:^` to the caret range of the dependency's current
 published version (e.g. `^0.6.1`) at pack time. Do **not** use `npm publish`
@@ -50,7 +51,8 @@ packages and the `tool-*` packages) are unaffected, but use
 
 Always publish internal dependencies in dependency order (e.g. `@frapx/core`
 before the `fx-*` packages, `@frapx/glsl-noise` before `@frapx/fx-particles`,
-`@frapx/fx-canvas` before `@frapx/react-canvas`) so the
+`@frapx/fx-canvas` before `@frapx/react-canvas`, `@frapx/fx-particles` before
+`@frapx/react-particles`) so the
 caret range resolves to an already-published version.
 
 ## Versioning
@@ -74,6 +76,7 @@ Each public package owns its changelog:
 - `packages/core/CHANGELOG.md`
 - `packages/fx-canvas/CHANGELOG.md`
 - `packages/react-canvas/CHANGELOG.md`
+- `packages/react-particles/CHANGELOG.md`
 - `packages/glsl-noise/CHANGELOG.md`
 - `packages/glsl-flowmap/CHANGELOG.md`
 - `packages/glsl-sdf/CHANGELOG.md`
