@@ -28,6 +28,8 @@ The particles draw into their own transparent canvas. To put them over an `fx-ca
 
 It needs WebGL2; without it `status` is `"unsupported"` and nothing is drawn. Importing it is safe during SSR.
 
+In a React app, use [`@frapx/react-particles`](/frapx/packages/react-particles/) for a `<Particles />` component and a `useParticles()` hook.
+
 ## Presets
 
 `preset` is a starting point; every other option is merged over it. `forces`, `emitter` and `velocity` merge field by field, so `forces: { pointer: {} }` adds a pointer push to a preset's own forces.

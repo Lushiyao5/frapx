@@ -1,0 +1,86 @@
+---
+title: "@frapx/react-particles"
+description: React bindings for @frapx/fx-particles.
+---
+
+import { Badge } from "@astrojs/starlight/components";
+
+<Badge text="react-* — framework binding" variant="tip" /> Wraps [`@frapx/fx-particles`](/frapx/packages/fx-particles/) for React.
+
+A thin lifecycle adapter around `@frapx/fx-particles` — the simulation and
+render loop stay in the runtime, and the package ships no CSS. Needs WebGL2.
+
+```sh
+pnpm add @frapx/fx-particles @frapx/react-particles
+```
+
+## Component
+
+```tsx
+import { Particles } from "@frapx/react-particles";
+
+export function Hero() {
+  return (
+    <section style={{ position: "relative", minHeight: "100vh" }}>
+      <Particles preset="snow" rate={60} style={{ position: "absolute", inset: 0 }} />
+      <h1>Winter sale</h1>
+    </section>
+  );
+}
+```
+
+Props are the `createParticles()` options (except `target`, `onReady` and
+`onError`) plus regular `div` attributes. The canvas is transparent, so stack
+it over other content — a `<ShaderBackground />` from
+[`@frapx/react-canvas`](/frapx/packages/react-canvas/), for example — with CSS.
+
+## What changes in place
+
+Options are compared by value, so inline arrays and objects are fine.
+
+- **In place:** `rate`, `opacity`, `twinkle`, `perspective`, the force values
+  (`forces.gravity`, `forces.drag`, `forces.curl.*`, `forces.pointer.*`),
+  `color`, `palette`, `blend`, `clock` and `resolution`.
+- **Recreated:** any other change (`preset`, `lifetime`, `size`, `sprite`,
+  which forces are present…), removing an in-place value, and `recreateKey`.
+- Without `maxParticles`, raising `rate` beyond what the automatic pool holds
+  recreates the instance with a larger pool; with `maxParticles`, `rate`
+  always changes in place.
+
+## Timelines
+
+`uniformSources` binds sources such as `keyframes()` in array order (a later
+one wins for the same uniform). Sources are compared by identity, and a
+recreated instance is bound again.
+
+```tsx
+import { keyframes } from "@frapx/fx-particles";
+
+const fadeIn = keyframes({ opacity: [[0, 0], [3, 1]] }, { ease: "smooth" });
+
+<Particles preset="fireflies" uniformSources={[fadeIn]} />;
+```
+
+## Hook and handle
+
+`useParticles(options, recreateDeps?)` returns `{ ref, instance, status, error }`
+with the same comparison rules. The component's `ref` exposes the instance's
+methods — `setTime`, `setClock`, `captureFrame`, `reset`, `setUniform`,
+`bindUniforms`, `setColor` and the rest:
+
+```tsx
+const ref = useRef<ParticlesHandle>(null);
+
+<Particles ref={ref} preset="confetti" clock="manual" resolution={[1920, 1080]} />;
+
+ref.current?.setTime(2);
+const png = await ref.current?.captureFrame();
+```
+
+## Notes
+
+- React 18+ is supported. Safe to import during SSR — WebGL work starts only after mount.
+- An invalid config reaches `error` / `onParticlesError` instead of throwing.
+- Use `onParticlesReady` / `onParticlesError` instead of the runtime's `onReady` / `onError` (avoids a DOM prop naming conflict).
+
+Full prop and hook reference: [package README](https://github.com/kramhash/frapx/blob/main/packages/react-particles/README.md) on GitHub.

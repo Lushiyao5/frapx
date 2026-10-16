@@ -16,6 +16,7 @@ Packages are named by category, so the prefix tells you what kind of package it 
 
 **Framework bindings** — for an effect runtime above:
 - [`@frapx/react-canvas`](./packages/react-canvas) - React bindings for `@frapx/fx-canvas`.
+- [`@frapx/react-particles`](./packages/react-particles) - React bindings for `@frapx/fx-particles`.
 
 **GLSL snippets** — string-concatenate into your own fragment shader:
 - [`@frapx/glsl-noise`](./packages/glsl-noise) - Lightweight GLSL 3D noise helpers.
@@ -74,6 +75,7 @@ pnpm --filter @frapx/example-vite-timeline dev
 pnpm --filter @frapx/example-vite-hot-reload dev
 pnpm --filter @frapx/example-vite-particles dev
 pnpm --filter @frapx/example-vite-react dev
+pnpm --filter @frapx/example-vite-react-particles dev
 ```
 
 ## Documentation Site

@@ -270,6 +270,43 @@ importers:
         specifier: ^6.3.5
         version: 6.4.3(@types/node@24.13.2)(lightningcss@1.32.0)(yaml@2.9.0)
 
+  examples/vite-react-particles:
+    dependencies:
+      '@frapx/fx-canvas':
+        specifier: workspace:*
+        version: link:../../packages/fx-canvas
+      '@frapx/fx-particles':
+        specifier: workspace:*
+        version: link:../../packages/fx-particles
+      '@frapx/react-canvas':
+        specifier: workspace:*
+        version: link:../../packages/react-canvas
+      '@frapx/react-particles':
+        specifier: workspace:*
+        version: link:../../packages/react-particles
+      react:
+        specifier: ^19.2.3
+        version: 19.2.7
+      react-dom:
+        specifier: ^19.2.3
+        version: 19.2.7(react@19.2.7)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.7
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.17)
+      '@vitejs/plugin-react':
+        specifier: ^5.1.2
+        version: 5.2.0(vite@6.4.3(@types/node@24.13.2)(lightningcss@1.32.0)(yaml@2.9.0))
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.3.5
+        version: 6.4.3(@types/node@24.13.2)(lightningcss@1.32.0)(yaml@2.9.0)
+
   examples/vite-sdf:
     dependencies:
       '@frapx/fx-canvas':
@@ -363,6 +400,28 @@ importers:
       '@frapx/fx-canvas':
         specifier: workspace:^
         version: link:../fx-canvas
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.7
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.17)
+      jsdom:
+        specifier: ^27.3.0
+        version: 27.4.0
+      react:
+        specifier: ^19.2.3
+        version: 19.2.7
+      react-dom:
+        specifier: ^19.2.3
+        version: 19.2.7(react@19.2.7)
+
+  packages/react-particles:
+    dependencies:
+      '@frapx/fx-particles':
+        specifier: workspace:^
+        version: link:../fx-particles
     devDependencies:
       '@types/react':
         specifier: ^19.2.7
