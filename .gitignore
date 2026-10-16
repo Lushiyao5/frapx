@@ -10,6 +10,7 @@ coverage/
 test-results/
 playwright-report/
 .playwright-mcp/
+.playwright-cli/
 
 # Logs
 *.log
