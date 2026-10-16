@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added `curl3d` (`frapx_curl3d(vec3)`), a divergence-free curl noise field
+  built from three offset simplex potentials, for advecting particles and
+  flow-like motion.
+- Added `simplex3dGrad` (`frapx_simplex3dGrad(vec3, out vec3)`), simplex noise
+  with its analytic gradient, plus the `simplex3dGradBody` and `curl3dBody`
+  building blocks. The combined `noise3d` snippet now includes both.
+
 ## 0.2.1 - 2026-10-10
 
 ### Added

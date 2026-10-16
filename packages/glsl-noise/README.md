@@ -43,10 +43,28 @@ createShaderBackground({
 - `perlin3d` - self-contained `frapx_perlin3d(vec3)`
 - `periodicPerlin3d` - self-contained `frapx_periodicPerlin3d(vec3, vec3)`
 - `fbm3d` - self-contained `frapx_fbm3d(vec3)` using simplex noise
+- `simplex3dGrad` - self-contained `frapx_simplex3dGrad(vec3, out vec3)`: simplex noise plus its analytic gradient
+- `curl3d` - self-contained `frapx_curl3d(vec3)`: a divergence-free vector field (curl noise)
 - `noise3d` - combined snippet with all 3D functions
-- `noise3dCommon`, `simplex3dBody`, `perlin3dBody`, `periodicPerlin3dBody`, `fbm3dBody` - composable building blocks
+- `noise3dCommon`, `simplex3dBody`, `simplex3dGradBody`, `curl3dBody`, `perlin3dBody`, `periodicPerlin3dBody`, `fbm3dBody` - composable building blocks
 
 Use `noise3d` when you need multiple functions in one shader to avoid duplicating shared helper functions.
+
+## Curl noise
+
+`frapx_curl3d(p)` returns the curl of a vector potential made of three offset
+simplex fields. It has no divergence, so anything advected by it swirls
+without bunching up or thinning out — the usual choice for drifting particles
+and smoke-like motion. The result is not normalized: lengths average about 3.5
+and peak near 10, so scale it to taste.
+
+```glsl
+// after interpolating ${curl3d} into the shader
+vec3 velocity = frapx_curl3d(position * 0.5 + vec3(0.0, 0.0, u_time * 0.1)) * 0.2;
+```
+
+It costs three `frapx_simplex3dGrad` calls, each about as expensive as one
+`frapx_simplex3d`.
 
 ## Notes
 

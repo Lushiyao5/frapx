@@ -46,12 +46,26 @@ createShaderBackground({
 | `perlin3d` | `frapx_perlin3d(vec3)` — self-contained |
 | `periodicPerlin3d` | `frapx_periodicPerlin3d(vec3, vec3)` — self-contained |
 | `fbm3d` | `frapx_fbm3d(vec3)` — self-contained, built on simplex noise |
+| `simplex3dGrad` | `frapx_simplex3dGrad(vec3, out vec3)` — self-contained, simplex noise plus its analytic gradient |
+| `curl3d` | `frapx_curl3d(vec3)` — self-contained, divergence-free curl noise |
 | `noise3d` | combined snippet exposing all of the above |
-| `noise3dCommon`, `simplex3dBody`, `perlin3dBody`, `periodicPerlin3dBody`, `fbm3dBody` | composable building blocks, for when you need several functions without duplicating shared helpers |
+| `noise3dCommon`, `simplex3dBody`, `simplex3dGradBody`, `curl3dBody`, `perlin3dBody`, `periodicPerlin3dBody`, `fbm3dBody` | composable building blocks, for when you need several functions without duplicating shared helpers |
 
 Function names are prefixed with `frapx_` to avoid GLSL global-scope
 collisions when combined with other snippets. Targets WebGL1 / GLSL ES 1.00 —
 use `precision highp float;` in shaders that include these.
+
+## Curl noise
+
+`frapx_curl3d(p)` returns the curl of a vector potential made of three offset
+simplex fields. It has no divergence, so particles advected by it swirl
+without bunching up or thinning out. The result is not normalized — lengths
+average about 3.5 and peak near 10 — and it costs three
+`frapx_simplex3dGrad` calls, each about as expensive as one `frapx_simplex3d`.
+
+```glsl
+vec3 velocity = frapx_curl3d(position * 0.5 + vec3(0.0, 0.0, u_time * 0.1)) * 0.2;
+```
 
 ## License
 

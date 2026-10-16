@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  curl3d,
   fbm3d,
   noise3d,
   noise3dCommon,
   perlin3d,
   periodicPerlin3d,
-  simplex3d
+  simplex3d,
+  simplex3dGrad
 } from "../src/index";
 
 describe("@frapx/glsl-noise", () => {
@@ -16,6 +18,11 @@ describe("@frapx/glsl-noise", () => {
       "float frapx_periodicPerlin3d(vec3 P, vec3 rep)"
     );
     expect(fbm3d).toContain("float frapx_fbm3d(vec3 p)");
+    expect(simplex3dGrad).toContain(
+      "float frapx_simplex3dGrad(vec3 v, out vec3 gradient)"
+    );
+    expect(curl3d).toContain("vec3 frapx_curl3d(vec3 p)");
+    expect(curl3d).toContain("float frapx_simplex3dGrad");
   });
 
   it("prefixes shared helper names", () => {
@@ -31,5 +38,7 @@ describe("@frapx/glsl-noise", () => {
     expect(noise3d).toContain("float frapx_perlin3d");
     expect(noise3d).toContain("float frapx_periodicPerlin3d");
     expect(noise3d).toContain("float frapx_fbm3d");
+    expect(noise3d).toContain("float frapx_simplex3dGrad");
+    expect(noise3d).toContain("vec3 frapx_curl3d");
   });
 });
