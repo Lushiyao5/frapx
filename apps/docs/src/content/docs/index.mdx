@@ -35,7 +35,8 @@ never need to guess:
 	<Card title="react-* — framework bindings" icon="puzzle">
 		A thin React wrapper around an `fx-*` package. **[`@frapx/react-canvas`](/frapx/packages/react-canvas/)**
 		wraps `@frapx/fx-canvas` as a `<ShaderBackground />` component and a
-		`useShaderBackground()` hook.
+		`useShaderBackground()` hook, and **[`@frapx/react-particles`](/frapx/packages/react-particles/)**
+		wraps `@frapx/fx-particles` as `<Particles />` and `useParticles()`.
 	</Card>
 	<Card title="glsl-* — GLSL snippets" icon="seti:shader">
 		Plain GLSL source strings you concatenate into your **own** fragment
@@ -76,6 +77,7 @@ never need to guess:
 | Edit shaders with hot reload and see compile errors on the page | `setFragment()` (built in) + `@frapx/tool-dev` |
 | Chain passes (bloom, trails) or render anti-aliased, motion-blurred frames | `@frapx/fx-passes` (+ `@frapx/tool-capture` to export) |
 | Add falling snow, drifting dust, sparkles or confetti over a page | `@frapx/fx-particles` (WebGL2) |
+| Add the same particles in a React app | `@frapx/fx-particles` + `@frapx/react-particles` |
 | Export a particle layer with alpha to composite over other footage | `@frapx/fx-particles` + `@frapx/tool-capture` (+ `@frapx/tool-render`) |
 
 Still not sure? Start with [Getting Started](/frapx/getting-started/) — it

@@ -30,6 +30,10 @@ export default defineConfig({
             { label: "@frapx/fx-passes", slug: "packages/fx-passes" },
             { label: "@frapx/fx-particles", slug: "packages/fx-particles" },
             { label: "@frapx/react-canvas", slug: "packages/react-canvas" },
+            {
+              label: "@frapx/react-particles",
+              slug: "packages/react-particles",
+            },
             { label: "@frapx/glsl-noise", slug: "packages/glsl-noise" },
             { label: "@frapx/glsl-flowmap", slug: "packages/glsl-flowmap" },
             { label: "@frapx/glsl-sdf", slug: "packages/glsl-sdf" },

@@ -12,6 +12,7 @@ on:
       - "packages/fx-passes/**"
       - "packages/fx-particles/**"
       - "packages/react-canvas/**"
+      - "packages/react-particles/**"
       - "packages/glsl-flowmap/**"
       - "packages/glsl-noise/**"
       - "packages/glsl-sdf/**"
