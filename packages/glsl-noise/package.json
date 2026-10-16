@@ -9,7 +9,8 @@
     "noise",
     "perlin",
     "simplex",
-    "fbm"
+    "fbm",
+    "curl"
   ],
   "type": "module",
   "sideEffects": false,
@@ -28,7 +29,8 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "license": "MIT",
   "repository": {

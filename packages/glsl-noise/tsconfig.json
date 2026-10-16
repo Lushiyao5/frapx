@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src", "test", "tsup.config.ts"],
+  "include": ["src", "test", "e2e", "tsup.config.ts", "playwright.config.ts"],
   "compilerOptions": {
     "rootDir": ".",
     "types": ["vitest/globals", "node"]
