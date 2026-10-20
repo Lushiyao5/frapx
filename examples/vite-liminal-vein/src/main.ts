@@ -20,7 +20,7 @@ const SAMPLES = 32;
 /** Open shutter as a fraction of the frame interval: 180°. */
 const SHUTTER = 0.5;
 /** Export size unless `frapx-render --resolution` overrides it. */
-const EXPORT_RESOLUTION: [number, number] = [3840, 2160];
+const EXPORT_RESOLUTION: [number, number] = [1920, 1080];
 
 const stage = document.querySelector<HTMLElement>("[data-stage]")!;
 const title = document.querySelector<HTMLElement>("[data-title]")!;
@@ -82,8 +82,8 @@ if (holdsFrame) {
   });
 }
 
-// `frapx-render` (@frapx/tool-render) renders this page headless, at 3840 ×
-// 2160 unless --resolution says otherwise (the page's own size there is just
+// `frapx-render` (@frapx/tool-render) renders this page headless, at 1920 ×
+// 1080 unless --resolution says otherwise (the page's own size there is just
 // the headless viewport): --set spp=N sets the samples per frame (default 32), --set shutter=F the
 // open shutter as a fraction of the frame (default 0.5), and --set dither=0|1
 // the dither (default on for 8-bit PNG, off for --format png16).

@@ -45,10 +45,12 @@ node packages/tool-render/dist/cli.js examples/vite-liminal-vein/dist \
   --out renders/liminal-vein --format png16 --encode prores --encode h264
 ```
 
-The page renders 960 frames (16 s at 60 fps) at 3840 × 2160 with 32 samples
-by default, about 1.5 s per frame (about 24 min for the loop) on an M4 Max.
+The page renders 960 frames (16 s at 60 fps) at 1920 × 1080 with 32 samples
+by default, about 0.8 s per frame (about 13 min for the loop, encoding
+included) on an M4 Max.
 
-- `--resolution 1920x1080` renders another size; `--fps 30` another rate (the
+- `--resolution 3840x2160` renders another size (4K takes about 1.5 s per
+  frame, about 24 min for the loop, on an M4 Max); `--fps 30` another rate (the
   loop stays 16 s).
 - `--set spp=64` changes the samples per frame, `--set shutter=0` turns motion
   blur off.
