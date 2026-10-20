@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `registerRenderTarget(target, { resolution })` declares the default render size (positive integers). `describe()` reports it, `frapx-render --resolution` overrides it, and `prepare()` receives the size the job renders at. Without either, a page rendered headless comes out at the 1280 × 720 viewport.
+
 ## 0.2.0 - 2026-10-14
 
 ### Added

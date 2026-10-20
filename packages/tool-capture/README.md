@@ -79,6 +79,7 @@ import { registerRenderTarget } from "@frapx/tool-capture";
 registerRenderTarget(fx, {
   fps: 30,
   duration: 24,
+  resolution: [3840, 2160],
   prepare({ params }) {
     fx.setUniform("quality", Number(params.quality ?? 1));
   }
@@ -86,10 +87,10 @@ registerRenderTarget(fx, {
 ```
 
 ```sh
-frapx-render dist --out frames --resolution 3840x2160 --set quality=2
+frapx-render dist --out frames --set quality=2
 ```
 
-`prepare({ params, fps, format, resolution })` runs before each render job. Pass a getter (`() => fx`) when the page replaces its instance. Registering again replaces the previous registration; the returned function removes it.
+`resolution` is the default render size; `frapx-render --resolution` overrides it. Without either, the page renders at its own size, which in the headless browser is the 1280 × 720 viewport, so a page meant for video should declare one. `prepare({ params, fps, format, resolution })` runs before each render job, with the size the job renders at. Pass a getter (`() => fx`) when the page replaces its instance. Registering again replaces the previous registration; the returned function removes it.
 
 ## API
 

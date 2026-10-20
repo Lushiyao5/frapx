@@ -146,5 +146,35 @@ describe("registerRenderTarget", () => {
     const { target } = createTarget();
     expect(() => registerRenderTarget(target, { fps: 0, duration: 1 })).toThrow(RangeError);
     expect(() => registerRenderTarget(target, { fps: 30, duration: Number.NaN })).toThrow(RangeError);
+    expect(() => registerRenderTarget(target, { fps: 30, duration: 1, resolution: [0, 720] })).toThrow(
+      RangeError
+    );
+    expect(() =>
+      registerRenderTarget(target, { fps: 30, duration: 1, resolution: [1920.5, 1080] })
+    ).toThrow(RangeError);
+  });
+
+  it("describes a declared resolution and renders at it unless the job overrides it", async () => {
+    stubFetch();
+    const { target, calls } = createTarget();
+    const prepared: Array<readonly [number, number] | null> = [];
+    registerRenderTarget(target, {
+      fps: 10,
+      duration: 1,
+      resolution: [16, 9],
+      prepare: ({ resolution }) => {
+        prepared.push(resolution);
+      }
+    });
+    const host = globalThis.__frapxRender!;
+    expect(host.describe()).toEqual({ fps: 10, duration: 1, resolution: [16, 9] });
+
+    expect(await host.render(job({ frameCount: 1 }))).toEqual({ width: 16, height: 9 });
+    expect(await host.render(job({ frameCount: 1, resolution: [8, 6] }))).toEqual({ width: 8, height: 6 });
+    expect(prepared).toEqual([[16, 9], [8, 6]]);
+    expect(calls.filter((call) => call.includes("resolution"))).toEqual([
+      "a:resolution:16x9",
+      "a:resolution:8x6"
+    ]);
   });
 });

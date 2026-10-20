@@ -22,6 +22,20 @@ import type { RenderEvent, RenderOptions, RenderResult } from "./types";
 // published types do not reference @frapx/tool-capture.
 type PageGlobal = { __frapxRender?: RenderHost };
 
+// The page's registerRenderTarget() validates its own option; a page built
+// with something else may still send nonsense.
+const declaredResolution = (value: unknown): readonly [number, number] | undefined => {
+  if (value === undefined) return undefined;
+  if (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    value.every((size) => Number.isInteger(size) && size > 0)
+  ) {
+    return [value[0], value[1]];
+  }
+  throw new Error(`The page declares an invalid resolution: ${JSON.stringify(value)}.`);
+};
+
 const ENDPOINT_PATH = "/__frapx-render";
 const MAX_CONSECUTIVE_FAILURES = 3;
 const SOFTWARE_RENDERER = /swiftshader|llvmpipe|softpipe|software|basic render/i;
@@ -324,7 +338,8 @@ export const render = async (
       source: source.id,
       fps,
       format: options.format,
-      resolution: options.resolution ?? null,
+      // Resolved here, so the resume check and frapx-render.json hold the size used.
+      resolution: options.resolution ?? declaredResolution(described.resolution) ?? null,
       params: options.params
     };
     const pending = planFrames(state, settings, range, options.resume, out);
@@ -339,7 +354,15 @@ export const render = async (
     expected = new Set(pending);
     total = pending.length;
     started = performance.now();
-    onEvent?.({ type: "start", url: source.url, renderer, fps, range, pending: total });
+    onEvent?.({
+      type: "start",
+      url: source.url,
+      renderer,
+      fps,
+      resolution: settings.resolution,
+      range,
+      pending: total
+    });
 
     const endpoint = new URL(ENDPOINT_PATH, source.url).href;
     let failures = 0;

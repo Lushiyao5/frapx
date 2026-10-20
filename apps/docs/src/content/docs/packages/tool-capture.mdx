@@ -93,8 +93,10 @@ the CPU: roughly 0.7 s per 4K frame, against 0.08 s for 8-bit.
 
 ## Rendering from the command line
 
-`registerRenderTarget(fx, { fps, duration, prepare })` lets
+`registerRenderTarget(fx, { fps, duration, resolution, prepare })` lets
 [`@frapx/tool-render`](/frapx/packages/tool-render/) render the page headlessly
 with `frapx-render`. It only sets a global, so it can stay in production builds.
+`resolution` is the default render size (`--resolution` overrides it); without
+it, the page renders at the headless 1280 × 720 viewport.
 
 Full reference: [README](https://github.com/kramhash/frapx/blob/main/packages/tool-capture/README.md) on GitHub.

@@ -30,39 +30,47 @@ export const registerRenderTarget = (
   target: CaptureTarget | (() => CaptureTarget),
   options: RenderTargetOptions
 ): (() => void) => {
-  const { fps, duration, prepare } = options;
+  const { fps, duration, resolution, prepare } = options;
   if (!Number.isFinite(fps) || fps <= 0) {
     throw new RangeError(`fps must be a positive number, got ${fps}`);
   }
   if (!Number.isFinite(duration) || duration <= 0) {
     throw new RangeError(`duration must be a positive number, got ${duration}`);
   }
+  if (
+    resolution !== undefined &&
+    !(resolution.length === 2 && resolution.every((size) => Number.isInteger(size) && size > 0))
+  ) {
+    throw new RangeError(`resolution must be two positive integers, got ${JSON.stringify(resolution)}`);
+  }
   const resolve = typeof target === "function" ? target : () => target;
   let controller: AbortController | null = null;
 
   const host: RenderHost = {
     version: 1,
-    describe: () => ({ fps, duration }),
+    describe: () => ({ fps, duration, ...(resolution && { resolution }) }),
     async render(job: RenderJob) {
       if (controller) throw new Error("A render job is already running.");
       const current = new AbortController();
       controller = current;
       try {
         await resolve().ready;
+        // The CLI already resolves the declared size; this covers an older one.
+        const size = job.resolution ?? resolution ?? null;
         await prepare?.({
           params: job.params,
           fps: job.fps,
           format: job.format,
-          resolution: job.resolution
+          resolution: size
         });
         // prepare() may have replaced the instance.
         const instance = resolve();
         await instance.ready;
-        if (job.resolution) {
+        if (size) {
           if (!instance.setResolution) {
             throw new Error("This render target cannot change its resolution.");
           }
-          instance.setResolution(job.resolution);
+          instance.setResolution(size);
         }
         await captureSequence(instance, {
           sink: createEndpointSink(job.endpoint),

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Renders at the `resolution` a page declares with `registerRenderTarget()` when `--resolution` is not given. `frapx-render.json` and the `--resume` check record the size actually used.
+- Prints the render size when a render starts (`Size: …`); the `start` event carries it as `resolution`.
+
 ## 0.1.0 - 2026-10-14
 
 ### Added

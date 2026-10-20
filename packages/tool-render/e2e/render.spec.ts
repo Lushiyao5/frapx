@@ -156,3 +156,23 @@ test("reports a page that never registers", async () => {
     render(options(`${fixtureServer.url}unregistered/`, out, { timeout: 1 }))
   ).rejects.toThrow("did not call registerRenderTarget() from @frapx/tool-capture within 1s");
 });
+
+test("renders at the page's declared resolution unless --resolution overrides it", async () => {
+  const out = await tempDir();
+  const source = `${fixtureServer.url}declared-size/`;
+  const { events } = await renderCollecting(options(source, out));
+  expect(events[0]).toMatchObject({ type: "start", resolution: [24, 16], range: [0, 2] });
+  expect(JSON.parse(await readFile(join(out, "frapx-render.json"), "utf8")).resolution).toEqual([24, 16]);
+
+  // Resuming without the flag matches the declared size it recorded.
+  await rm(join(out, "frame_00001.png"));
+  const resumed = await renderCollecting(options(source, out, { resume: true }));
+  expect(resumed.events[0]).toMatchObject({ type: "start", resolution: [24, 16], pending: 1 });
+
+  const overridden = await tempDir();
+  const { events: overriddenEvents } = await renderCollecting(
+    options(source, overridden, { resolution: [8, 6] })
+  );
+  expect(overriddenEvents[0]).toMatchObject({ type: "start", resolution: [8, 6] });
+  expect(JSON.parse(await readFile(join(overridden, "frapx-render.json"), "utf8")).resolution).toEqual([8, 6]);
+});

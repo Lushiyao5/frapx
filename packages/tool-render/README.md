@@ -23,6 +23,7 @@ const fx = createPasses({ target: stage, clock: "manual", resolution: [1920, 108
 registerRenderTarget(fx, {
   fps: 30,
   duration: 24, // seconds; the default range is frames 0..719
+  resolution: [1920, 1080], // the default size; --resolution overrides it
   prepare({ params }) {
     // --set spp=192 arrives here as a string.
     fx.setAccumulation({ samples: Number(params.spp ?? 64) });
@@ -30,7 +31,7 @@ registerRenderTarget(fx, {
 });
 ```
 
-`prepare()` runs before each render job (and again after the page is reopened), with the command line's `params`, `fps`, `format` and `resolution`. Pass a getter, `registerRenderTarget(() => fx, …)`, when the page replaces its instance; `prepare()` may do so. The `--resolution` override is applied after `prepare()`.
+`prepare()` runs before each render job (and again after the page is reopened), with the command line's `params`, `fps` and `format`, and the size the job renders at (`--resolution`, else the page's `resolution`). Pass a getter, `registerRenderTarget(() => fx, …)`, when the page replaces its instance; `prepare()` may do so. The size is applied after `prepare()`. A page that declares no `resolution` and gets no `--resolution` renders at its own size, which headless is the 1280 × 720 viewport; the CLI prints the size it renders at when it starts.
 
 ## Render
 
@@ -48,7 +49,7 @@ A URL works too (`frapx-render http://127.0.0.1:5173/ --out …`). Prefer a buil
 | `-o, --out <dir>` | required | Output directory. |
 | `-r, --range <a-b>` | the page's `duration` | Inclusive frame range, or a single frame. |
 | `--fps <n>` | the page's `fps` | Frame `n` is drawn at `n / fps` seconds. |
-| `--resolution <WxH>` | the page's size | Render size, e.g. `2560x1440` or `2048x1080`. |
+| `--resolution <WxH>` | the page's `resolution`, else its size (headless: 1280 × 720) | Render size, e.g. `2560x1440` or `2048x1080`. |
 | `--format <png\|png16>` | `png` | 8-bit, or 16-bit from the float buffer (the page must provide one; see `@frapx/tool-capture`). |
 | `-s, --set <key=value>` | | Passed to `prepare()`. Repeatable. |
 | `--resume` | | Continue a render in `--out`. |
