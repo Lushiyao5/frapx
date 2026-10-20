@@ -81,15 +81,16 @@ if (holdsFrame) {
   });
 }
 
-// `frapx-render` (@frapx/tool-render) renders this page headless, at 1920 ×
-// 1080 unless --resolution says otherwise (the page's own size there is just
-// the headless viewport): --set spp=N sets the samples per frame (default 32), --set shutter=F the
-// open shutter as a fraction of the frame (default 0.5), and --set dither=0|1
-// the dither (default on for 8-bit PNG, off for --format png16).
+// `frapx-render` (@frapx/tool-render) renders this page headless, at
+// EXPORT_RESOLUTION unless --resolution says otherwise: --set spp=N sets the
+// samples per frame (default 32), --set shutter=F the open shutter as a
+// fraction of the frame (default 0.5), and --set dither=0|1 the dither
+// (default on for 8-bit PNG, off for --format png16).
 registerRenderTarget(fx, {
   fps: FPS,
   duration: LOOP_SECONDS,
-  prepare({ params: job, fps, format, resolution }) {
+  resolution: EXPORT_RESOLUTION,
+  prepare({ params: job, fps, format }) {
     const samples = Number(job.spp ?? SAMPLES);
     if (!Number.isInteger(samples) || samples < 1) {
       throw new RangeError(`spp must be a positive integer, got "${job.spp}"`);
@@ -105,7 +106,6 @@ registerRenderTarget(fx, {
     exporting = true;
     fx.setUniforms({ quality: 1, dither: Number(dither) });
     fx.setAccumulation({ samples, shutter, fps });
-    if (!resolution) fx.setResolution(EXPORT_RESOLUTION);
   }
 });
 

@@ -28,6 +28,13 @@ export const createReporter = (stream: NodeJS.WriteStream) => {
         line(`Rendering ${event.url}`);
         line(`  GPU: ${event.renderer}`);
         line(
+          `  Size: ${
+            event.resolution
+              ? `${event.resolution[0]} × ${event.resolution[1]}`
+              : "the page's own (headless: the 1280 × 720 viewport)"
+          }`
+        );
+        line(
           `  Frames ${first}–${last} at ${event.fps} fps: ${event.pending} to render, ${last - first + 1 - event.pending} already done`
         );
         break;

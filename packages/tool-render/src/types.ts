@@ -11,7 +11,7 @@ export type RenderOptions = {
   range?: readonly [number, number];
   /** Defaults to the page's frame rate. */
   fps?: number;
-  /** Overrides the page's render size. */
+  /** Overrides the render size the page declares (or, without one, its own size). */
   resolution?: readonly [number, number];
   format: SequenceFormat;
   /** Passed to the page's `prepare()` as strings. */
@@ -33,6 +33,8 @@ export type RenderEvent =
       url: string;
       renderer: string;
       fps: number;
+      /** `--resolution`, else the page's declared size; `null` for the page's own size. */
+      resolution: readonly [number, number] | null;
       range: readonly [number, number];
       /** Frames to render in this run; the rest of the range already exists. */
       pending: number;

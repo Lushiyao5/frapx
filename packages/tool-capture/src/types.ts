@@ -87,7 +87,11 @@ export type RenderPrepareContext = {
   params: Readonly<Record<string, string>>;
   fps: number;
   format: SequenceFormat;
-  /** The `--resolution` override, applied right after `prepare()`, or `null` for the page's own size. */
+  /**
+   * The size the job renders at, applied right after `prepare()`: the
+   * `--resolution` override, else the `resolution` the page declared, else
+   * `null` for the page's own size.
+   */
   resolution: readonly [number, number] | null;
 };
 
@@ -96,6 +100,12 @@ export type RenderTargetOptions = {
   fps: number;
   /** Default length in seconds; the default range is `round(duration * fps)` frames. */
   duration: number;
+  /**
+   * Default render size in pixels. `frapx-render --resolution` overrides it.
+   * Without either, the page renders at its own size, which in the headless
+   * browser is the 1280 × 720 viewport. Needs a target with `setResolution`.
+   */
+  resolution?: readonly [number, number];
   /**
    * Runs before each render job, e.g. to apply `params` as sample counts or
    * uniforms. May replace the target when `registerRenderTarget()` was given a
@@ -122,7 +132,8 @@ export type RenderJob = {
  */
 export type RenderHost = {
   readonly version: 1;
-  describe(): { fps: number; duration: number };
+  /** `resolution` is absent when the page declares none. */
+  describe(): { fps: number; duration: number; resolution?: readonly [number, number] };
   render(job: RenderJob): Promise<{ width: number; height: number }>;
   /** Stops the running job between frames (or samples). */
   abort(): void;
