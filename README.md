@@ -71,6 +71,7 @@ pnpm --filter @frapx/example-vite-sdf dev
 pnpm --filter @frapx/example-vite-raymarch dev
 pnpm --filter @frapx/example-vite-passes dev
 pnpm --filter @frapx/example-vite-poolrooms dev
+pnpm --filter @frapx/example-vite-liminal-vein dev
 pnpm --filter @frapx/example-vite-timeline dev
 pnpm --filter @frapx/example-vite-hot-reload dev
 pnpm --filter @frapx/example-vite-particles dev

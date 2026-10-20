@@ -160,6 +160,28 @@ importers:
         specifier: ^6.3.5
         version: 6.4.3(@types/node@24.13.2)(lightningcss@1.32.0)(yaml@2.9.0)
 
+  examples/vite-liminal-vein:
+    dependencies:
+      '@frapx/fx-passes':
+        specifier: workspace:*
+        version: link:../../packages/fx-passes
+      '@frapx/glsl-raymarch':
+        specifier: workspace:*
+        version: link:../../packages/glsl-raymarch
+      '@frapx/glsl-sdf':
+        specifier: workspace:*
+        version: link:../../packages/glsl-sdf
+      '@frapx/tool-capture':
+        specifier: workspace:*
+        version: link:../../packages/tool-capture
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.3.5
+        version: 6.4.3(@types/node@24.13.2)(lightningcss@1.32.0)(yaml@2.9.0)
+
   examples/vite-particles:
     dependencies:
       '@frapx/fx-canvas':
