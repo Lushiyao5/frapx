@@ -837,3 +837,49 @@ test("onResize fires on a size change, not on setup or the same size, and waits 
   expect(result.afterCapture).toBe(2);
   expect(result.calls[1]?.size).toEqual([4, 4]);
 });
+
+test("accumulation.loop wraps the time so frames match one loop later with many samples", async ({
+  page
+}) => {
+  await open(page);
+  const fragment = `#version 300 es
+precision highp float;
+uniform float u_time;
+uniform float u_frameTime;
+uniform float u_bound;
+out vec4 fragColor;
+void main() {
+  // Fast enough to show a float32 step in the time.
+  fragColor = vec4(fract(sin(u_time * 4111.0) * 0.5 + 0.5), fract(u_time * 977.0), u_frameTime, u_bound);
+}
+`;
+  const result = await page.evaluate(async (fragment) => {
+    const frames = async (loop: number | null) => {
+      const fx = (window as Win).__frapx.createPasses({
+        clock: "manual",
+        resolution: [4, 4],
+        accumulation: { samples: 8, shutter: 0.5, fps: 60, loop },
+        passes: [{ name: "image", fragment, accumulate: true, format: "rgba32f" }]
+      });
+      // Bound uniforms see the same wrapped time.
+      fx.bindUniforms({ get: (time) => ({ bound: time >= 16 ? 1 : 0 }) });
+      await fx.ready;
+      const read = async (seconds: number) => {
+        fx.setTime(seconds);
+        return Array.from((await fx.captureFrame({ format: "rgba16f" })).subarray(0, 4));
+      };
+      const first = await read(0);
+      const looped = await read(16);
+      const later = await read(17.5);
+      fx.destroy();
+      return { first, looped, later };
+    };
+    return { loop: await frames(16), none: await frames(null) };
+  }, fragment);
+  expect(result.loop.looped).toEqual(result.loop.first);
+  expect(result.loop.later[2]).toBe(1.5);
+  expect(result.loop.later[3]).toBe(0);
+  // Without a loop the sample times round differently 16 s later.
+  expect(result.none.looped.slice(0, 2)).not.toEqual(result.none.first.slice(0, 2));
+  expect(result.none.later[3]).toBe(1);
+});

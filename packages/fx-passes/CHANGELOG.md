@@ -5,6 +5,7 @@
 ### Added
 
 - `onResize(state)`, as in `@frapx/fx-canvas`: called whenever the render size actually changes (not on setup, but also after `setResolution()`; a resize requested during `captureFrame()` waits for the capture). `state` is the new exported `PassesRenderState` type, with the same fields as fx-canvas' `RenderState`. The pass buffers take the new size on the next draw.
+- `accumulation.loop` (seconds) for seamless loops: every pass sees the time wrapped into `[0, loop)` (`u_frameTime`, `u_time`, and the time bound uniforms are evaluated at), with each sample's shutter offset added in double precision, so a frame one loop later is byte-identical at any sample count. Before, `u_time` rounded to float32 made frame 960 of a 16 s loop differ from frame 0 by a few levels once `samples > 1`. `ResolvedAccumulation` gains `loop`.
 
 ## 0.2.0 - 2026-10-15
 

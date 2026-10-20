@@ -101,8 +101,6 @@ vec2 tunnelPath(float z) {
 }
 
 float breathAt(float z) {
-  // The phase within the loop rather than the time, so the loop's last frame
-  // gives the same argument as its first and they match to the bit.
   return sin(TAU * fract(u_time / LOOP_SECONDS) + z * Z_FREQUENCY);
 }
 

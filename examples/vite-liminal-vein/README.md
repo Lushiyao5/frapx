@@ -27,7 +27,8 @@ Needs WebGL2 with `EXT_color_buffer_float`.
   is motion blurred and anti-aliased.
 - Everything that varies along the tunnel, the bend included, repeats every
   loop distance, so the camera wraps from the end of the loop to its start
-  without a jump.
+  without a jump. `accumulation.loop` wraps the time itself, so frame 960
+  renders identically to frame 0, to the bit.
 - The light follows a rhythm, `pulse` (a beat every 4 s that flares and fades)
   and `energy` (swelling through the middle of the loop), bound with
   `bindUniforms()` from `src/rhythm.ts`. It is a fixed curve for now; music
