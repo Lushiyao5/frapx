@@ -457,6 +457,33 @@ describe("fixed resolution", () => {
   });
 });
 
+describe("onResize", () => {
+  it("calls onResize when a frame picks up a new size before the resize observer", async () => {
+    // Browsers run animation frames before resize observations, so a running
+    // loop measures the new size first.
+    const order: string[] = [];
+    const onResize = vi.fn((state: HostFrameState) => {
+      order.push(`resize ${state.width}x${state.height}`);
+    });
+    const { host, canvas } = create({
+      onResize,
+      onDraw: (state) => {
+        order.push(`draw ${state.width}x${state.height}`);
+      }
+    });
+    await host.ready;
+    tick(0);
+
+    canvas.clientWidth = 300;
+    tick(16);
+    host.resize();
+
+    // 300x100 target at devicePixelRatio 2.
+    expect(onResize).toHaveBeenCalledTimes(1);
+    expect(order.slice(-2)).toEqual(["resize 600x200", "draw 600x200"]);
+  });
+});
+
 describe("detached canvas", () => {
   const createDetached = (overrides: Partial<RuntimeHostOptions> = {}) => {
     const frames: HostFrameState[] = [];

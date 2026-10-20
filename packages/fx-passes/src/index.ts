@@ -10,6 +10,7 @@ export type {
   DprOption,
   PassOptions,
   PassesInstance,
+  PassesRenderState,
   RenderMode,
   RenderTargetFormat,
   ResolvedAccumulation,

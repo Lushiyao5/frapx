@@ -80,6 +80,8 @@ Accumulating passes must come first in the list. They may only read passes liste
 | `bindUniforms(source)` | Drives uniforms from a timeline such as `keyframes()` (see Timelines) |
 | `setUniform()`, `setUniforms()`, `setTexture()`, `setTextures()` | Change user uniforms and textures. Uniforms set during a capture apply to the next frame; a texture applies once it loads |
 
+`onResize(state)` runs whenever the render size actually changes, as in `@frapx/fx-canvas`: not on setup, but also after `setResolution()`, and after the capture when requested during `captureFrame()`. `state` carries the instance, `gl`, the canvas and its new `width` / `height`. The pass buffers take the new size on the next draw.
+
 ## Requirements
 
 WebGL2 with `EXT_color_buffer_float`. Without it, `status` is `"unsupported"` and `ready` rejects with `UnsupportedError`. Shaders may be GLSL ES 1.00 or 3.00, chosen per pass. Samples are summed with additive blending when `EXT_float_blend` is available, and with an extra pass otherwise.

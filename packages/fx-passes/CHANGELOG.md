@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `onResize(state)`, as in `@frapx/fx-canvas`: called whenever the render size actually changes (not on setup, but also after `setResolution()`; a resize requested during `captureFrame()` waits for the capture). `state` is the new exported `PassesRenderState` type, with the same fields as fx-canvas' `RenderState`. The pass buffers take the new size on the next draw.
+
 ## 0.2.0 - 2026-10-15
 
 ### Added

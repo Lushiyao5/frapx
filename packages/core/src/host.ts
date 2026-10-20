@@ -241,22 +241,7 @@ class RuntimeHost implements RuntimeHostInstance {
       return;
     }
 
-    const prevWidth = this.width;
-    const prevHeight = this.height;
-    const prevViewportWidth = this.viewportWidth;
-    const prevViewportHeight = this.viewportHeight;
-
-    this.measureSize();
-
-    const sizeChanged =
-      this.width !== prevWidth ||
-      this.height !== prevHeight ||
-      this.viewportWidth !== prevViewportWidth ||
-      this.viewportHeight !== prevViewportHeight;
-
-    if (sizeChanged && this.context) {
-      this.options.onResize?.(this.createFrameState(this.elapsed, 0));
-    }
+    this.syncSize();
 
     if (this.shouldRenderOnDemand && !this.inRender) {
       this.render();
@@ -374,7 +359,7 @@ class RuntimeHost implements RuntimeHostInstance {
 
     this.inRender = true;
     try {
-      this.measureSize();
+      this.syncSize();
       this.options.onDraw(this.createFrameState(time, delta, gl));
       this.frame++;
     } finally {
@@ -393,7 +378,7 @@ class RuntimeHost implements RuntimeHostInstance {
     this.inRender = true;
     this.captureDrawing = true;
     try {
-      this.measureSize();
+      this.syncSize();
       await draw(this.createFrameState(this.elapsed, delta, this.context), signal);
       this.frame++;
     } finally {
@@ -452,6 +437,30 @@ class RuntimeHost implements RuntimeHostInstance {
       reducedMotion: this.isManual ? false : this.reducedMotionActive,
       pointer: this.isManual ? { ...IDLE_POINTER } : { ...this.pointer }
     };
+  }
+
+  /**
+   * Measures the size and calls onResize if it changed. Frames measure too:
+   * browsers run animation frames before resize observations, so in a running
+   * loop a frame is usually the first to see a new size.
+   */
+  private syncSize(): void {
+    const prevWidth = this.width;
+    const prevHeight = this.height;
+    const prevViewportWidth = this.viewportWidth;
+    const prevViewportHeight = this.viewportHeight;
+
+    this.measureSize();
+
+    const sizeChanged =
+      this.width !== prevWidth ||
+      this.height !== prevHeight ||
+      this.viewportWidth !== prevViewportWidth ||
+      this.viewportHeight !== prevViewportHeight;
+
+    if (sizeChanged && this.context) {
+      this.options.onResize?.(this.createFrameState(this.elapsed, 0));
+    }
   }
 
   private measureSize(): void {
