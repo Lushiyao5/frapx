@@ -1,0 +1,132 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  color: #ecfeff;
+  background: #020306;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  color-scheme: dark;
+}
+
+html,
+body,
+.stage {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  min-width: 280px;
+  margin: 0;
+  overflow: hidden;
+}
+
+.stage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 28% 38%, rgba(17, 94, 89, 0.28), transparent 34%),
+    radial-gradient(circle at 72% 62%, rgba(88, 28, 135, 0.3), transparent 38%),
+    linear-gradient(145deg, #061115, #070510 52%, #020306);
+}
+
+.stage::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: radial-gradient(circle, transparent 42%, rgba(0, 0, 0, 0.46) 100%);
+  content: "";
+  pointer-events: none;
+}
+
+[data-frapx-passes-canvas] {
+  z-index: 0;
+}
+
+.title {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(2, 3, 6, 0.08);
+  opacity: 1;
+  transition:
+    opacity 1.4s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 1.4s;
+  pointer-events: none;
+}
+
+.title.is-hidden {
+  visibility: hidden;
+  opacity: 0;
+}
+
+h1 {
+  margin: 0;
+  color: rgba(236, 254, 255, 0.94);
+  font-size: clamp(1.7rem, 5.4vw, 5.6rem);
+  font-weight: 360;
+  letter-spacing: clamp(0.24em, 1.3vw, 0.52em);
+  line-height: 1;
+  text-align: center;
+  text-indent: clamp(0.24em, 1.3vw, 0.52em);
+  text-shadow:
+    0 0 24px rgba(34, 211, 238, 0.34),
+    0 0 72px rgba(168, 85, 247, 0.2);
+}
+
+.unsupported {
+  position: absolute;
+  z-index: 3;
+  right: 24px;
+  bottom: 22px;
+  left: 24px;
+  margin: 0;
+  color: rgba(236, 254, 255, 0.72);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  line-height: 1.5;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.stage.is-unsupported::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background:
+    repeating-radial-gradient(
+      ellipse at 50% 52%,
+      transparent 0 9%,
+      rgba(34, 211, 238, 0.035) 10%,
+      transparent 11% 17%
+    );
+  content: "";
+}
+
+@media (max-width: 640px) {
+  h1 {
+    font-size: clamp(1.35rem, 8vw, 2.6rem);
+    letter-spacing: 0.22em;
+    text-indent: 0.22em;
+  }
+
+  .unsupported {
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title {
+    transition: none;
+  }
+}
