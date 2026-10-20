@@ -1,6 +1,6 @@
 {
   "name": "@frapx/tool-render",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Node CLI that renders a @frapx/tool-capture page frame by frame in headless Chrome — resumable PNG sequences on disk, with optional ProRes or H.264 encoding through ffmpeg.",
   "keywords": [
     "webgl",
