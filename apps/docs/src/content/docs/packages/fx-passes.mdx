@@ -62,6 +62,8 @@ An accumulating pass outputs a single sample's color. The runtime sums the sampl
 
 A shader that depends only on time gets motion blur without changes. Samples follow a deterministic low-discrepancy sequence, and sample 0 is the plain frame.
 
+For a seamless loop, set `accumulation.loop` to its length in seconds. Every pass then sees the time wrapped into the loop, with each sample's shutter offset added in double precision, so the frame one loop later is identical to the bit at any sample count.
+
 - **Preview**: an unchanged frame gains one sample per draw until `samples`, and any input change starts over. A running realtime loop shows one sample per frame. A stopped or manual-clock instance keeps refining the still frame on its own. Progress is in `samplesDrawn` and `onSample`.
 - **Capture**: `captureFrame()` draws all samples from scratch. It waits for the GPU between batches so long frames never trip the browser's GPU watchdog, checks `signal` between samples, then runs the remaining passes and reads the last one. Uniform, accumulation and feedback changes made while it draws apply to the next frame.
 
@@ -88,7 +90,7 @@ see [`@frapx/tool-dev`](/frapx/packages/tool-dev/) for an on-page error overlay.
 | `accumulation`, `samplesDrawn` | The resolved accumulation settings, and the samples of the current frame drawn so far |
 | `start()`, `stop()`, `render()`, `resize()`, `destroy()` | Lifecycle. `render()` at an unchanged time adds the next sample |
 | `setTime(seconds)`, `setClock(clock)`, `setResolution(size)` | Clock and size, as in `@frapx/fx-canvas` |
-| `setAccumulation(options)` | Changes `samples`, `shutter` or `fps` and restarts the frame's samples |
+| `setAccumulation(options)` | Changes `samples`, `shutter`, `fps` or `loop` and restarts the frame's samples |
 | `captureFrame(options)` | Draws every sample of the current frame and reads the last pass |
 | `resetFeedback()` | Clears the previous-frame outputs |
 | `setFragment(name, source)` | Swaps one pass' shader (see Hot reloading) |

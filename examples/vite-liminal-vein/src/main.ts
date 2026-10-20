@@ -46,7 +46,8 @@ const quality = () => (exporting || holdsFrame || !prefersLightweightRender() ? 
 const fx = createPasses({
   target: stage,
   clock: holdsFrame ? "manual" : "realtime",
-  accumulation: { samples: SAMPLES, shutter: SHUTTER, fps: FPS },
+  // The time wraps every loop, so frame 960 renders exactly like frame 0.
+  accumulation: { samples: SAMPLES, shutter: SHUTTER, fps: FPS, loop: LOOP_SECONDS },
   passes: [
     { name: "scene", fragment: scene, accumulate: true, format: "rgba32f", filter: "nearest" },
     ...bloomPasses("scene"),

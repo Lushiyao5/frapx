@@ -33,7 +33,7 @@ import type {
   UniformSource
 } from "@frapx/core";
 import { Accumulator } from "./internal/accumulator";
-import { resolveAccumulation } from "./internal/accumulation";
+import { resolveAccumulation, wrapTime } from "./internal/accumulation";
 import { BUILT_IN_UNIFORMS, passSize, planPasses, type PassPlan } from "./internal/graph";
 import { sampleAt, sampleTime } from "./internal/sampling";
 import type {
@@ -464,7 +464,13 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
     return this.plans[0]!.accumulate;
   }
 
-  private drawPreview(state: HostFrameState): void {
+  // The frame's state with its time wrapped into the loop, if there is one.
+  private loopState(state: HostFrameState, settings: ResolvedAccumulation): HostFrameState {
+    return settings.loop === null ? state : { ...state, time: wrapTime(state.time, settings.loop) };
+  }
+
+  private drawPreview(frameState: HostFrameState): void {
+    const state = this.loopState(frameState, this.settings);
     this.beginFrame(state);
     if (this.hasAccumulation) {
       if (this.drawn < this.settings.samples) {
@@ -480,7 +486,7 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
   }
 
   private async drawCapture(
-    state: HostFrameState,
+    frameState: HostFrameState,
     signal: AbortSignal | undefined
   ): Promise<void> {
     const gl = this.context;
@@ -489,6 +495,7 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
     this.capturing = true;
     // Settings changed during the capture apply to the next frame.
     const settings = this.settings;
+    const state = this.loopState(frameState, settings);
     try {
       // Start the frame's samples over, whatever a preview already summed.
       this.inputsDirty = true;

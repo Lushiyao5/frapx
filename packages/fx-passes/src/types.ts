@@ -77,12 +77,21 @@ export type AccumulationOptions = {
   shutter?: number;
   /** Frame rate that sets the frame interval. Required when `shutter` > 0. */
   fps?: number;
+  /**
+   * Length in seconds of a seamless loop, or `null` (the default) for none.
+   * Every pass then sees the time wrapped into `[0, loop)` — `u_frameTime`,
+   * `u_time` and the time bound uniforms are evaluated at — with each
+   * sample's shutter offset added in double precision before the upload, so
+   * a frame one loop later is identical to the bit, with any sample count.
+   */
+  loop?: number | null;
 };
 
 export type ResolvedAccumulation = {
   readonly samples: number;
   readonly shutter: number;
   readonly fps: number | null;
+  readonly loop: number | null;
 };
 
 export type SampleProgress = {

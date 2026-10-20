@@ -52,6 +52,8 @@ A pass with `accumulate: true` is drawn `accumulation.samples` times per frame. 
 
 Because `u_time` moves within the shutter, a shader that depends only on time gets motion blur without changes. Uniforms bound with `bindUniforms(source)` (for example `keyframes()`, re-exported here) are evaluated at each sample's time too, so a keyframed camera blurs the same way; later passes see the frame's time. A source that returns new values for the same time (an edited timeline) restarts the frame's samples on the next `render()`. Samples follow a low-discrepancy (R3) sequence, so the same frame always gives the same pixels. Sample 0 has no jitter and opens the shutter, so one sample is the plain frame. Outside accumulating passes, `u_time` equals `u_frameTime`, `u_jitter` is zero and `u_sampleCount` is 1.
 
+**Seamless loops.** Set `accumulation.loop` to the loop's length in seconds and every pass sees the time wrapped into `[0, loop)`: `u_frameTime`, `u_time` and the time bound uniforms are evaluated at. The runtime adds each sample's shutter offset to the wrapped time in double precision before uploading it, so a frame one loop later (frame 960 of a 16 s loop at 60 fps) is identical to the bit with any number of samples. Without it, `u_time` keeps growing, and a 32-bit float rounds the sample times near 16 s differently than near 0. Adding the offset in the shader does not fix that reliably, since GPU compilers may reorder the arithmetic.
+
 - **Preview.** While the frame's inputs (time, uniforms, textures, size) stay the same, each draw adds one sample until `samples` is reached, and a change starts over. A running realtime loop therefore shows one sample per frame. A stopped or manual-clock instance keeps refining the still frame on animation frames by itself. Progress is in `samplesDrawn` and `onSample`.
 - **Capture.** `captureFrame()` always draws every sample of the frame from scratch, waiting for the GPU between batches so long frames never trip the browser's GPU watchdog. Then it runs the remaining passes and reads the last one. A capture's `signal` is checked between samples. Uniform, accumulation and feedback changes made while it draws apply to the next frame.
 
@@ -73,7 +75,7 @@ Accumulating passes must come first in the list. They may only read passes liste
 | `accumulation`, `samplesDrawn` | The resolved accumulation settings, and the samples of the current frame drawn so far |
 | `start()`, `stop()`, `render()`, `resize()`, `destroy()` | Lifecycle. `render()` at an unchanged time adds the next sample |
 | `setTime(seconds)`, `setClock(clock)`, `setResolution(size)` | Clock and size, as in `@frapx/fx-canvas` |
-| `setAccumulation(options)` | Changes `samples`, `shutter` or `fps` and restarts the frame's samples |
+| `setAccumulation(options)` | Changes `samples`, `shutter`, `fps` or `loop` and restarts the frame's samples |
 | `captureFrame(options)` | Draws every sample of the current frame and reads the last pass |
 | `resetFeedback()` | Clears the previous-frame outputs |
 | `setFragment(name, source)` | Swaps one pass' shader (see Hot reloading) |
