@@ -59,6 +59,7 @@ const fx = createPasses({
   dpr: () => Math.min(window.devicePixelRatio, prefersLightweightRender() ? 1 : 1.5),
   maxDpr: 1.5,
   respectReducedMotion: true,
+  onResize: ({ instance }) => instance.setUniform("quality", quality()),
   onReady: () => {
     stage.classList.add("is-ready");
     window.setTimeout(() => title.classList.add("is-hidden"), 4000);
@@ -72,8 +73,6 @@ const fx = createPasses({
 
 // The light follows a fixed rhythm per loop; music would bind its own source here.
 fx.bindUniforms(loopRhythm);
-
-window.addEventListener("resize", () => fx.setUniform("quality", quality()));
 
 if (holdsFrame) {
   void fx.ready.then(() => {

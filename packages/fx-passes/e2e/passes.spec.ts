@@ -785,3 +785,55 @@ test("binding a source during a capture applies from the next frame", async ({ p
   expect(result.duringUnbind).toBe(0.75);
   expect(result.unbound).toBe(0.25);
 });
+
+test("onResize fires on a size change, not on setup or the same size, and waits out a capture", async ({
+  page
+}) => {
+  await open(page);
+  const result = await page.evaluate(async (fragment) => {
+    const calls: Array<{ size: [number, number]; instance: boolean; gl: boolean }> = [];
+    let fx: ReturnType<Win["__frapx"]["createPasses"]>;
+    let resizeDuringCapture = true;
+    fx = (window as Win).__frapx.createPasses({
+      clock: "manual",
+      resolution: [8, 8],
+      accumulation: { samples: 4 },
+      passes: [{ name: "image", fragment, accumulate: true }],
+      onResize: (state) => {
+        calls.push({
+          size: [state.width, state.height],
+          instance: state.instance === fx,
+          gl: state.gl === fx.gl
+        });
+      },
+      onSample: ({ drawn, capturing }) => {
+        if (capturing && drawn === 2 && resizeDuringCapture) {
+          resizeDuringCapture = false;
+          fx.setResolution([4, 4]);
+        }
+      }
+    });
+    await fx.ready;
+    const afterSetup = calls.length;
+    fx.setResolution([8, 8]);
+    const afterSameSize = calls.length;
+    fx.setResolution([16, 12]);
+    const afterChange = calls.length;
+    const capture = fx.captureFrame({ format: "rgba8" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const duringCapture = calls.length;
+    const captured = await capture;
+    const afterCapture = calls.length;
+    fx.destroy();
+    return { afterSetup, afterSameSize, afterChange, duringCapture, afterCapture, captured: captured.length, calls };
+  }, pattern);
+  expect(result.afterSetup).toBe(0);
+  expect(result.afterSameSize).toBe(0);
+  expect(result.afterChange).toBe(1);
+  expect(result.calls[0]).toEqual({ size: [16, 12], instance: true, gl: true });
+  // The capture keeps its size; the resize asked for during it comes after.
+  expect(result.duringCapture).toBe(1);
+  expect(result.captured).toBe(16 * 12 * 4);
+  expect(result.afterCapture).toBe(2);
+  expect(result.calls[1]?.size).toEqual([4, 4]);
+});

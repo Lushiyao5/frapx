@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- The host's `onResize` now also fires when a frame is the first to see a new size. Browsers run animation frames before resize observations, so in a running realtime loop the frame took the new size and the resize observer then found nothing changed: `onResize` almost never fired while playing. It runs before that frame's draw.
+
 ## 0.5.0 - 2026-10-15
 
 ### Added

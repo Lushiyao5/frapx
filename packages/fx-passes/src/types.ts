@@ -94,6 +94,28 @@ export type SampleProgress = {
   capturing: boolean;
 };
 
+/**
+ * The instance's state at a size change, passed to `onResize`. The fields
+ * match `@frapx/fx-canvas`' `RenderState`.
+ */
+export type PassesRenderState<
+  TUniforms extends UniformInputMap = UniformInputMap,
+> = {
+  instance: PassesInstance<TUniforms>;
+  gl: WebGL2RenderingContext;
+  canvas: HTMLCanvasElement;
+  time: number;
+  delta: number;
+  frame: number;
+  width: number;
+  height: number;
+  viewportWidth: number;
+  viewportHeight: number;
+  pixelRatio: number;
+  /** Whether the OS "prefers reduced motion" setting is currently enabled. */
+  reducedMotion: boolean;
+};
+
 export type CreatePassesOptions<
   TUniforms extends UniformInputMap = UniformInputMap,
 > = {
@@ -124,6 +146,13 @@ export type CreatePassesOptions<
   onError?: (error: Error) => void;
   /** Called after every accumulated sample, in previews and captures. */
   onSample?: (progress: SampleProgress) => void;
+  /**
+   * Called whenever the render size actually changes (not every frame, nor on
+   * setup), including after `setResolution()`; during `captureFrame()` it
+   * waits until the capture ends. The pass buffers take the new size on the
+   * next draw.
+   */
+  onResize?: (state: PassesRenderState<TUniforms>) => void;
 };
 
 export type PassesInstance<

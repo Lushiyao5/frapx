@@ -369,9 +369,12 @@ createShaderBackground({
   onReady(instance) {},
   onError(error) {},
   onBeforeRender(state) {},
-  onAfterRender(state) {}
+  onAfterRender(state) {},
+  onResize(state) {}
 });
 ```
+
+`onResize(state)` is called with the same `RenderState` as the render hooks whenever the render size actually changes: not on setup, nor every frame, but also after `setResolution()`. A resize requested during `captureFrame()` waits until the capture ends.
 
 `layer: "background"` inserts the canvas as the first child with `z-index: 0`. `layer: "overlay"` inserts it as the last child with `z-index: 1`. Existing child styles are not changed.
 

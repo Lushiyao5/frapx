@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- `onResize` fires when the canvas size changes while the realtime loop is running. It used to fire almost only when the loop was stopped, since a frame picked up the new size before the resize observer did (fixed in `@frapx/core`).
+
+### Documentation
+
+- Documented `onResize(state)` in the README and on the docs site.
+
 ## 0.10.0 - 2026-10-15
 
 ### Added

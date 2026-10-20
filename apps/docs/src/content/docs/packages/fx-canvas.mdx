@@ -104,6 +104,10 @@ await fx.setTexture("image", "/next-hero.webp");
 await fx.setTextures({ image: "/next-hero.webp" });
 ```
 
+`onResize(state)` runs whenever the render size actually changes (not on setup,
+but also after `setResolution()`), for work that depends on the size, such as
+picking a quality level.
+
 `hexToRgb("#7dd3fc")` and `hexToRgba("#0f172acc")` turn hex colors into
 `vec3` / `vec4` uniform values, and `glslUtils` (from `@frapx/fx-canvas/glsl`)
 holds small GLSL snippets such as `glslUtils.coverUv` for cover-fitting an

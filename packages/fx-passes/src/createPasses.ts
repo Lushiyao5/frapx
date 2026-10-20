@@ -170,6 +170,25 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
 
       onCaptureDraw: (state, signal) => this.drawCapture(state, signal),
 
+      onResize: (state) => {
+        if (this.destroyed) return;
+        options.onResize?.({
+          instance: this,
+          // createContext above only ever returns a WebGL2 context.
+          gl: state.gl as WebGL2RenderingContext,
+          canvas: state.canvas,
+          time: state.time,
+          delta: state.delta,
+          frame: state.frame,
+          width: state.width,
+          height: state.height,
+          viewportWidth: state.viewportWidth,
+          viewportHeight: state.viewportHeight,
+          pixelRatio: state.pixelRatio,
+          reducedMotion: state.reducedMotion
+        });
+      },
+
       captureSource: () => {
         const last = this.passes[this.passes.length - 1];
         return last ? currentOf(last) : null;
