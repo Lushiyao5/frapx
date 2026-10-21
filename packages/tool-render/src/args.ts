@@ -1,3 +1,4 @@
+import { statSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { isRoutePath } from "./server";
 import type { BrowserName, Encoder, RenderOptions, SequenceFormat } from "./types";
@@ -24,6 +25,8 @@ Options:
   -s, --set <key=value>    Parameter for the page's prepare(); repeatable
       --resume             Skip frames already in --out (settings must match)
       --encode <preset>    prores or h264, encoded with ffmpeg afterwards; repeatable
+      --audio <file>       Mux this audio into the encoded videos, cut to the range
+      --strict-audio       Stop when the audio and the page's duration differ by over a frame
       --browser <name>     chrome (installed Google Chrome, default) or chromium
       --headed             Show the browser window
       --allow-software     Render even on a software WebGL renderer
@@ -62,6 +65,14 @@ export const parseResolution = (value: string): readonly [number, number] => {
 export const parsePath = (value: string): string => {
   if (!isRoutePath(value)) throw new UsageError(`--path must start with a single /, got "${value}"`);
   return value;
+};
+
+const parseAudio = (values: readonly string[], encoding: boolean): string => {
+  if (values.length > 1) throw new UsageError("Pass one --audio file");
+  const file = values[0]!;
+  if (!encoding) throw new UsageError("--audio is muxed into encoded videos, so it needs --encode");
+  if (!statSync(file, { throwIfNoEntry: false })?.isFile()) throw new UsageError(`--audio file not found: ${file}`);
+  return file;
 };
 
 const parseFps = (value: string): number => {
@@ -106,6 +117,8 @@ export const parseCliArgs = (argv: readonly string[]): ParsedArgs => {
         set: { type: "string", short: "s", multiple: true },
         resume: { type: "boolean" },
         encode: { type: "string", multiple: true },
+        audio: { type: "string", multiple: true },
+        "strict-audio": { type: "boolean" },
         browser: { type: "string" },
         headed: { type: "boolean" },
         "allow-software": { type: "boolean" },
@@ -144,6 +157,11 @@ export const parseCliArgs = (argv: readonly string[]): ParsedArgs => {
     timeout: values.timeout === undefined ? 60 : parseInteger("--timeout", values.timeout, 1)
   };
   if (values.path !== undefined) options.path = parsePath(values.path);
+  if (values.audio !== undefined) options.audio = parseAudio(values.audio, encode.length > 0);
+  if (values["strict-audio"]) {
+    if (options.audio === undefined) throw new UsageError("--strict-audio needs --audio <file>");
+    options.strictAudio = true;
+  }
   if (values.range !== undefined) options.range = parseRange(values.range);
   if (values.fps !== undefined) options.fps = parseFps(values.fps);
   if (values.resolution !== undefined) options.resolution = parseResolution(values.resolution);

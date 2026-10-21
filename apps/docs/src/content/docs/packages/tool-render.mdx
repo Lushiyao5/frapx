@@ -18,7 +18,8 @@ pnpm add -D @frapx/tool-render
 ```
 
 Needs Node 20+, an installed Google Chrome (or `npx playwright install chromium`
-with `--browser chromium`), and `ffmpeg` on `PATH` for `--encode`.
+with `--browser chromium`), and `ffmpeg` on `PATH` for `--encode` (plus
+`ffprobe` for `--audio`).
 
 ## Register the page
 
@@ -67,6 +68,8 @@ use the address it prints, or start it with `--host 127.0.0.1`.
 | `--set <key=value>` | | Passed to `prepare()`; repeatable. |
 | `--resume` | | Render only the missing frames; the settings must match. |
 | `--encode <prores\|h264>` | | ProRes 422 HQ `.mov` or H.264 `.mp4`, BT.709. |
+| `--audio <file>` | | Muxed into each video (PCM 24-bit / AAC 320k), cut to the range. |
+| `--strict-audio` | | Stop when the audio and the page's `duration` differ by over a frame. |
 | `--browser <chrome\|chromium>` | `chrome` | |
 | `--headed` | | Show the window. |
 | `--allow-software` | | Allow SwiftShader and other software renderers. |
@@ -81,6 +84,9 @@ use the address it prints, or start it with `--host 127.0.0.1`.
   failures in a row without progress stop it.
 - **Hot reloads** — a reload or navigation mid-render stops it, because later
   frames would come from different code. Render a production build.
+- **Mismatched audio** — with `--audio`, the file's length is compared with the
+  page's `duration` before rendering. More than a frame apart warns, or stops
+  with `--strict-audio`.
 - **Silent software rendering** — it prints the WebGL renderer and stops on
   SwiftShader or llvmpipe unless you pass `--allow-software`.
 

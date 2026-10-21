@@ -21,6 +21,10 @@ export type RenderOptions = {
   /** Skips frames already in `out`; the settings must match its `frapx-render.json`. */
   resume: boolean;
   encode: readonly Encoder[];
+  /** Audio muxed into each encoded video, cut to the rendered range. Needs `encode`. */
+  audio?: string;
+  /** Fails before rendering, instead of warning, when `audio` and the page's duration differ by more than a frame. */
+  strictAudio?: boolean;
   browser: BrowserName;
   headed: boolean;
   /** Renders even when WebGL runs on a software renderer such as SwiftShader. */
@@ -51,6 +55,7 @@ export type RenderEvent =
     }
   | { type: "retry"; reason: string; attempt: number }
   | { type: "page-error"; message: string }
+  | { type: "warning"; message: string }
   | { type: "encode"; encoder: Encoder; file: string };
 
 export type RenderResult = {

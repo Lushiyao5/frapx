@@ -6,6 +6,7 @@
 
 - `--path <route>` (`RenderOptions.path`) opens a route of a directory source, such as `frapx-render dist --path /music`. It must start with a single `/` and may carry a query; with a URL source it is an error, since the route belongs in the URL. `frapx-render.json` records it, and `--resume` refuses a different route (manifests without it count as `/`).
 - The directory server falls back to the root `index.html` for a missing route without a file extension, so single-page app routes render from `dist/`. Missing files with an extension are still 404.
+- `--audio <file>` (`RenderOptions.audio`) muxes one audio file into every `--encode` output, cut to the rendered range: PCM 24-bit in ProRes `.mov`, AAC 320 kb/s in H.264 `.mp4`. It needs `--encode` and `ffprobe`. Before rendering, its duration is compared with the page's `duration`. More than one frame apart emits a new `warning` event, which the CLI prints. `--strict-audio` (`strictAudio`) stops instead. `frapx-render.json` records the file; `--resume` does not compare it.
 
 ### Documentation
 

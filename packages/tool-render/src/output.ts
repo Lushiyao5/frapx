@@ -29,6 +29,8 @@ export type Manifest = RenderSettings & {
   tool: "@frapx/tool-render";
   version: 1;
   range: readonly [number, number];
+  /** The `--audio` file of the last run; not compared on `--resume`. */
+  audio?: string;
 };
 
 const sortedEntries = (params: Readonly<Record<string, string>>) =>
