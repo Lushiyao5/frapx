@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Leaving `ready` unawaited no longer logs an unhandled rejection after `destroy()` or in an unsupported environment, via `@frapx/core`; awaiting it still rejects. fx-passes has no React binding, so this removes the `Uncaught (in promise) DestroyedError` that every StrictMode user saw.
+
 ## 0.3.0 - 2026-10-20
 
 ### Added

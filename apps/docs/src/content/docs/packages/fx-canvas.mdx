@@ -104,6 +104,15 @@ await fx.setTexture("image", "/next-hero.webp");
 await fx.setTextures({ image: "/next-hero.webp" });
 ```
 
+`ready` resolves once the first setup finishes. It rejects with `DestroyedError`
+when `destroy()` runs first, with `UnsupportedError` when WebGL (or a feature
+the instance needs) is unavailable, and with the setup error, such as a
+`ShaderCompileError`, when initialization fails. Leaving `ready` unawaited after
+`destroy()` or in an unsupported environment does not produce an unhandled
+rejection, so a React StrictMode effect that destroys the instance in cleanup
+stays quiet. Setup failures and a missing target still surface as unhandled
+rejections when `ready` is left unhandled, even with `onError`.
+
 `onResize(state)` runs whenever the render size actually changes (not on setup,
 but also after `setResolution()`), for work that depends on the size, such as
 picking a quality level.

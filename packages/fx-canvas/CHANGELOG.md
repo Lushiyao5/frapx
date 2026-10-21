@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Leaving `ready` unawaited no longer logs an unhandled rejection after `destroy()` or in an unsupported environment, via `@frapx/core`; awaiting it still rejects.
+
+### Documentation
+
+- When `ready` rejects and when it surfaces as unhandled, in the README and on the docs site.
+
 ## 0.10.1 - 2026-10-20
 
 ### Fixed

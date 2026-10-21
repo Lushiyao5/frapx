@@ -550,6 +550,69 @@ describe("detached canvas", () => {
   });
 });
 
+describe("ready rejection", () => {
+  // Swaps out the runner's own listeners so a loud rejection can be asserted
+  // instead of failing the run.
+  const collectUnhandled = async (run: () => void): Promise<unknown[]> => {
+    const reasons: unknown[] = [];
+    const previous = process.listeners("unhandledRejection");
+    const listener = (reason: unknown) => {
+      reasons.push(reason);
+    };
+    process.removeAllListeners("unhandledRejection");
+    process.on("unhandledRejection", listener);
+    try {
+      run();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    } finally {
+      process.off("unhandledRejection", listener);
+      for (const restore of previous) process.on("unhandledRejection", restore);
+    }
+    return reasons;
+  };
+
+  it("does not surface an unawaited ready when destroyed before ready", async () => {
+    let host!: ReturnType<typeof create>["host"];
+    const reasons = await collectUnhandled(() => {
+      host = create().host;
+      host.destroy();
+    });
+
+    expect(reasons).toEqual([]);
+    await expect(host.ready).rejects.toBeInstanceOf(DestroyedError);
+  });
+
+  it("does not surface an unawaited ready when WebGL is unsupported", async () => {
+    let host!: ReturnType<typeof create>["host"];
+    const reasons = await collectUnhandled(() => {
+      host = create({ createContext: () => null }).host;
+    });
+
+    expect(reasons).toEqual([]);
+    expect(host.status).toBe("unsupported");
+    await expect(host.ready).rejects.toBeInstanceOf(UnsupportedError);
+  });
+
+  it("still surfaces initialization failures and a missing target", async () => {
+    const failure = new Error("compile failed");
+    const reasons = await collectUnhandled(() => {
+      create({
+        onInit: () => {
+          throw failure;
+        }
+      });
+      createRuntimeHost({
+        target: ".missing",
+        createContext: createMockGl,
+        onInit: () => {},
+        onDraw: () => {}
+      });
+    });
+
+    expect(reasons).toEqual([failure, expect.any(TargetNotFoundError)]);
+  });
+});
+
 describe("captureFrame", () => {
   const floatSource = {
     texture: {},

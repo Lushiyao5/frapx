@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- An unawaited `ready` no longer produces an unhandled rejection when `destroy()` rejects it with `DestroyedError` (for example a React StrictMode effect cleanup) or when the environment is unsupported (`UnsupportedError`, including the no-op instance created without a browser). Awaiting `ready` or `.then(…, onError)` still observes the rejection. Setup failures and `TargetNotFoundError` still surface.
+
 ## 0.5.1 - 2026-10-20
 
 ### Fixed
