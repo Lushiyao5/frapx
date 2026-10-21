@@ -47,11 +47,19 @@ vite build
 frapx-render dist --out renders/loop --resolution 3840x2160 --set spp=192 --encode prores
 # interrupted? continue with the same settings:
 frapx-render dist --out renders/loop --resolution 3840x2160 --set spp=192 --encode prores --resume
+# a route of a single-page app:
+frapx-render dist --path /music --out renders/music
 ```
+
+A missing route without a file extension falls back to `dist/index.html`, so
+client-side routes render from the build. For a URL source, put the route in
+the URL instead. `vite preview` listens on `localhost` only, which may be IPv6:
+use the address it prints, or start it with `--host 127.0.0.1`.
 
 | Option | Default | |
 | --- | --- | --- |
 | `--out <dir>` | required | Output directory. |
+| `--path <route>` | `/` | Route to open in a directory, e.g. `/music`. |
 | `--range <a-b>` | the page's `duration` | Inclusive frame range. |
 | `--fps <n>` | the page's `fps` | |
 | `--resolution <WxH>` | the page's `resolution`, else its size (headless: 1280 × 720) | e.g. `2560x1440`, `2048x1080`. |
@@ -67,7 +75,7 @@ frapx-render dist --out renders/loop --resolution 3840x2160 --set spp=192 --enco
 
 - **Truncated frames** — each PNG is written to a temporary file and renamed.
 - **Mixed settings** — `frapx-render.json` in the output folder records the
-  source, fps, format, resolution and params; `--resume` refuses when they differ.
+  source, route, fps, format, resolution and params; `--resume` refuses when they differ.
 - **Crashes and lost contexts** — the page is opened again and the render
   continues; the frame written right before a lost context is redone. Three
   failures in a row without progress stop it.

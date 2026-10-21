@@ -31,8 +31,17 @@ describe("serveDirectory", () => {
     expect(script.headers.get("content-type")).toContain("text/javascript");
   });
 
+  it("serves the root index.html for a missing route without an extension", async () => {
+    const route = await fetch(new URL("music?take=2", server.url));
+    expect(route.status).toBe(200);
+    expect(route.headers.get("content-type")).toContain("text/html");
+    expect(await route.text()).toContain("<title>x</title>");
+    expect((await fetch(new URL("assets/missing", server.url))).status).toBe(200);
+  });
+
   it("answers 404 for missing files and refuses paths outside the root", async () => {
     expect((await fetch(new URL("missing.js", server.url))).status).toBe(404);
+    expect((await fetch(new URL("music/missing.js", server.url))).status).toBe(404);
     // URLs normalize "..", even encoded; an encoded slash survives until decoding.
     expect((await fetch(`${server.url}..%2fsecret.txt`)).status).toBe(403);
   });

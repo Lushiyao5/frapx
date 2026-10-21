@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `--path <route>` (`RenderOptions.path`) opens a route of a directory source, such as `frapx-render dist --path /music`. It must start with a single `/` and may carry a query; with a URL source it is an error, since the route belongs in the URL. `frapx-render.json` records it, and `--resume` refuses a different route (manifests without it count as `/`).
+- The directory server falls back to the root `index.html` for a missing route without a file extension, so single-page app routes render from `dist/`. Missing files with an extension are still 404.
+
+### Documentation
+
+- `localhost` vs `127.0.0.1` for URL sources served by `vite preview` or `vite dev`.
+
 ## 0.2.0 - 2026-10-20
 
 ### Added

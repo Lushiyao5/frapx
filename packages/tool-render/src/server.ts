@@ -29,9 +29,16 @@ const TYPES: Record<string, string> = {
   ".bin": "application/octet-stream"
 };
 
+/** A route on the served origin; `//host` (or `/\host`, read the same way) would leave it. */
+export const isRoutePath = (value: string): boolean => /^\/(?![/\\])/.test(value);
+
 export type StaticServer = { url: string; close(): Promise<void> };
 
-/** Serves `root` on 127.0.0.1 at a free port. Directories resolve to their index.html. */
+/**
+ * Serves `root` on 127.0.0.1 at a free port. Directories resolve to their
+ * index.html, and a missing route without a file extension falls back to the
+ * root index.html, as single-page apps expect.
+ */
 export const serveDirectory = async (root: string): Promise<StaticServer> => {
   const base = resolve(root);
   const server = createServer(async (request, response) => {
@@ -45,6 +52,10 @@ export const serveDirectory = async (root: string): Promise<StaticServer> => {
       let info = await stat(file).catch(() => null);
       if (info?.isDirectory()) {
         file = join(file, "index.html");
+        info = await stat(file).catch(() => null);
+      }
+      if (!info?.isFile() && extname(pathname) === "") {
+        file = join(base, "index.html");
         info = await stat(file).catch(() => null);
       }
       if (!info?.isFile()) {

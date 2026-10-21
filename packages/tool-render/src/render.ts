@@ -14,7 +14,7 @@ import {
   writeManifest
 } from "./output";
 import type { RenderSettings } from "./output";
-import { serveDirectory } from "./server";
+import { isRoutePath, serveDirectory } from "./server";
 import type { StaticServer } from "./server";
 import type { RenderEvent, RenderOptions, RenderResult } from "./types";
 
@@ -213,12 +213,18 @@ const classify = (error: unknown, session: Session): Error => {
 };
 
 const resolveSource = async (
-  source: string
-): Promise<{ url: string; id: string; server: StaticServer | null }> => {
+  source: string,
+  path: string | undefined
+): Promise<{ url: string; id: string; path?: string; server: StaticServer | null }> => {
   const info = await stat(source).catch(() => null);
   if (info?.isDirectory()) {
+    const route = path ?? "/";
+    if (!isRoutePath(route)) throw new Error(`The path must start with a single /, got ${route}.`);
     const server = await serveDirectory(source);
-    return { url: server.url, id: resolve(source), server };
+    return { url: new URL(route, server.url).href, id: resolve(source), path: route, server };
+  }
+  if (path !== undefined) {
+    throw new Error(`The path only applies to a directory; put it in the URL instead: ${source}`);
   }
   let url: URL;
   try {
@@ -250,7 +256,7 @@ export const render = async (
   signal?.throwIfAborted();
 
   const state = await openOutput(out);
-  const source = await resolveSource(options.source);
+  const source = await resolveSource(options.source, options.path);
   let browser: Browser | null = null;
   let session: Session | null = null;
 
@@ -336,6 +342,7 @@ export const render = async (
     const range = options.range ?? ([0, Math.max(1, Math.round(described.duration * fps)) - 1] as const);
     const settings: RenderSettings = {
       source: source.id,
+      ...(source.path !== undefined && { path: source.path }),
       fps,
       format: options.format,
       // Resolved here, so the resume check and frapx-render.json hold the size used.

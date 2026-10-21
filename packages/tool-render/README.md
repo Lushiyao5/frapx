@@ -42,11 +42,14 @@ vite build
 frapx-render dist --out renders/loop --resolution 3840x2160 --set spp=192 --encode prores
 ```
 
-A URL works too (`frapx-render http://127.0.0.1:5173/ --out …`). Prefer a build for long renders: a dev server's hot reload replaces the page mid-render, which `frapx-render` detects and stops on, since later frames would come from different code.
+When the page to render is a route of the app, such as `/music`, pass it with `--path`: `frapx-render dist --path /music --out renders/music`. The directory server falls back to `dist/index.html` for a missing route without a file extension, as single-page apps expect; a missing file with an extension (`/assets/missing.js`) stays a 404.
+
+A URL works too (`frapx-render http://127.0.0.1:5173/music --out …`; put the route in the URL, `--path` is for directories). Prefer a build for long renders: a dev server's hot reload replaces the page mid-render, which `frapx-render` detects and stops on, since later frames would come from different code. `frapx-render` connects to exactly the host in the URL. `vite preview` and `vite dev` listen on `localhost` only, which may resolve to IPv6 (`::1`), so `http://127.0.0.1:…` can be refused while `http://localhost:…` works; use the address the server prints, or start it with `--host 127.0.0.1`.
 
 | Option | Default | |
 | --- | --- | --- |
 | `-o, --out <dir>` | required | Output directory. |
+| `--path <route>` | `/` | Route to open in a directory source, e.g. `/music` or `/music?take=2`. |
 | `-r, --range <a-b>` | the page's `duration` | Inclusive frame range, or a single frame. |
 | `--fps <n>` | the page's `fps` | Frame `n` is drawn at `n / fps` seconds. |
 | `--resolution <WxH>` | the page's `resolution`, else its size (headless: 1280 × 720) | Render size, e.g. `2560x1440` or `2048x1080`. |
@@ -64,7 +67,7 @@ Progress goes to stderr with the time per frame and an estimate of the time left
 ### Resuming and failures
 
 - Each frame is written to a temporary file and renamed, so an interrupted render never leaves a truncated PNG.
-- `--out` gets a `frapx-render.json` with the settings that decide what a frame looks like: the source, `fps`, `format`, `resolution` and `params`. `--resume` renders only the frames of the range that are missing, and refuses when any of those settings differ. Without `--resume`, a folder that already holds frames is refused.
+- `--out` gets a `frapx-render.json` with the settings that decide what a frame looks like: the source, the `--path` route, `fps`, `format`, `resolution` and `params`. `--resume` renders only the frames of the range that are missing, and refuses when any of those settings differ. Without `--resume`, a folder that already holds frames is refused.
 - When the page crashes or loses its WebGL context, `frapx-render` opens it again and continues with the next missing frame. The frame written just before a lost context is rendered again, since it may be blank. Three failures in a row without progress stop the render.
 - A page that reloads or navigates to a new document stops the render; `history.pushState()` and hash changes do not.
 - Frame requests bypass service workers, so PWA builds render too.
@@ -89,7 +92,7 @@ ffmpeg -framerate 30 -i frame_%05d.png \
 
 ## API
 
-The CLI is a thin wrapper around `render(options, { signal, onEvent })`, exported for scripts. `options` mirrors the flags (`source`, `out`, `range`, `fps`, `resolution`, `format`, `params`, `resume`, `encode`, `browser`, `headed`, `allowSoftware`, `timeout`); `onEvent` receives `start`, `frame`, `retry`, `page-error` and `encode` events. It resolves with `{ out, range, rendered, videos }`.
+The CLI is a thin wrapper around `render(options, { signal, onEvent })`, exported for scripts. `options` mirrors the flags (`source`, `path`, `out`, `range`, `fps`, `resolution`, `format`, `params`, `resume`, `encode`, `browser`, `headed`, `allowSoftware`, `timeout`); `onEvent` receives `start`, `frame`, `retry`, `page-error` and `encode` events. It resolves with `{ out, range, rendered, videos }`.
 
 `parseCliArgs(argv)` turns `frapx-render` arguments into `{ kind: "run", options }` (or `{ kind: "help" }` / `{ kind: "version" }`) for scripts that accept the same flags, and throws `UsageError` for invalid ones.
 

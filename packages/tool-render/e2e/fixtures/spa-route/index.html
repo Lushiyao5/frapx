@@ -1,0 +1,9 @@
+<!doctype html>
+<script>
+  // Registers only off the root, like a single-page app whose render page is a route.
+  if (location.pathname !== "/") {
+    const script = document.createElement("script");
+    script.src = "/protocol.js";
+    document.head.append(script);
+  }
+</script>

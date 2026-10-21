@@ -176,3 +176,25 @@ test("renders at the page's declared resolution unless --resolution overrides it
   expect(overriddenEvents[0]).toMatchObject({ type: "start", resolution: [8, 6] });
   expect(JSON.parse(await readFile(join(overridden, "frapx-render.json"), "utf8")).resolution).toEqual([8, 6]);
 });
+
+test("opens a route of a directory source and resumes only on the same route", async () => {
+  const spa = join(fixtures, "spa-route");
+  const out = await tempDir();
+  const { result, events } = await renderCollecting(options(spa, out, { path: "/sub", range: [0, 1] }));
+  expect(result.rendered).toBe(2);
+  expect(events[0]).toMatchObject({ type: "start", url: expect.stringMatching(/\/sub$/) });
+  expect(JSON.parse(await readFile(join(out, "frapx-render.json"), "utf8"))).toMatchObject({
+    source: spa,
+    path: "/sub"
+  });
+
+  await expect(render(options(spa, out, { path: "/other", range: [0, 1], resume: true }))).rejects.toThrow(
+    'path: "/sub" → "/other"'
+  );
+  await expect(render(options(spa, await tempDir(), { timeout: 1 }))).rejects.toThrow(
+    "did not call registerRenderTarget()"
+  );
+  await expect(
+    render(options(`${fixtureServer.url}spa-route/`, await tempDir(), { path: "/sub" }))
+  ).rejects.toThrow("put it in the URL instead");
+});
