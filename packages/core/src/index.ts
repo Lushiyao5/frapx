@@ -67,6 +67,7 @@ export type {
   ShaderLayer,
   RenderMode,
   ClockMode,
+  TimeSource,
   Resolution,
   RenderTargetFormat,
   RenderTargetOptions,

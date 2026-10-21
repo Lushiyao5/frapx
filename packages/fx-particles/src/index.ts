@@ -24,6 +24,7 @@ export type {
   SizeOverLife,
   SpriteShape,
   TextureInput,
+  TimeSource,
   UniformInput,
   Vec3
 } from "./types";

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `timeSource` option and `setTimeSource(source | null)` make the realtime loop follow an external transport such as an audio player: `u_time` is the source's value on every frame, and offscreen, hidden and reduced-motion pausing and the pointer uniforms keep working, which `clock: "manual"` bypasses. `u_delta` is clamped to 0.1 s and is 0 when the source goes back. A manual clock ignores the source but keeps it. Re-exports the `TimeSource` type.
+
+### Documentation
+
+- "Following an audio transport" in the README and on the docs site, with why aligning a realtime clock once at play drifts.
+
 ## 0.10.1 - 2026-10-20
 
 ### Fixed

@@ -87,6 +87,7 @@ const OPTION_KEYS = [
   "pauseWhenHidden",
   "respectReducedMotion",
   "clock",
+  "timeSource",
   "resolution",
   "dpr",
   "maxDpr",

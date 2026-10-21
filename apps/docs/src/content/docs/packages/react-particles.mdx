@@ -40,7 +40,9 @@ Options are compared by value, so inline arrays and objects are fine.
 
 - **In place:** `rate`, `opacity`, `twinkle`, `perspective`, the force values
   (`forces.gravity`, `forces.drag`, `forces.curl.*`, `forces.pointer.*`),
-  `color`, `palette`, `blend`, `clock` and `resolution`.
+  `color`, `palette`, `blend`, `clock`, `timeSource` and `resolution`. A
+  `timeSource` is called through a stable wrapper, so an inline arrow
+  function is fine.
 - **Recreated:** any other change (`preset`, `lifetime`, `size`, `sprite`,
   which forces are present…), removing an in-place value, and `recreateKey`.
 - Without `maxParticles`, raising `rate` beyond what the automatic pool holds

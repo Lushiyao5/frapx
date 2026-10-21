@@ -24,6 +24,7 @@ const shaderMock = vi.hoisted(() => {
     setUniforms: vi.fn(),
     setTime: vi.fn(),
     setClock: vi.fn(),
+    setTimeSource: vi.fn(),
     setResolution: vi.fn(),
     captureFrame: vi.fn(() => Promise.resolve(new Uint8Array(4))),
     resetFeedback: vi.fn(),
@@ -247,6 +248,31 @@ describe("ShaderBackground", () => {
 
     expect(shaderMock.instance.setClock).toHaveBeenLastCalledWith("realtime");
     expect(shaderMock.instance.setResolution).toHaveBeenLastCalledWith(null);
+    expect(shaderMock.createShaderBackground).toHaveBeenCalledTimes(1);
+  });
+
+  it("follows the latest timeSource without recreating or resetting it", async () => {
+    await act(async () => {
+      root.render(<ShaderBackground fragment="void main() {}" timeSource={() => 1} />);
+    });
+
+    const [options] = shaderMock.createShaderBackground.mock.calls[0] as unknown as [
+      { timeSource: () => number }
+    ];
+    expect(options.timeSource()).toBe(1);
+    const calls = shaderMock.instance.setTimeSource.mock.calls.length;
+
+    // A new inline function is read through the same wrapper.
+    await act(async () => {
+      root.render(<ShaderBackground fragment="void main() {}" timeSource={() => 2} />);
+    });
+    expect(options.timeSource()).toBe(2);
+    expect(shaderMock.instance.setTimeSource).toHaveBeenCalledTimes(calls);
+
+    await act(async () => {
+      root.render(<ShaderBackground fragment="void main() {}" />);
+    });
+    expect(shaderMock.instance.setTimeSource).toHaveBeenLastCalledWith(null);
     expect(shaderMock.createShaderBackground).toHaveBeenCalledTimes(1);
   });
 
