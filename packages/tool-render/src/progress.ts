@@ -58,6 +58,9 @@ export const createReporter = (stream: NodeJS.WriteStream) => {
       case "page-error":
         line(`  [page] ${event.message}`);
         break;
+      case "warning":
+        line(`  Warning: ${event.message}`);
+        break;
       case "encode":
         line(`  Encoded ${event.encoder}: ${event.file}`);
         break;

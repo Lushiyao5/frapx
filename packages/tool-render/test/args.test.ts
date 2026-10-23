@@ -1,3 +1,6 @@
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { UsageError, parseCliArgs, parsePath, parseRange, parseResolution } from "../src/args";
 
@@ -91,6 +94,26 @@ describe("parseCliArgs", () => {
     [["dist", "--out", "o", "--path", "music"]]
   ])("rejects %j", (argv) => {
     expect(() => parseCliArgs(argv)).toThrow(UsageError);
+  });
+});
+
+describe("--audio", () => {
+  it("takes one existing file with --encode, and --strict-audio only with it", async () => {
+    const file = join(await mkdtemp(join(tmpdir(), "frapx-args-")), "song.wav");
+    await writeFile(file, "");
+    expect(run("dist", "-o", "o", "--encode", "h264", "--audio", file)).toMatchObject({ audio: file });
+    expect(run("dist", "-o", "o", "--encode", "h264", "--audio", file, "--strict-audio")).toMatchObject({
+      audio: file,
+      strictAudio: true
+    });
+    expect(() => parseCliArgs(["dist", "-o", "o", "--audio", file])).toThrow("needs --encode");
+    expect(() => parseCliArgs(["dist", "-o", "o", "--encode", "h264", "--audio", file, "--audio", file])).toThrow(
+      "Pass one --audio file"
+    );
+    expect(() => parseCliArgs(["dist", "-o", "o", "--encode", "h264", "--audio", `${file}.missing`])).toThrow(
+      "not found"
+    );
+    expect(() => parseCliArgs(["dist", "-o", "o", "--encode", "h264", "--strict-audio"])).toThrow(UsageError);
   });
 });
 

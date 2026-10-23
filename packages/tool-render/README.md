@@ -8,7 +8,7 @@ Command-line rendering for pages built with `@frapx/fx-canvas`, `@frapx/fx-passe
 pnpm add -D @frapx/tool-render
 ```
 
-Needs Node 20 or later and an installed Google Chrome (or `npx playwright install chromium` for `--browser chromium`). `--encode` needs `ffmpeg` on `PATH`.
+Needs Node 20 or later and an installed Google Chrome (or `npx playwright install chromium` for `--browser chromium`). `--encode` needs `ffmpeg` on `PATH`, and `--audio` also `ffprobe`.
 
 ## Prepare the page
 
@@ -57,6 +57,8 @@ A URL works too (`frapx-render http://127.0.0.1:5173/music --out …`; put the r
 | `-s, --set <key=value>` | | Passed to `prepare()`. Repeatable. |
 | `--resume` | | Continue a render in `--out`. |
 | `--encode <prores\|h264>` | | Encode the range with ffmpeg afterwards. Repeatable. |
+| `--audio <file>` | | Mux this audio into each encoded video, cut to the range. Needs `--encode`. |
+| `--strict-audio` | | Stop before rendering when the audio and the page's `duration` differ by more than a frame. |
 | `--browser <chrome\|chromium>` | `chrome` | Installed Google Chrome, or Playwright's Chromium. |
 | `--headed` | | Show the browser window. |
 | `--allow-software` | | Render on a software WebGL renderer such as SwiftShader. |
@@ -90,9 +92,19 @@ ffmpeg -framerate 30 -i frame_%05d.png \
 
 `setparams` matters: without it, ffmpeg 8 tags the color primaries and transfer as unknown.
 
+### Audio
+
+`--audio music.wav` muxes a soundtrack into every `--encode` output: PCM 24-bit in the ProRes `.mov`, AAC 320 kb/s in the H.264 `.mp4`. The audio is cut to the rendered range, from `first / fps` for `(last - first + 1) / fps` seconds, so `--range 120-239` at 30 fps carries 4–8 s of the file. The AAC encoder delay is compensated by the MP4 edit list, so the audio stays on the frames.
+
+```sh
+frapx-render dist --path /music --out renders/music --set spp=16 --encode h264 --audio public/music.wav
+```
+
+Before rendering, `frapx-render` reads the file with `ffprobe`, refuses it when it has no audio stream, and compares its duration with the page's `duration`. More than one frame apart prints a warning (a `warning` event in the API). `--strict-audio` stops instead, so a file exported a few milliseconds short does not end up as a video whose picture drifts against the sound on every loop. The CLI does not know the tempo: check that the beats sit on the grid in your own tooling. `--audio` does not change the frames, so `--resume` does not compare it. `frapx-render.json` records it for reference.
+
 ## API
 
-The CLI is a thin wrapper around `render(options, { signal, onEvent })`, exported for scripts. `options` mirrors the flags (`source`, `path`, `out`, `range`, `fps`, `resolution`, `format`, `params`, `resume`, `encode`, `browser`, `headed`, `allowSoftware`, `timeout`); `onEvent` receives `start`, `frame`, `retry`, `page-error` and `encode` events. It resolves with `{ out, range, rendered, videos }`.
+The CLI is a thin wrapper around `render(options, { signal, onEvent })`, exported for scripts. `options` mirrors the flags (`source`, `path`, `out`, `range`, `fps`, `resolution`, `format`, `params`, `resume`, `encode`, `audio`, `strictAudio`, `browser`, `headed`, `allowSoftware`, `timeout`); `onEvent` receives `start`, `frame`, `retry`, `page-error`, `warning` and `encode` events. It resolves with `{ out, range, rendered, videos }`.
 
 `parseCliArgs(argv)` turns `frapx-render` arguments into `{ kind: "run", options }` (or `{ kind: "help" }` / `{ kind: "version" }`) for scripts that accept the same flags, and throws `UsageError` for invalid ones.
 

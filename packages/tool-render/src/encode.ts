@@ -19,16 +19,18 @@ const COLOR_TAGS = [
   "bt709"
 ];
 
-const PRESETS: Record<Encoder, { extension: string; codec: string[] }> = {
-  // ProRes 422 HQ, 10-bit: an editing master.
+const PRESETS: Record<Encoder, { extension: string; codec: string[]; audio: string[] }> = {
+  // ProRes 422 HQ, 10-bit: an editing master, with uncompressed audio.
   prores: {
     extension: ".mov",
-    codec: ["-c:v", "prores_ks", "-profile:v", "3", "-vendor", "apl0", "-pix_fmt", "yuv422p10le"]
+    codec: ["-c:v", "prores_ks", "-profile:v", "3", "-vendor", "apl0", "-pix_fmt", "yuv422p10le"],
+    audio: ["-c:a", "pcm_s24le"]
   },
   // High-quality H.264 for review and sharing.
   h264: {
     extension: ".mp4",
-    codec: ["-c:v", "libx264", "-preset", "slow", "-crf", "16", "-pix_fmt", "yuv420p", "-movflags", "+faststart"]
+    codec: ["-c:v", "libx264", "-preset", "slow", "-crf", "16", "-pix_fmt", "yuv420p", "-movflags", "+faststart"],
+    audio: ["-c:a", "aac", "-b:a", "320k"]
   }
 };
 
@@ -36,63 +38,138 @@ const PRESETS: Record<Encoder, { extension: string; codec: string[] }> = {
 export const videoFileName = (out: string, encoder: Encoder): string =>
   join(out, `${basename(resolve(out))}${PRESETS[encoder].extension}`);
 
-/** ffmpeg arguments to encode `frame_%05d.png` frames `first..last` in the working directory. */
+/**
+ * ffmpeg arguments to encode `frame_%05d.png` frames `first..last` in the
+ * working directory, with `audio` (an absolute path) cut to the same span.
+ */
 export const ffmpegArgs = (
   encoder: Encoder,
   fps: number,
   range: readonly [number, number],
-  output: string
-): string[] => [
-  "-y",
-  "-hide_banner",
-  "-loglevel",
-  "error",
-  "-framerate",
-  String(fps),
-  "-start_number",
-  String(range[0]),
-  "-i",
-  "frame_%05d.png",
-  "-frames:v",
-  String(range[1] - range[0] + 1),
-  ...SCALE,
-  ...PRESETS[encoder].codec,
-  ...COLOR_TAGS,
-  output
-];
+  output: string,
+  audio?: string
+): string[] => {
+  const frames = range[1] - range[0] + 1;
+  return [
+    "-y",
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-framerate",
+    String(fps),
+    "-start_number",
+    String(range[0]),
+    "-i",
+    "frame_%05d.png",
+    ...(audio === undefined
+      ? []
+      : ["-ss", String(range[0] / fps), "-t", String(frames / fps), "-i", audio, "-map", "0:v", "-map", "1:a"]),
+    "-frames:v",
+    String(frames),
+    ...SCALE,
+    ...PRESETS[encoder].codec,
+    ...(audio === undefined ? [] : PRESETS[encoder].audio),
+    ...COLOR_TAGS,
+    output
+  ];
+};
 
-const run = (args: string[], cwd?: string): Promise<{ code: number | null; stderr: string }> =>
+const run = (
+  args: string[],
+  cwd?: string,
+  command = "ffmpeg"
+): Promise<{ code: number | null; stdout: string; stderr: string }> =>
   new Promise((resolveRun, reject) => {
-    const child = spawn("ffmpeg", args, { cwd, stdio: ["ignore", "ignore", "pipe"] });
+    const child = spawn(command, args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
     let stderr = "";
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
+      stdout += chunk;
+    });
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (chunk: string) => {
       stderr += chunk;
     });
     child.once("error", reject);
-    child.once("close", (code) => resolveRun({ code, stderr }));
+    child.once("close", (code) => resolveRun({ code, stdout, stderr }));
   });
 
-/** Throws when ffmpeg is not on PATH, so a long render does not end in a failed encode. */
-export const assertFfmpeg = async (): Promise<void> => {
-  try {
-    const { code } = await run(["-version"]);
-    if (code === 0) return;
-  } catch {
-    // Reported below.
+/**
+ * Throws when ffmpeg (and, for `--audio`, ffprobe) is not on PATH, so a long
+ * render does not end in a failed encode.
+ */
+export const assertFfmpeg = async (probe = false): Promise<void> => {
+  for (const command of probe ? ["ffmpeg", "ffprobe"] : ["ffmpeg"]) {
+    try {
+      const { code } = await run(["-version"], undefined, command);
+      if (code === 0) continue;
+    } catch {
+      // Reported below.
+    }
+    throw new Error(`${command === "ffmpeg" ? "--encode" : "--audio"} needs ${command} on PATH, but it could not be run.`);
   }
-  throw new Error("--encode needs ffmpeg on PATH, but it could not be run.");
+};
+
+/**
+ * Reads the duration from ffprobe's `codec_type=` / `duration=` lines, and
+ * refuses a file without an audio stream, which would only fail at encode time.
+ */
+export const parseAudioProbe = (stdout: string, file: string): number => {
+  const fields = new Map(
+    stdout
+      .split(/\r?\n/)
+      .map((line) => line.trim().split("="))
+      .filter((pair): pair is [string, string] => pair.length === 2)
+  );
+  if (fields.get("codec_type") !== "audio") throw new Error(`${file} has no audio stream.`);
+  const seconds = Number(fields.get("duration"));
+  if (!Number.isFinite(seconds) || seconds <= 0) throw new Error(`ffprobe reports no duration for ${file}.`);
+  return seconds;
+};
+
+/** The duration of an audio file in seconds, read with ffprobe. */
+export const probeDuration = async (file: string): Promise<number> => {
+  const { code, stdout, stderr } = await run(
+    [
+      "-v",
+      "error",
+      "-select_streams",
+      "a:0",
+      "-show_entries",
+      "stream=codec_type:format=duration",
+      "-of",
+      "default=noprint_wrappers=1",
+      file
+    ],
+    undefined,
+    "ffprobe"
+  );
+  if (code !== 0) throw new Error(`ffprobe could not read ${file}:\n${stderr.trim()}`);
+  return parseAudioProbe(stdout, file);
+};
+
+/** Describes how `audio` seconds miss the page's `duration`, or returns null within one frame. */
+export const audioDurationMismatch = (audio: number, duration: number, fps: number): string | null => {
+  const difference = audio - duration;
+  // ffprobe reports microseconds; the margin keeps exactly one frame inside.
+  if (Math.abs(difference) <= 1 / fps + 1e-6) return null;
+  const ms = (seconds: number) => `${(seconds * 1000).toFixed(1)} ms`;
+  return `The audio is ${audio.toFixed(3)} s, ${ms(Math.abs(difference))} ${
+    difference < 0 ? "shorter" : "longer"
+  } than the page's ${duration.toFixed(3)} s (${(Math.abs(difference) * fps).toFixed(1)} frames at ${fps} fps).`;
 };
 
 export const encodeVideo = async (
   out: string,
   encoder: Encoder,
   fps: number,
-  range: readonly [number, number]
+  range: readonly [number, number],
+  audio?: string
 ): Promise<string> => {
   const output = videoFileName(out, encoder);
   // "./" keeps a name starting with "-" from reading as an option.
-  const { code, stderr } = await run(ffmpegArgs(encoder, fps, range, `./${basename(output)}`), out);
+  const { code, stderr } = await run(ffmpegArgs(encoder, fps, range, `./${basename(output)}`, audio), out);
   if (code !== 0) throw new Error(`ffmpeg (${encoder}) exited with ${code}:\n${stderr.trim()}`);
   return output;
 };

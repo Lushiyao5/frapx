@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { chromium } from "playwright-core";
 import type { Browser, Page, Route } from "playwright-core";
 import type { RenderHost, RenderJob } from "@frapx/tool-capture";
-import { assertFfmpeg, encodeVideo } from "./encode";
+import { assertFfmpeg, audioDurationMismatch, encodeVideo, probeDuration } from "./encode";
 import {
   contiguousRuns,
   frameFileName,
@@ -252,7 +252,14 @@ export const render = async (
 ): Promise<RenderResult> => {
   const { signal, onEvent } = hooks;
   const out = resolve(options.out);
-  if (options.encode.length > 0) await assertFfmpeg();
+  // Absolute, since ffmpeg runs in `out`.
+  const audio = options.audio === undefined ? undefined : resolve(options.audio);
+  if (audio !== undefined && options.encode.length === 0) {
+    throw new Error("The audio is muxed into encoded videos, so it needs an encoder.");
+  }
+  if (options.encode.length > 0) await assertFfmpeg(audio !== undefined);
+  // Read before the browser starts, so an unreadable file fails at once.
+  const audioSeconds = audio === undefined ? null : await probeDuration(audio);
   signal?.throwIfAborted();
 
   const state = await openOutput(out);
@@ -349,12 +356,19 @@ export const render = async (
       resolution: options.resolution ?? declaredResolution(described.resolution) ?? null,
       params: options.params
     };
+    if (audioSeconds !== null) {
+      const mismatch = audioDurationMismatch(audioSeconds, described.duration, fps);
+      if (mismatch && options.strictAudio) throw new Error(`${mismatch} Remove --strict-audio to render anyway.`);
+      if (mismatch) onEvent?.({ type: "warning", message: mismatch });
+    }
     const pending = planFrames(state, settings, range, options.resume, out);
     const saved = state.manifest?.range;
     await writeManifest(out, {
       tool: "@frapx/tool-render",
       version: 1,
       ...settings,
+      // For information; it does not change the frames, so resuming ignores it.
+      ...(audio !== undefined && { audio }),
       range: saved ? [Math.min(saved[0], range[0]), Math.max(saved[1], range[1])] : range
     });
 
@@ -433,7 +447,7 @@ export const render = async (
     const videos: string[] = [];
     for (const encoder of options.encode) {
       signal?.throwIfAborted();
-      const file = await encodeVideo(out, encoder, fps, range);
+      const file = await encodeVideo(out, encoder, fps, range, audio);
       videos.push(file);
       onEvent?.({ type: "encode", encoder, file });
     }
