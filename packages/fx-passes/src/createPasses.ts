@@ -49,6 +49,7 @@ import type {
   ShaderStatus,
   TextureInput,
   TextureMap,
+  TimeSource,
   UniformInput,
   UniformInputMap,
   UniformRuntimeValue
@@ -140,6 +141,7 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
       ...(options.respectReducedMotion !== undefined && { respectReducedMotion: options.respectReducedMotion }),
       ...(options.renderMode !== undefined && { renderMode: options.renderMode }),
       ...(options.clock !== undefined && { clock: options.clock }),
+      ...(options.timeSource !== undefined && { timeSource: options.timeSource }),
       ...(options.resolution !== undefined && { resolution: options.resolution }),
       ...(options.debug !== undefined && { debug: options.debug }),
 
@@ -271,6 +273,11 @@ class Passes<TUniforms extends UniformInputMap> implements PassesInstance<TUnifo
     if (this.destroyed) return;
     this.host.setClock(clock);
     this.scheduleRefine();
+  }
+
+  setTimeSource(source: TimeSource | null): void {
+    if (this.destroyed) return;
+    this.host.setTimeSource(source);
   }
 
   setResolution(resolution: Resolution | null): void {

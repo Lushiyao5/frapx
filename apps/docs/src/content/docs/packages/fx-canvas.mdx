@@ -44,6 +44,7 @@ createShaderBackground({
 - **Textures** — image URL / `HTMLImageElement` / `HTMLCanvasElement` sources, with runtime updates via `setTexture()` / `setTextures()`.
 - **Feedback** — `feedback: true` gives you a managed ping-pong framebuffer exposed as `u_previousFrame` for effects that need to read the previous frame. `feedback: { format: "rgba16f" }` uses half-float buffers on WebGL2 for accumulation without banding.
 - **Deterministic rendering** — `clock: "manual"` + `setTime()` / `render()` draws exactly when you ask, and `resolution` fixes the render size, for frame-accurate output such as video frames.
+- **External time** — `timeSource` makes the realtime loop follow an audio transport or any other clock, keeping the lifecycle gates.
 
 ## Deterministic rendering
 
@@ -74,6 +75,31 @@ is not preserved. It returns a PNG `Blob` by default, or raw top-row-first RGBA
 with `{ format: "rgba8" }` (`Uint8Array`) and `{ format: "rgba16f" }`
 (`Float32Array`, read from float feedback buffers).
 
+### Following an audio transport
+
+```ts
+const fx = createShaderBackground({
+  target: ".hero",
+  fragment,
+  respectReducedMotion: true,
+  timeSource: () => transport.getPositionMs() / 1000 // seconds
+});
+```
+
+Every animation frame takes `u_time` from the source as is. `u_delta` is the
+step from the previous frame, clamped to 0.1 s, and 0 when the source goes back
+(a seek or a loop) or on the first frame after a pause. Unlike the manual clock,
+the gates keep working: offscreen and hidden stop drawing and read the source
+again on resume, reduced motion holds a still frame at the source's time, and
+the pointer uniforms work. `render()` and `captureFrame()` redraw at the last
+frame's time. `setTimeSource(fn | null)` changes or removes the source; a manual
+clock ignores it but keeps it.
+
+Do not align a plain realtime clock once with `setTime()` at play. It counts
+animation frame timestamps, not the transport, so it starts 30–40 ms off and
+drifts further on every loop when the audio and visual loop lengths differ, and
+it cannot follow seeks or pauses.
+
 ### Float feedback
 
 `feedback: { format: "rgba16f" }` needs WebGL2 with `EXT_color_buffer_float`
@@ -93,6 +119,7 @@ fx.resize();
 fx.destroy();
 fx.setTime(2.5);
 fx.setClock("manual");
+fx.setTimeSource(() => audio.currentTime); // or null
 fx.setResolution([1920, 1080]);
 await fx.captureFrame({ format: "png" });
 fx.feedbackFormat;
@@ -103,6 +130,15 @@ fx.setUniforms({ progress: 0.5, color: [1, 0, 0] });
 await fx.setTexture("image", "/next-hero.webp");
 await fx.setTextures({ image: "/next-hero.webp" });
 ```
+
+`ready` resolves once the first setup finishes. It rejects with `DestroyedError`
+when `destroy()` runs first, with `UnsupportedError` when WebGL (or a feature
+the instance needs) is unavailable, and with the setup error, such as a
+`ShaderCompileError`, when initialization fails. Leaving `ready` unawaited after
+`destroy()` or in an unsupported environment does not produce an unhandled
+rejection, so a React StrictMode effect that destroys the instance in cleanup
+stays quiet. Setup failures and a missing target still surface as unhandled
+rejections when `ready` is left unhandled, even with `onError`.
 
 `onResize(state)` runs whenever the render size actually changes (not on setup,
 but also after `setResolution()`), for work that depends on the size, such as

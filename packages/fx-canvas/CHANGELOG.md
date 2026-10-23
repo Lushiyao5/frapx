@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `timeSource` option and `setTimeSource(source | null)` make the realtime loop follow an external transport such as an audio player: `u_time` is the source's value on every frame, and offscreen, hidden and reduced-motion pausing and the pointer uniforms keep working, which `clock: "manual"` bypasses. `u_delta` is clamped to 0.1 s and is 0 when the source goes back. A manual clock ignores the source but keeps it; `renderMode: "demand"` does not read it (`debug` warns). Re-exports the `TimeSource` type.
+
+### Fixed
+
+- Leaving `ready` unawaited no longer logs an unhandled rejection after `destroy()` or in an unsupported environment, via `@frapx/core`; awaiting it still rejects.
+
+### Documentation
+
+- "Following an audio transport" in the README and on the docs site, with why aligning a realtime clock once at play drifts.
+- When `ready` rejects and when it surfaces as unhandled, in the README and on the docs site.
+
 ## 0.10.1 - 2026-10-20
 
 ### Fixed

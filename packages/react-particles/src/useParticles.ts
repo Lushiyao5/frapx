@@ -48,8 +48,8 @@ export type UseParticlesResult = {
 
 /**
  * Options are compared by value. Uniform-backed values (`rate`, `opacity`,
- * force strengths…), `color`, `palette`, `blend`, `clock` and `resolution`
- * change in place; any other change, dropping one of those values, or a
+ * force strengths…), `color`, `palette`, `blend`, `clock`, `timeSource` and
+ * `resolution` change in place; any other change, dropping one of those values, or a
  * `rate` that outgrows the automatic pool recreates the instance.
  */
 export const useParticles = (
@@ -83,6 +83,13 @@ export const useParticles = (
     setTarget(node);
   }, []);
 
+  // The instance gets a stable wrapper that calls the latest source, so an
+  // inline function neither recreates it nor restarts u_delta every render.
+  const readTimeSource = useCallback(
+    () => latestOptionsRef.current.timeSource?.() ?? Number.NaN,
+    [latestOptionsRef]
+  );
+
   useEffect(() => {
     mountedRef.current = true;
     return () => {
@@ -98,6 +105,7 @@ export const useParticles = (
     delete rest.onParticlesReady;
     delete rest.onParticlesError;
     delete rest.uniformSources;
+    if (rest.timeSource) rest.timeSource = readTimeSource;
 
     let fx: ParticlesInstance;
     try {
@@ -249,6 +257,11 @@ export const useParticles = (
   useEffect(() => {
     instanceRef.current?.setClock(clock);
   }, [clock]);
+
+  const hasTimeSource = options.timeSource !== undefined;
+  useEffect(() => {
+    instanceRef.current?.setTimeSource(hasTimeSource ? readTimeSource : null);
+  }, [hasTimeSource, readTimeSource]);
 
   // Compared by value so an inline array literal does not re-apply every render.
   const resolutionKey = options.resolution

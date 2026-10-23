@@ -94,6 +94,16 @@ ref.current?.setTime(2);
 const png = await ref.current?.captureFrame();
 ```
 
+`timeSource` follows an external transport such as an audio player while the
+offscreen, hidden and reduced-motion gates keep working (see
+[Following an audio transport](/frapx/packages/fx-canvas/#following-an-audio-transport)).
+The latest function is called on every frame, so an inline arrow function
+neither recreates the instance nor restarts `u_delta`:
+
+```tsx
+<ShaderBackground fragment={fragment} timeSource={() => transport.getPositionMs() / 1000} />
+```
+
 ### Timelines
 
 `uniformSources` binds sources such as `keyframes()` in array order (a later

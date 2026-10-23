@@ -34,7 +34,8 @@ jobs:
 
   e2e:
     name: E2E Tests
-    runs-on: ubuntu-latest
+    # ubuntu-latest moved to 26.04, where Playwright 1.60 cannot install chromium.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 

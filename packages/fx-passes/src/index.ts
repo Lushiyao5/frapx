@@ -19,6 +19,7 @@ export type {
   ShaderLayer,
   ShaderStatus,
   TextureInput,
+  TimeSource,
   TextureMap,
   UniformInput,
   UniformInputMap,

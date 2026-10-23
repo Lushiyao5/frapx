@@ -20,7 +20,8 @@ export type LiveValues = {
 const TOP_UNIFORMS = ["rate", "opacity", "twinkle", "perspective"] as const;
 
 // Options left out of the structure: live values, the forces (handled
-// separately), the in-place clock and resolution, and the hook's own options.
+// separately), the in-place clock, time source and resolution, and the hook's
+// own options.
 const NOT_STRUCTURE = new Set<string>([
   ...TOP_UNIFORMS,
   "color",
@@ -28,6 +29,7 @@ const NOT_STRUCTURE = new Set<string>([
   "blend",
   "forces",
   "clock",
+  "timeSource",
   "resolution",
   "onParticlesReady",
   "onParticlesError",

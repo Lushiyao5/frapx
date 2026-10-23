@@ -74,7 +74,7 @@ Accumulating passes must come first in the list. They may only read passes liste
 | `canvas`, `gl`, `status`, `supported`, `ready`, `clock` | As in `@frapx/fx-canvas` |
 | `accumulation`, `samplesDrawn` | The resolved accumulation settings, and the samples of the current frame drawn so far |
 | `start()`, `stop()`, `render()`, `resize()`, `destroy()` | Lifecycle. `render()` at an unchanged time adds the next sample |
-| `setTime(seconds)`, `setClock(clock)`, `setResolution(size)` | Clock and size, as in `@frapx/fx-canvas` |
+| `setTime(seconds)`, `setClock(clock)`, `setTimeSource(source)`, `setResolution(size)` | Clock and size, as in `@frapx/fx-canvas`. With a `timeSource`, the realtime loop shows one sample per frame at the source's time, as it does without one |
 | `setAccumulation(options)` | Changes `samples`, `shutter`, `fps` or `loop` and restarts the frame's samples |
 | `captureFrame(options)` | Draws every sample of the current frame and reads the last pass |
 | `resetFeedback()` | Clears the previous-frame outputs |

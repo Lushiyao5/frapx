@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `timeSource` option and `setTimeSource(source | null)`, as in `@frapx/fx-canvas`: the realtime loop follows an external transport and keeps the lifecycle gates. A jump in the source is handled like a slow frame, not a seek: forward runs up to 4 steps and drops the rest, back restarts from the prewarmed start, so no frame costs more than the prewarm plus 4 steps. Re-exports the `TimeSource` type.
+
+### Fixed
+
+- Leaving `ready` unawaited no longer logs an unhandled rejection after `destroy()` or in an unsupported environment, via `@frapx/core`; awaiting it still rejects.
+
 ## 0.1.1 - 2026-10-16
 
 ### Fixed
