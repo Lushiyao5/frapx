@@ -111,18 +111,42 @@ export const assertFfmpeg = async (probe = false): Promise<void> => {
   }
 };
 
+/**
+ * Reads the duration from ffprobe's `codec_type=` / `duration=` lines, and
+ * refuses a file without an audio stream, which would only fail at encode time.
+ */
+export const parseAudioProbe = (stdout: string, file: string): number => {
+  const fields = new Map(
+    stdout
+      .split(/\r?\n/)
+      .map((line) => line.trim().split("="))
+      .filter((pair): pair is [string, string] => pair.length === 2)
+  );
+  if (fields.get("codec_type") !== "audio") throw new Error(`${file} has no audio stream.`);
+  const seconds = Number(fields.get("duration"));
+  if (!Number.isFinite(seconds) || seconds <= 0) throw new Error(`ffprobe reports no duration for ${file}.`);
+  return seconds;
+};
+
 /** The duration of an audio file in seconds, read with ffprobe. */
 export const probeDuration = async (file: string): Promise<number> => {
   const { code, stdout, stderr } = await run(
-    ["-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", file],
+    [
+      "-v",
+      "error",
+      "-select_streams",
+      "a:0",
+      "-show_entries",
+      "stream=codec_type:format=duration",
+      "-of",
+      "default=noprint_wrappers=1",
+      file
+    ],
     undefined,
     "ffprobe"
   );
-  const seconds = Number(stdout.trim());
-  if (code !== 0 || !Number.isFinite(seconds)) {
-    throw new Error(`ffprobe could not read the duration of ${file}:\n${stderr.trim()}`);
-  }
-  return seconds;
+  if (code !== 0) throw new Error(`ffprobe could not read ${file}:\n${stderr.trim()}`);
+  return parseAudioProbe(stdout, file);
 };
 
 /** Describes how `audio` seconds miss the page's `duration`, or returns null within one frame. */

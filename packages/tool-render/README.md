@@ -100,7 +100,7 @@ ffmpeg -framerate 30 -i frame_%05d.png \
 frapx-render dist --path /music --out renders/music --set spp=16 --encode h264 --audio public/music.wav
 ```
 
-Before rendering, `frapx-render` reads the file's duration with `ffprobe` and compares it with the page's `duration`. More than one frame apart prints a warning (a `warning` event in the API). `--strict-audio` stops instead, so a file exported a few milliseconds short does not end up as a video whose picture drifts against the sound on every loop. The CLI does not know the tempo: check that the beats sit on the grid in your own tooling. `--audio` does not change the frames, so `--resume` does not compare it. `frapx-render.json` records it for reference.
+Before rendering, `frapx-render` reads the file with `ffprobe`, refuses it when it has no audio stream, and compares its duration with the page's `duration`. More than one frame apart prints a warning (a `warning` event in the API). `--strict-audio` stops instead, so a file exported a few milliseconds short does not end up as a video whose picture drifts against the sound on every loop. The CLI does not know the tempo: check that the beats sit on the grid in your own tooling. `--audio` does not change the frames, so `--resume` does not compare it. `frapx-render.json` records it for reference.
 
 ## API
 

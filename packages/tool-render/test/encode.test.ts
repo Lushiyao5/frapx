@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { audioDurationMismatch, ffmpegArgs, videoFileName } from "../src/encode";
+import { audioDurationMismatch, ffmpegArgs, parseAudioProbe, videoFileName } from "../src/encode";
 
 describe("ffmpegArgs", () => {
   it("encodes the range from its first frame with BT.709 tags", () => {
@@ -58,6 +58,19 @@ describe("ffmpegArgs", () => {
     const args = ffmpegArgs("h264", 60, [0, 899], "frames.mp4", "/music/song.wav");
     expect(args.slice(args.indexOf("-ss"), args.indexOf("-ss") + 4)).toEqual(["-ss", "0", "-t", "15"]);
     expect(args).toEqual(expect.arrayContaining(["-c:a", "aac", "-b:a", "320k"]));
+  });
+});
+
+describe("parseAudioProbe", () => {
+  it("reads the duration of a file with an audio stream", () => {
+    expect(parseAudioProbe("codec_type=audio\nduration=15.000000\n", "song.wav")).toBe(15);
+  });
+
+  it("refuses a file without audio or without a duration", () => {
+    // A video-only file still has a format duration.
+    expect(() => parseAudioProbe("duration=15.000000\n", "silent.mp4")).toThrow("silent.mp4 has no audio stream.");
+    expect(() => parseAudioProbe("codec_type=audio\nduration=N/A\n", "live.aac")).toThrow("no duration");
+    expect(() => parseAudioProbe("", "x.png")).toThrow("no audio stream");
   });
 });
 
