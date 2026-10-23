@@ -348,6 +348,19 @@ describe("realtime setTime", () => {
 });
 
 describe("time source", () => {
+  it("warns under debug that demand mode never reads the source", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { host } = create({ renderMode: "demand", debug: true, timeSource: () => 1 });
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("not read with renderMode \"demand\""));
+    warn.mockClear();
+    host.setTimeSource(null);
+    create({ debug: true, timeSource: () => 1 });
+    expect(warn).not.toHaveBeenCalled();
+    host.setTimeSource(() => 2);
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+
   it("takes each frame's time from the source and the delta between frames", async () => {
     let now = 4;
     const { host, frames } = create({ timeSource: () => now });

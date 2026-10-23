@@ -85,6 +85,7 @@ class RuntimeHost implements RuntimeHostInstance {
     this.options = options;
     this.clockMode = options.clock ?? "realtime";
     this.source = options.timeSource ?? null;
+    this.warnIfSourceUnread();
     this.fixedResolution = options.resolution
       ? normalizeResolution(options.resolution)
       : null;
@@ -184,6 +185,14 @@ class RuntimeHost implements RuntimeHostInstance {
     if (this.destroyed) return;
     this.source = source;
     this.lastSourceTime = null;
+    this.warnIfSourceUnread();
+  }
+
+  // Only the realtime loop reads the source, and demand mode runs no loop.
+  private warnIfSourceUnread(): void {
+    if (this.source && this.options.renderMode === "demand") {
+      this.debugWarn("`timeSource` is not read with renderMode \"demand\", which runs no frame loop. Call setTime() instead.");
+    }
   }
 
   setResolution(resolution: Resolution | null): void {

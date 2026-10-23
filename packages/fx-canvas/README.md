@@ -323,6 +323,7 @@ const fx = createShaderBackground({
 - `u_time` is the source's value as is. `u_delta` is the step from the previous frame, clamped to 0.1 s. It is 0 when the source goes back (a seek or a loop) and on the first frame after a pause.
 - Unlike `clock: "manual"`, the gates keep working: offscreen and hidden stop drawing (the first frame after resuming reads the source again, so it is current), reduced motion holds a still frame at the source's time, and `u_pointer*` / `u_reducedMotion` behave as in realtime. Seeks, pauses and loops of the transport are followed because the time is read, not counted.
 - `render()` and `captureFrame()` redraw at the last frame's time. A source that returns a non-finite value holds the previous time.
+- Only the animation frame loop reads the source, so `renderMode: "demand"` (which runs no loop) ignores it; call `setTime()` there. `debug: true` warns about it.
 - `setTimeSource(fn | null)` changes or removes it at runtime; removing it continues from the source's last time. A manual clock ignores the source but keeps it, so switching to manual to export and back restores it.
 
 Do not align a plain realtime clock once with `setTime()` when playback starts. The realtime clock counts animation frame timestamps, not the transport, so it drifts: it starts 30–40 ms off, and when the audio loop is shorter than the visual loop the gap grows on every loop. It cannot follow seeks or pauses either. Following the transport every frame keeps it within a frame.

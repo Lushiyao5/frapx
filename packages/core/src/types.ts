@@ -204,7 +204,7 @@ export type RuntimeHostOptions = {
   renderMode?: RenderMode;
   /** Defaults to `"realtime"`. See {@link ClockMode}. */
   clock?: ClockMode;
-  /** Takes realtime frames' time from this source. See {@link TimeSource}. */
+  /** Takes realtime loop frames' time from this source; unread in demand mode. See {@link TimeSource}. */
   timeSource?: TimeSource;
   /**
    * Fixes the internal render size instead of following the target's size.

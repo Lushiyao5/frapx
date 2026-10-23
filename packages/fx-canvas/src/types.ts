@@ -168,7 +168,8 @@ export type CreateShaderBackgroundOptions<
    * reduced-motion pausing keep working, and so does the pointer; the
    * reduced-motion frame is drawn at the source's time. `render()` and
    * `captureFrame()` redraw at the last frame's time. A manual clock ignores
-   * the source but keeps it. Change later with `setTimeSource()`.
+   * the source but keeps it, and `renderMode: "demand"`, which runs no frame
+   * loop, never reads it. Change later with `setTimeSource()`.
    */
   timeSource?: TimeSource;
   /**
