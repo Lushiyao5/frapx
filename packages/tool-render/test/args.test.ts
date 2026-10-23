@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { UsageError, parseCliArgs, parseRange, parseResolution } from "../src/args";
+import { UsageError, parseCliArgs, parsePath, parseRange, parseResolution } from "../src/args";
 
 const run = (...argv: string[]) => {
   const parsed = parseCliArgs(argv);
@@ -87,9 +87,21 @@ describe("parseCliArgs", () => {
     [["dist", "--out", "o", "--set", "=1"]],
     [["dist", "--out", "o", "--fps", "0"]],
     [["dist", "--out", "o", "--timeout", "0"]],
-    [["dist", "--out", "o", "--unknown"]]
+    [["dist", "--out", "o", "--unknown"]],
+    [["dist", "--out", "o", "--path", "music"]]
   ])("rejects %j", (argv) => {
     expect(() => parseCliArgs(argv)).toThrow(UsageError);
+  });
+});
+
+describe("parsePath", () => {
+  it("accepts a route with a query and refuses anything that is not one", () => {
+    expect(run("dist", "--out", "o", "--path", "/music?take=2").path).toBe("/music?take=2");
+    expect(parsePath("/")).toBe("/");
+    expect(() => parsePath("music")).toThrow(UsageError);
+    expect(() => parsePath("//evil.example/")).toThrow(UsageError);
+    expect(() => parsePath("/\\evil.example/")).toThrow(UsageError);
+    expect(() => parsePath("")).toThrow(UsageError);
   });
 });
 

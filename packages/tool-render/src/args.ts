@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import { isRoutePath } from "./server";
 import type { BrowserName, Encoder, RenderOptions, SequenceFormat } from "./types";
 
 /** A command-line mistake; the CLI prints it with the usage and exits with 2. */
@@ -15,6 +16,7 @@ as Vite's dist/, for long renders).
 
 Options:
   -o, --out <dir>          Output directory (required)
+      --path <route>       Route to open in a directory, e.g. /music (default: /)
   -r, --range <a-b>        Inclusive frame range (default: the page's duration)
       --fps <n>            Frame rate (default: the page's)
       --resolution <WxH>   Override the render size, e.g. 2560x1440
@@ -57,6 +59,11 @@ export const parseResolution = (value: string): readonly [number, number] => {
   return [parseInteger("--resolution", match[1]!, 1), parseInteger("--resolution", match[2]!, 1)];
 };
 
+export const parsePath = (value: string): string => {
+  if (!isRoutePath(value)) throw new UsageError(`--path must start with a single /, got "${value}"`);
+  return value;
+};
+
 const parseFps = (value: string): number => {
   const fps = Number(value);
   if (!/^\d+(\.\d+)?$/.test(value) || !(fps > 0)) {
@@ -91,6 +98,7 @@ export const parseCliArgs = (argv: readonly string[]): ParsedArgs => {
       strict: true,
       options: {
         out: { type: "string", short: "o" },
+        path: { type: "string" },
         range: { type: "string", short: "r" },
         fps: { type: "string" },
         resolution: { type: "string" },
@@ -135,6 +143,7 @@ export const parseCliArgs = (argv: readonly string[]): ParsedArgs => {
     allowSoftware: values["allow-software"] ?? false,
     timeout: values.timeout === undefined ? 60 : parseInteger("--timeout", values.timeout, 1)
   };
+  if (values.path !== undefined) options.path = parsePath(values.path);
   if (values.range !== undefined) options.range = parseRange(values.range);
   if (values.fps !== undefined) options.fps = parseFps(values.fps);
   if (values.resolution !== undefined) options.resolution = parseResolution(values.resolution);

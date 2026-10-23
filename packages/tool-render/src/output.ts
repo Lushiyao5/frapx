@@ -17,6 +17,8 @@ export const parseFrameFileName = (name: string): number | null => {
 /** The settings that decide what a frame looks like. Resuming requires them to match. */
 export type RenderSettings = {
   source: string;
+  /** The route opened in a directory source; absent (older manifests, URLs) means `/`. */
+  path?: string;
   fps: number;
   format: SequenceFormat;
   resolution: readonly [number, number] | null;
@@ -41,6 +43,7 @@ export const compareSettings = (saved: RenderSettings, current: RenderSettings):
     }
   };
   check("source", saved.source, current.source);
+  check("path", saved.path ?? "/", current.path ?? "/");
   check("fps", saved.fps, current.fps);
   check("format", saved.format, current.format);
   check("resolution", saved.resolution, current.resolution);

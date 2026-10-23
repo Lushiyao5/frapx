@@ -5,6 +5,8 @@ export type BrowserName = "chrome" | "chromium";
 export type RenderOptions = {
   /** An http(s) URL, or a directory to serve (such as a Vite `dist/`). */
   source: string;
+  /** The route to open in a directory source, such as `/music`; defaults to `/`. */
+  path?: string;
   /** Output directory for the frames, `frapx-render.json` and encoded videos. */
   out: string;
   /** Inclusive frame range. Defaults to the page's duration at `fps`. */

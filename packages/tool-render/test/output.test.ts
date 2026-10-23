@@ -46,6 +46,11 @@ describe("compareSettings", () => {
       'params: {"mode":"path","spp":"192"} → {"spp":"64"}'
     ]);
   });
+
+  it("treats a manifest without a path as the root route", () => {
+    expect(compareSettings(settings, { ...settings, path: "/" })).toEqual([]);
+    expect(compareSettings(settings, { ...settings, path: "/music" })).toEqual(['path: "/" → "/music"']);
+  });
 });
 
 describe("planFrames", () => {
