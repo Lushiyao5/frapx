@@ -68,6 +68,13 @@ export const useShaderBackground = <
     setTarget(node);
   }, []);
 
+  // The instance gets a stable wrapper that calls the latest source, so an
+  // inline function neither recreates it nor restarts u_delta every render.
+  const readTimeSource = useCallback(
+    () => latestOptionsRef.current.timeSource?.() ?? Number.NaN,
+    [latestOptionsRef]
+  );
+
   useEffect(() => {
     mountedRef.current = true;
     return () => {
@@ -89,12 +96,14 @@ export const useShaderBackground = <
       uniforms,
       textures,
       uniformSources,
+      timeSource,
       ...rest
     } = latest;
 
     const createOptions = omitUndefined({
       ...rest,
       target,
+      timeSource: timeSource && readTimeSource,
       uniforms,
       textures,
       onReady(readyInstance: ShaderBackgroundInstance<TUniforms>) {
@@ -218,6 +227,11 @@ export const useShaderBackground = <
   useEffect(() => {
     instanceRef.current?.setClock(clock);
   }, [clock]);
+
+  const hasTimeSource = options.timeSource !== undefined;
+  useEffect(() => {
+    instanceRef.current?.setTimeSource(hasTimeSource ? readTimeSource : null);
+  }, [hasTimeSource, readTimeSource]);
 
   // Compared by value so an inline array literal does not re-apply every render.
   const resolutionKey = options.resolution

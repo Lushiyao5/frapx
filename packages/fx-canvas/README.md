@@ -307,6 +307,27 @@ for (let frame = 0; frame < 120; frame += 1) {
 - Omit both `target` and `canvas` while passing `resolution` to render into a detached canvas that is never inserted into the page (`fx.canvas` gives you the element).
 - The drawing buffer is not preserved between frames, so read pixels in the same task as `render()` (or in `onAfterRender`) — or use `captureFrame()`, which does that for you.
 
+### Following an audio transport
+
+To keep a realtime shader in step with audio (or any transport that knows its position), pass `timeSource`. Every animation frame then takes `u_time` from it:
+
+```ts
+const fx = createShaderBackground({
+  target: ".hero",
+  fragment,
+  respectReducedMotion: true,
+  timeSource: () => transport.getPositionMs() / 1000 // seconds
+});
+```
+
+- `u_time` is the source's value as is. `u_delta` is the step from the previous frame, clamped to 0.1 s. It is 0 when the source goes back (a seek or a loop) and on the first frame after a pause.
+- Unlike `clock: "manual"`, the gates keep working: offscreen and hidden stop drawing (the first frame after resuming reads the source again, so it is current), reduced motion holds a still frame at the source's time, and `u_pointer*` / `u_reducedMotion` behave as in realtime. Seeks, pauses and loops of the transport are followed because the time is read, not counted.
+- `render()` and `captureFrame()` redraw at the last frame's time. A source that returns a non-finite value holds the previous time.
+- Only the animation frame loop reads the source, so `renderMode: "demand"` (which runs no loop) ignores it; call `setTime()` there. `debug: true` warns about it.
+- `setTimeSource(fn | null)` changes or removes it at runtime; removing it continues from the source's last time. A manual clock ignores the source but keeps it, so switching to manual to export and back restores it.
+
+Do not align a plain realtime clock once with `setTime()` when playback starts. The realtime clock counts animation frame timestamps, not the transport, so it drifts: it starts 30–40 ms off, and when the audio loop is shorter than the visual loop the gap grows on every loop. It cannot follow seeks or pauses either. Following the transport every frame keeps it within a frame.
+
 ### Capturing frames
 
 `captureFrame()` draws a frame and reads it back in the same task, so it never depends on `preserveDrawingBuffer`:
@@ -328,7 +349,7 @@ const hdr = await fx.captureFrame({ format: "rgba16f" });   // Float32Array
 uniform vec2 u_resolution;     // drawing buffer px
 uniform vec2 u_viewportSize;   // CSS px
 uniform float u_pixelRatio;
-uniform float u_time;          // seconds, paused offscreen/hidden (manual clock: set by setTime)
+uniform float u_time;          // seconds, paused offscreen/hidden (manual clock: set by setTime; timeSource: its value)
 uniform float u_delta;         // seconds, clamped to 0.1 (manual clock: not clamped)
 uniform vec2 u_pointer;        // drawing buffer px, bottom-left origin
 uniform vec2 u_pointerUv;      // 0..1, bottom-left origin
@@ -356,6 +377,7 @@ createShaderBackground({
   respectReducedMotion: false,
   renderMode: "always",
   clock: "realtime",
+  // timeSource: () => audio.currentTime,
   // resolution: [1920, 1080],
   dpr: "auto",
   maxDpr: 2,
@@ -422,6 +444,7 @@ fx.resize();
 fx.destroy();
 fx.setTime(2.5);
 fx.setClock("manual");
+fx.setTimeSource(() => audio.currentTime); // or null for animation frame time
 fx.setResolution([1920, 1080]); // or null to follow the target
 await fx.captureFrame({ format: "png" });
 fx.feedbackFormat; // "rgba8" | "rgba16f" | null

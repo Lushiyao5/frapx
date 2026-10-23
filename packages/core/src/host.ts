@@ -9,7 +9,8 @@ import type {
   Resolution,
   RuntimeHostInstance,
   RuntimeHostOptions,
-  ShaderStatus
+  ShaderStatus,
+  TimeSource
 } from "./types";
 import { DestroyedError, TargetNotFoundError, UnsupportedError } from "./internal/errors";
 import { canvasToPng, readPixels } from "./internal/capture";
@@ -25,6 +26,9 @@ const MAX_DELTA_SECONDS = 0.1;
 
 // Manual clocks report a neutral pointer so output never depends on input.
 const IDLE_POINTER: HostPointer = { x: 0, y: 0, uvX: 0, uvY: 0, active: 0 };
+
+const clampDelta = (delta: number): number =>
+  Math.min(Math.max(delta, 0), MAX_DELTA_SECONDS);
 
 type Gate = "offscreen" | "hidden" | "reducedMotion";
 
@@ -68,6 +72,9 @@ class RuntimeHost implements RuntimeHostInstance {
   private clockMode: ClockMode;
   private manualDelta = 0;
   private lastManualTime: number | null = null;
+  private source: TimeSource | null;
+  // The source's value at the previous loop frame; null restarts u_delta at 0.
+  private lastSourceTime: number | null = null;
   private fixedResolution: Resolution | null;
   private objectFitRestore: string | null = null;
   // Letterbox offset (CSS px) of the contained canvas content inside the target.
@@ -77,6 +84,8 @@ class RuntimeHost implements RuntimeHostInstance {
   constructor(options: RuntimeHostOptions) {
     this.options = options;
     this.clockMode = options.clock ?? "realtime";
+    this.source = options.timeSource ?? null;
+    this.warnIfSourceUnread();
     this.fixedResolution = options.resolution
       ? normalizeResolution(options.resolution)
       : null;
@@ -109,6 +118,10 @@ class RuntimeHost implements RuntimeHostInstance {
     return this.clockMode;
   }
 
+  get timeSource(): TimeSource | null {
+    return this.source;
+  }
+
   start(): void {
     if (this.destroyed || this.currentStatus === "unsupported") return;
     this.running = true;
@@ -139,6 +152,8 @@ class RuntimeHost implements RuntimeHostInstance {
       return;
     }
 
+    // Redraws at the last frame's time: refinement and reduced motion must
+    // not chase a running source.
     if (this.hasVisibilityBlock) return;
     this.renderInternal(this.elapsed, 0);
   }
@@ -164,6 +179,20 @@ class RuntimeHost implements RuntimeHostInstance {
     this.lastManualTime = null;
     // Gates kept tracking while manual, so this resumes against current state.
     this.reconcile();
+  }
+
+  setTimeSource(source: TimeSource | null): void {
+    if (this.destroyed) return;
+    this.source = source;
+    this.lastSourceTime = null;
+    this.warnIfSourceUnread();
+  }
+
+  // Only the realtime loop reads the source, and demand mode runs no loop.
+  private warnIfSourceUnread(): void {
+    if (this.source && this.options.renderMode === "demand") {
+      this.debugWarn("`timeSource` is not read with renderMode \"demand\", which runs no frame loop. Call setTime() instead.");
+    }
   }
 
   setResolution(resolution: Resolution | null): void {
@@ -280,6 +309,34 @@ class RuntimeHost implements RuntimeHostInstance {
     return this.clockMode === "manual";
   }
 
+  private get followsSource(): boolean {
+    return this.source !== null && !this.isManual;
+  }
+
+  // A non-finite reading holds the previous time instead of throwing in a frame.
+  private readSource(): number | null {
+    if (!this.followsSource) return null;
+    const now = this.source!();
+    return Number.isFinite(now) ? now : null;
+  }
+
+  // The static frame takes the source's current time without a delta.
+  private syncSourceTime(): void {
+    const now = this.readSource();
+    if (now !== null) this.elapsed = now;
+  }
+
+  // A loop frame under a source: time is the source's value, never clamped;
+  // delta is the step from the previous frame, 0 when it went back.
+  private advanceFromSource(): number {
+    const now = this.readSource();
+    if (now === null) return 0;
+    const previous = this.lastSourceTime;
+    this.lastSourceTime = now;
+    this.elapsed = now;
+    return previous === null ? 0 : clampDelta(now - previous);
+  }
+
   private get isDetached(): boolean {
     if (this.dom) return this.dom.detached === true;
     return this.options.target === undefined && this.options.canvas === undefined;
@@ -349,6 +406,7 @@ class RuntimeHost implements RuntimeHostInstance {
 
   private renderStaticFrame(): void {
     if (this.hasVisibilityBlock) return;
+    this.syncSourceTime();
     this.renderInternal(this.elapsed, 0);
   }
 
@@ -524,10 +582,14 @@ class RuntimeHost implements RuntimeHostInstance {
       if (!this.running || this.destroyed) return;
 
       const seconds = timestamp / 1000;
-      const rawDelta = this.lastTimestamp ? seconds - this.lastTimestamp : 0;
-      const delta = Math.min(Math.max(rawDelta, 0), MAX_DELTA_SECONDS);
+      let delta: number;
+      if (this.followsSource) {
+        delta = this.advanceFromSource();
+      } else {
+        delta = this.lastTimestamp ? clampDelta(seconds - this.lastTimestamp) : 0;
+        this.elapsed += delta;
+      }
       this.lastTimestamp = seconds;
-      this.elapsed += delta;
       this.renderInternal(this.elapsed, delta);
       this.scheduleFrame();
     });
@@ -539,6 +601,7 @@ class RuntimeHost implements RuntimeHostInstance {
       this.rafId = 0;
     }
     this.lastTimestamp = 0;
+    this.lastSourceTime = null;
   }
 
   private async init(): Promise<void> {

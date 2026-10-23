@@ -196,6 +196,35 @@ describe("clock option", () => {
   });
 });
 
+describe("timeSource option", () => {
+  it("takes the loop's time from the source and switches with setTimeSource", async () => {
+    const canvas = new Canvas();
+    const states: RenderState[] = [];
+    let now = 12;
+    const fx = create(canvas, {
+      timeSource: () => now,
+      onBeforeRender: (state) => {
+        states.push(state);
+      }
+    });
+    await fx.ready;
+    expect(fx.clock).toBe("realtime");
+
+    rafCallbacks.shift()?.(1000);
+    now = 12.05;
+    rafCallbacks.shift()?.(1016);
+    fx.setTimeSource(null);
+    now = 0;
+    rafCallbacks.shift()?.(1032);
+
+    expect(states.map((s) => [s.time, s.delta])).toEqual([
+      [12, 0],
+      [12.05, expect.closeTo(0.05)],
+      [expect.closeTo(12.066), expect.closeTo(0.016)]
+    ]);
+  });
+});
+
 describe("resolution option", () => {
   it("renders at the fixed size and switches with setResolution", async () => {
     const canvas = new Canvas();
@@ -231,6 +260,7 @@ describe("after destroy", () => {
     expect(() => {
       fx.setTime(1);
       fx.setClock("realtime");
+      fx.setTimeSource(() => 1);
       fx.setResolution([10, 10]);
     }).not.toThrow();
     expect(fx.status).toBe("destroyed");

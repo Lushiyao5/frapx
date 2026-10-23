@@ -8,6 +8,7 @@ import type {
   ShaderLayer,
   ShaderStatus,
   TextureInput,
+  TimeSource,
   UniformInput,
   UniformSource
 } from "@frapx/core";
@@ -22,6 +23,7 @@ export type {
   ShaderLayer,
   ShaderStatus,
   TextureInput,
+  TimeSource,
   UniformInput
 } from "@frapx/core";
 
@@ -190,6 +192,8 @@ export type CreateParticlesOptions = ParticleConfig & {
   respectReducedMotion?: boolean;
   /** Defaults to `"realtime"`. See {@link ParticlesInstance.setTime}. */
   clock?: ClockMode;
+  /** Realtime frames take their time from this source. See {@link ParticlesInstance.setTimeSource}. */
+  timeSource?: TimeSource;
   /** Fixed internal render size. Required without `target` or `canvas`. */
   resolution?: Resolution;
   dpr?: DprOption;
@@ -227,6 +231,13 @@ export type ParticlesInstance = {
   setTime(seconds: number): void;
   /** Switching to manual replays from the start on the next frame. */
   setClock(clock: ClockMode): void;
+  /**
+   * Makes the realtime clock follow an external transport, keeping the gates
+   * and the pointer. A jump in the source is not a seek: going forward runs at
+   * most 4 steps and drops the rest, going back restarts from the prewarmed
+   * start. `setTime()` has no lasting effect while a source is set.
+   */
+  setTimeSource(source: TimeSource | null): void;
   setResolution(resolution: Resolution | null): void;
   /**
    * Draws the current frame and reads it back. `"png"` and `"rgba16f"` are

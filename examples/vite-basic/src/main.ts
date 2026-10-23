@@ -9,6 +9,8 @@ declare global {
       pixel: number[] | null;
     };
     __frapxShader?: ShaderBackgroundInstance;
+    /** The external transport position `?timeSource=1` follows, in seconds. */
+    __frapxTransportTime?: number;
   }
 }
 
@@ -151,6 +153,8 @@ const fragment =
 // `?clock=manual&res=640x360` exercises deterministic rendering.
 const clock = params.get("clock") === "manual" ? "manual" : "realtime";
 const resolutionMatch = /^(\d+)x(\d+)$/.exec(params.get("res") ?? "");
+// `?timeSource=1` follows window.__frapxTransportTime like an audio transport.
+const followTransport = params.get("timeSource") === "1";
 
 const fx = createShaderBackground({
   target: "[data-hero]",
@@ -159,6 +163,7 @@ const fx = createShaderBackground({
     ? { format: feedbackFormat, formatFallback: params.get("strict") !== "1" }
     : useFeedback,
   clock,
+  ...(followTransport && { timeSource: () => window.__frapxTransportTime ?? 0 }),
   ...(resolutionMatch && {
     resolution: [Number(resolutionMatch[1]), Number(resolutionMatch[2])] as const
   }),

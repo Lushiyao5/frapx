@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `timeSource` host option and `setTimeSource(source | null)`: the realtime loop takes each frame's time from an external transport (`() => seconds`), such as an audio player, while the offscreen, hidden and reduced-motion gates and the pointer keep working. `time` is the source's value, never clamped; `delta` is the step from the previous frame, clamped to `[0, 0.1]`, and 0 when the source goes back or on the first frame after a pause. The reduced-motion still frame reads the source; `render()` and `captureFrame()` redraw at the last frame's time. A manual clock ignores the source but keeps it, and `renderMode: "demand"` (no frame loop) never reads it, with a `debug` warning. New `TimeSource` type.
+
 ## 0.5.1 - 2026-10-20
 
 ### Fixed
