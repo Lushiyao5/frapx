@@ -17,21 +17,21 @@ frapx とステップシーケンサー [vixeq](https://github.com/kramhash/vixe
 
 ## 作業単位
 
-| ID | Issue | リポジトリ | 時期 | 内容 | 依存 |
-| --- | --- | --- | --- | --- | --- |
-| X1 | [#36](https://github.com/kramhash/frapx/issues/36) | frapx | — | realtime clock に外部の時刻源を渡せるようにし、ゲート（offscreen / hidden / reduced-motion）を残す（F3・F15） | なし |
-| X2 | [#37](https://github.com/kramhash/frapx/issues/37) | frapx | — | `destroy()` で `ready` が reject されたとき、未処理の rejection にしない（F7） | なし |
-| X3 | [#38](https://github.com/kramhash/frapx/issues/38) | frapx | — | `frapx-render` に dist ディレクトリを渡したとき、サブルートの指定と SPA fallback を使えるようにする（F8） | なし |
-| X4 | [#39](https://github.com/kramhash/frapx/issues/39) | frapx | — | `frapx-render --audio` で音を mux し、音の長さとグリッドを検査する（F9・F14） | なし |
-| X5 | [#40](https://github.com/kramhash/frapx/issues/40) | frapx | — | docs のレシピ「シーケンサーで uniform を動かす」（F10・F17） | V3 |
-| V1 | [vixeq#3](https://github.com/kramhash/vixeq/issues/3) | vixeq | 1.0.0-rc.1 | track id を呼び出し側が指定でき、自動で振る id もプロジェクト内で決まるようにする（F2） | なし |
-| V2 | [vixeq#4](https://github.com/kramhash/vixeq/issues/4) | vixeq | 1.0.0-rc.1 | 負の `startPositionMs` を扱う（F13） | なし |
-| V3 | [vixeq#5](https://github.com/kramhash/vixeq/issues/5) | vixeq | 1.1.0 | 時刻から値を引く純関数一式（単一パターン用のサンプラー、直前のステップの問い合わせ、attack と先読みを持つ包絡、hold イージング）（F1・F5・F6・F17） | なし |
-| V4 | [vixeq#6](https://github.com/kramhash/vixeq/issues/6) | vixeq | 1.1.0 | transport で音の出力遅延を補正する（F4） | なし |
-| V5 | [vixeq#7](https://github.com/kramhash/vixeq/issues/7) | vixeq | 1.1.0 | playground を `@frapx/fx-canvas` の `bindUniforms` 方式に移行する（F12） | V3 |
-| V6 | [vixeq#2](https://github.com/kramhash/vixeq/issues/2) | vixeq | — | player-react でアレンジメントを編集できるようにする（F16） | 後回し |
+| ID | Issue | リポジトリ | 時期 | 内容 | 依存 | 状態 |
+| --- | --- | --- | --- | --- | --- | --- |
+| X1 | [#36](https://github.com/kramhash/frapx/issues/36) | frapx | — | realtime clock に外部の時刻源を渡せるようにし、ゲート（offscreen / hidden / reduced-motion）を残す（F3・F15） | なし | 完了（#41、core 0.6.0 ほか） |
+| X2 | [#37](https://github.com/kramhash/frapx/issues/37) | frapx | — | `destroy()` で `ready` が reject されたとき、未処理の rejection にしない（F7） | なし | 完了（#42、core 0.6.0 ほか） |
+| X3 | [#38](https://github.com/kramhash/frapx/issues/38) | frapx | — | `frapx-render` に dist ディレクトリを渡したとき、サブルートの指定と SPA fallback を使えるようにする（F8） | なし | 完了（#43、tool-render 0.3.0） |
+| X4 | [#39](https://github.com/kramhash/frapx/issues/39) | frapx | — | `frapx-render --audio` で音を mux し、音の長さとグリッドを検査する（F9・F14） | なし | 完了（#44、tool-render 0.3.0） |
+| X5 | [#40](https://github.com/kramhash/frapx/issues/40) | frapx | — | docs のレシピ「シーケンサーで uniform を動かす」（F10・F17） | V3 | V3 待ち |
+| V1 | [vixeq#3](https://github.com/kramhash/vixeq/issues/3) | vixeq | 1.0.0-rc.1 | track id を呼び出し側が指定でき、自動で振る id もプロジェクト内で決まるようにする（F2） | なし | 完了 |
+| V2 | [vixeq#4](https://github.com/kramhash/vixeq/issues/4) | vixeq | 1.0.0-rc.1 | 負の `startPositionMs` を扱う（F13） | なし | 完了 |
+| V3 | [vixeq#5](https://github.com/kramhash/vixeq/issues/5) | vixeq | 1.1.0 | 時刻から値を引く純関数一式（単一パターン用のサンプラー、直前のステップの問い合わせ、attack と先読みを持つ包絡、hold イージング）（F1・F5・F6・F17） | なし | rc.2 → 1.0.0 の後 |
+| V4 | [vixeq#6](https://github.com/kramhash/vixeq/issues/6) | vixeq | 1.1.0 | transport で音の出力遅延を補正する（F4） | なし | 未着手（1.1.0） |
+| V5 | [vixeq#7](https://github.com/kramhash/vixeq/issues/7) | vixeq | 1.1.0 | playground を `@frapx/fx-canvas` の `bindUniforms` 方式に移行する（F12） | V3 | V3 待ち |
+| V6 | [vixeq#2](https://github.com/kramhash/vixeq/issues/2) | vixeq | — | player-react でアレンジメントを編集できるようにする（F16） | 後回し | 後回し |
 
-- 並行して進められるのは X1・X2・X3・X4・V1・V2・V4。
+- 2026-10-23 時点で、X1〜X4・V1・V2 は完了。V3・V4 は、vixeq の rc.2 の改名（vixeq#21・#22）と 1.0.0 の後に、1.1.0 として進める。
 - X5 と V5 は V3 のリリース後に着手する。
 - F11（pnpm 11 の `minimumReleaseAge` のせいで、公開当日の版がインストールされない）は起票しない。リリース告知では「1 日待つか、`minimumReleaseAgeExclude` に入れる」と添える。
 
@@ -88,13 +88,25 @@ frapx とステップシーケンサー [vixeq](https://github.com/kramhash/vixe
   - 拍の瞬間に画面全体を光らせ、約 80ms で消える `flash` を足すと、輝度のピークが 32/32 拍とも拍のフレームに来た。
   - 拍に合わせる表現は、立ち上がりで最大になる包絡を基本にする。純関数なら、拍の手前から動き出す予備動作も書ける。
 
+### 再測定（2026-10-23、公開版）
+frapx を公開版（core 0.6.0 / fx-canvas 0.11.0 / fx-passes 0.4.0 / react-canvas 0.8.0 / tool-render 0.3.0）に上げ、回避策を外して測り直した。lab の `/live` と `/music` は `?clock=source`（`timeSource`）を既定にし、`manual` と `realtime` は比較用に残した。
+
+- **F7**: StrictMode の開発ビルドで `/music` と `/live` を開いても、`DestroyedError` は出ない。
+- **F3**: `/live` で reduced-motion をエミュレートすると、`source` は止まる。`manual` は動き続ける（以前と同じ）。
+- **F15**: `/music` で transport と frapx の時刻差を、19 秒・ループ 1 回を跨いで測った。
+  - `source`: −5.3〜0 ms。ループの後も変わらない。
+  - `manual`: 1 周目は −16〜0 ms、ループの後は −5.3〜0 ms。
+  - `realtime`（再生開始時に 1 回だけ合わせる）: +23〜+29 ms の一定のずれ。
+- **F8**: `frapx-render dist --path /music` で、preview サーバーなしに書き出せる。
+- **F9・F14**: `--encode h264 --audio public/music.wav --strict-audio` で、mux と長さの照合まで済む。1920×1080・16spp・900 フレームで 66〜89 秒。映像と音声はともに 15.000 秒、`start_time` は 0。
+- **F17 の補足**: 差し替えた音源（16 分グリッドとのずれ +1 ms）で書き出した mp4 を視聴し、体感のずれは無かった。音源のピークが 0 dBFS だと AAC も 0.0 dB に達するので、音源は −1 dB ほど余裕を持たせて書き出す。
+
 ### 再現手順（lab）
 - **音源の検査**: `python3 -I scripts/check-wav.py public/music.wav`
   - 長さ・16 分グリッドのずれ・サンプルレートが NG なら、終了コード 1。
   - ピークは WARN として出すだけ。
 - **解析値**: `python3 -I scripts/analyze-wav.py public/music.wav src/lib/song.analysis.json` で、ハットと energy の値を作る。
-- **書き出し**: `pnpm build && pnpm exec vite preview --port 5289` を起動してから、`pnpm exec frapx-render http://localhost:5289/music --out <dir> --set spp=16` を実行する。
-- **mux**: `ffmpeg -framerate 60 -i <dir>/frame_%05d.png -i public/music.wav … -c:v libx264 -c:a aac -shortest music-av.mp4`
+- **書き出し（音付き）**: `pnpm build && pnpm exec frapx-render dist --path /music --out <dir> --set spp=16 --encode h264 --audio public/music.wav --strict-audio`（tool-render 0.3.0 以降。それより前は `vite preview` の URL を渡し、ffmpeg で手作業の mux をしていた）
 
 ## Claude への作業指示
 
