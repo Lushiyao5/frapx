@@ -22,6 +22,7 @@ import type {
   RenderTarget,
   RuntimeHostInstance,
   TextureSet,
+  TimeSource,
   UniformBindings,
   UniformSource
 } from "@frapx/core";
@@ -139,6 +140,7 @@ class Particles implements ParticlesInstance {
       ...(options.pauseWhenHidden !== undefined && { pauseWhenHidden: options.pauseWhenHidden }),
       ...(options.respectReducedMotion !== undefined && { respectReducedMotion: options.respectReducedMotion }),
       ...(options.clock !== undefined && { clock: options.clock }),
+      ...(options.timeSource !== undefined && { timeSource: options.timeSource }),
       ...(options.resolution !== undefined && { resolution: options.resolution }),
       ...(options.debug !== undefined && { debug: options.debug }),
 
@@ -237,7 +239,8 @@ class Particles implements ParticlesInstance {
   setTime(seconds: number): void {
     if (this.destroyed) return;
     this.host.setTime(seconds);
-    if (this.host.clock === "realtime") this.seeking = true;
+    // The source overrides the time next frame, so there is nothing to land on.
+    if (this.host.clock === "realtime" && !this.host.timeSource) this.seeking = true;
   }
 
   setClock(clock: ClockMode): void {
@@ -246,6 +249,12 @@ class Particles implements ParticlesInstance {
     // starts over to stay reproducible.
     if (clock === "manual") this.dirty = true;
     this.host.setClock(clock);
+  }
+
+  setTimeSource(source: TimeSource | null): void {
+    if (this.destroyed) return;
+    this.seeking = false;
+    this.host.setTimeSource(source);
   }
 
   setResolution(resolution: Resolution | null): void {

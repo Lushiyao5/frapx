@@ -17,6 +17,12 @@ export type RenderMode = "always" | "demand";
  * drawn only by explicit `render()` calls, so output is deterministic.
  */
 export type ClockMode = "realtime" | "manual";
+/**
+ * Returns the current time in seconds from an external transport, such as an
+ * audio player's position. Under the realtime clock it replaces
+ * requestAnimationFrame time while the gates keep working.
+ */
+export type TimeSource = () => number;
 /** Fixed internal render size in pixels: `[width, height]`. */
 export type Resolution = readonly [number, number];
 export type DprOption = "auto" | number | (() => number);
@@ -155,6 +161,18 @@ export type CreateShaderBackgroundOptions<
    */
   clock?: ClockMode;
   /**
+   * Makes the realtime animation loop follow an external transport, such as an
+   * audio player: every frame takes `u_time = timeSource()` and `u_delta` from
+   * the previous frame's value, clamped to `[0, 0.1]` (0 when the source goes
+   * back, and on the first frame after a pause). Offscreen, hidden and
+   * reduced-motion pausing keep working, and so does the pointer; the
+   * reduced-motion frame is drawn at the source's time. `render()` and
+   * `captureFrame()` redraw at the last frame's time. A manual clock ignores
+   * the source but keeps it, and `renderMode: "demand"`, which runs no frame
+   * loop, never reads it. Change later with `setTimeSource()`.
+   */
+  timeSource?: TimeSource;
+  /**
    * Fixes the internal render size (`u_resolution`) instead of following the
    * target's size. The canvas is letterboxed with `object-fit: contain`,
    * `u_viewportSize` stays the displayed size and `u_pixelRatio` is derived
@@ -208,6 +226,11 @@ export type ShaderBackgroundInstance<
    * resumes the loop if the instance was started.
    */
   setClock(clock: ClockMode): void;
+  /**
+   * Sets or removes the realtime clock's time source. Removing it continues
+   * from the source's last time.
+   */
+  setTimeSource(source: TimeSource | null): void;
   /**
    * Fixes the internal render size, or follows the target's size again when
    * `null`. Resets the feedback buffers like any resize. Throws

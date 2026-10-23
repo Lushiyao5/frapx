@@ -8,6 +8,12 @@ export type RenderMode = "always" | "demand";
  * drawn only by explicit `render()` calls, so output is deterministic.
  */
 export type ClockMode = "realtime" | "manual";
+/**
+ * Returns the current time in seconds from an external transport, such as an
+ * audio player's position. Under the realtime clock it replaces
+ * requestAnimationFrame time while the gates keep working.
+ */
+export type TimeSource = () => number;
 /** Fixed internal render size in pixels: `[width, height]`. */
 export type Resolution = readonly [number, number];
 export type DprOption = "auto" | number | (() => number);
@@ -198,6 +204,8 @@ export type RuntimeHostOptions = {
   renderMode?: RenderMode;
   /** Defaults to `"realtime"`. See {@link ClockMode}. */
   clock?: ClockMode;
+  /** Takes realtime loop frames' time from this source; unread in demand mode. See {@link TimeSource}. */
+  timeSource?: TimeSource;
   /**
    * Fixes the internal render size instead of following the target's size.
    * Required when neither `target` nor `canvas` is given.
@@ -244,6 +252,7 @@ export type RuntimeHostInstance = {
   readonly supported: boolean;
   readonly ready: Promise<void>;
   readonly clock: ClockMode;
+  readonly timeSource: TimeSource | null;
   start(): void;
   stop(): void;
   render(): void;
@@ -257,6 +266,12 @@ export type RuntimeHostInstance = {
   setTime(seconds: number): void;
   /** Switches between realtime and manual clocks after creation. */
   setClock(clock: ClockMode): void;
+  /**
+   * Sets or removes the realtime clock's external time source. Each realtime
+   * frame then takes `time = source()` and `delta` from the previous frame's
+   * value, clamped to `[0, 0.1]`. A manual clock ignores the source but keeps it.
+   */
+  setTimeSource(source: TimeSource | null): void;
   /**
    * Fixes the internal render size, or follows the target's size again when
    * `null`. Throws `UnsupportedError` when the size exceeds the GPU limits.

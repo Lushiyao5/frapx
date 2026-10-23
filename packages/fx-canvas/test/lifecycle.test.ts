@@ -300,6 +300,46 @@ describe("reduced motion", () => {
   });
 });
 
+describe("with a time source", () => {
+  it("pauses while hidden and resumes at the source's current time", async () => {
+    let now = 1;
+    let observed: number | null = null;
+    const fx = create({
+      timeSource: () => now,
+      onBeforeRender: (state: RenderState) => {
+        observed = state.time;
+      }
+    });
+    await fx.ready;
+
+    setHidden(true);
+    expect(fx.status).toBe("paused");
+
+    now = 7;
+    setHidden(false);
+    expect(fx.status).toBe("running");
+    rafCallbacks[rafCallbacks.length - 1]?.(16);
+    expect(observed).toBe(7);
+  });
+
+  it("holds a static frame at the source's time under reduced motion", async () => {
+    mediaMatches = true;
+    let observed: number | null = null;
+    const fx = create({
+      timeSource: () => 4.5,
+      respectReducedMotion: true,
+      onBeforeRender: (state: RenderState) => {
+        observed = state.time;
+      }
+    });
+    await fx.ready;
+
+    expect(fx.status).toBe("paused");
+    expect(rafCallbacks).toHaveLength(0);
+    expect(observed).toBe(4.5);
+  });
+});
+
 describe("teardown", () => {
   it("removes visibility and media listeners on destroy", async () => {
     const fx = create({ respectReducedMotion: true });

@@ -72,7 +72,7 @@ Lengths are in viewport heights (1 is the canvas' height) and times in seconds. 
 | `seed` | 1 | Seed for every random choice |
 | `format` | `"rgba8"` | `"rgba16f"` draws into a half-float buffer for 16-bit capture (needs `EXT_color_buffer_float`; `formatFallback: false` fails instead of falling back) |
 
-The host options are the same as `fx-canvas`: `target`, `canvas`, `layer`, `resolution`, `dpr`, `maxDpr`, `autoResize`, `autoStart`, `pauseWhenOffscreen`, `pauseWhenHidden`, `respectReducedMotion`, `clock`, `debug`, `canvasClass`, `canvasStyle`, `onReady` and `onError`. Under `respectReducedMotion`, a reduced-motion user sees a still frame: on load, the prewarmed first one.
+The host options are the same as `fx-canvas`: `target`, `canvas`, `layer`, `resolution`, `dpr`, `maxDpr`, `autoResize`, `autoStart`, `pauseWhenOffscreen`, `pauseWhenHidden`, `respectReducedMotion`, `clock`, `timeSource`, `debug`, `canvasClass`, `canvasStyle`, `onReady` and `onError`. Under `respectReducedMotion`, a reduced-motion user sees a still frame: on load, the prewarmed first one.
 
 Which forces exist, the pool, the sprite, `sizeOverLife` and `tumble` are compiled into the shaders, so changing them means creating a new instance.
 
@@ -117,6 +117,7 @@ particles.bindUniforms(
 The simulation advances in fixed steps of `1 / simulationRate` seconds, and the frame at time `t` shows the state after `floor(t * simulationRate)` steps from the prewarmed start, however many frames were drawn on the way. A manual clock always holds to this; a realtime clock does unless it has to drop time:
 
 - **Realtime clock.** Each frame runs the steps its elapsed time covers. A frame that falls far behind (a slow device, a restored context) runs up to 4 steps and drops the rest of the time instead of stalling. `setTime()` lands exactly; going back replays from the start.
+- **Realtime clock with a `timeSource`.** Each frame takes its time from the source (see "Following an audio transport" in the `fx-canvas` README). A jump in the source is not a seek: going forward runs up to 4 steps and drops the rest, as after a slow frame, and going back (a loop or a seek) restarts from the prewarmed start. Since prewarming always completes, the frame is never empty, and no frame costs more than the prewarm plus 4 steps however far the source jumps. A transport that loops back to within 4 steps of 0 therefore lands exactly. `setTime()` has no lasting effect while a source is set.
 - **Manual clock.** `setTime(t)` then `render()` or `captureFrame()` runs every step up to `t`; going back replays from the start. A frame is therefore the same whether it was reached directly, frame by frame or after rewinding, so `@frapx/tool-render` can split a render into ranges. Uniform values apply to the whole timeline: changing a simulation uniform with `setUniform()`, or binding or removing a source with `bindUniforms()`, replays from the start, and so does a new canvas size, since spawns are placed by aspect ratio. Changing `opacity` or `twinkle` only redraws. In a bound timeline, simulation uniforms are evaluated at every step's own time and drawing uniforms at the frame's time. The pointer has no effect, and switching to the manual clock starts over.
 
 Replaying is cheap per step but adds up: a frame 10 minutes in at 60 steps per second runs 36,000 steps. `captureFrame()` runs a long catch-up in batches with GPU waits in between, so it never trips the browser's GPU watchdog.
@@ -143,7 +144,7 @@ The capture holds the particle layer alone, with alpha, to composite over other 
 | `canvas`, `gl`, `status`, `supported`, `ready`, `clock` | As in `fx-canvas` |
 | `maxParticles`, `simulationRate` | The pool size and step rate in use |
 | `start()`, `stop()`, `render()`, `resize()`, `destroy()` | Lifecycle |
-| `setTime(seconds)`, `setClock(clock)`, `setResolution(size)` | Clock and size |
+| `setTime(seconds)`, `setClock(clock)`, `setTimeSource(source)`, `setResolution(size)` | Clock and size |
 | `captureFrame(options)` | Draws and reads the current frame |
 | `reset()` | Restarts from the prewarmed start on the next frame |
 | `setUniform()`, `setUniforms()`, `bindUniforms()` | Change the values above |

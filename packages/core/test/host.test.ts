@@ -347,6 +347,154 @@ describe("realtime setTime", () => {
   });
 });
 
+describe("time source", () => {
+  it("warns under debug that demand mode never reads the source", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { host } = create({ renderMode: "demand", debug: true, timeSource: () => 1 });
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("not read with renderMode \"demand\""));
+    warn.mockClear();
+    host.setTimeSource(null);
+    create({ debug: true, timeSource: () => 1 });
+    expect(warn).not.toHaveBeenCalled();
+    host.setTimeSource(() => 2);
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+
+  it("takes each frame's time from the source and the delta between frames", async () => {
+    let now = 4;
+    const { host, frames } = create({ timeSource: () => now });
+    await host.ready;
+
+    tick(1000);
+    now = 4.02;
+    tick(1016);
+    now = 4.5;
+    tick(1033);
+
+    expect(frames.map((f) => [f.time, f.delta])).toEqual([
+      [4, 0],
+      [4.02, expect.closeTo(0.02)],
+      [4.5, 0.1]
+    ]);
+  });
+
+  it("gives a zero delta when the source jumps back", async () => {
+    let now = 8;
+    const { host, frames } = create({ timeSource: () => now });
+    await host.ready;
+
+    tick(1000);
+    now = 0.01;
+    tick(1016);
+
+    expect(frames.at(-1)).toMatchObject({ time: 0.01, delta: 0 });
+  });
+
+  it("holds the previous time when the source returns a non-finite value", async () => {
+    let now = 2;
+    const { host, frames } = create({ timeSource: () => now });
+    await host.ready;
+
+    tick(1000);
+    now = Number.NaN;
+    tick(1016);
+
+    expect(frames.at(-1)).toMatchObject({ time: 2, delta: 0 });
+  });
+
+  it("pauses while hidden and resumes at the source's current time", async () => {
+    let now = 1;
+    const { host, frames } = create({ timeSource: () => now });
+    await host.ready;
+    tick(1000);
+
+    setHidden(true);
+    expect(host.status).toBe("paused");
+    expect(rafCallbacks).toHaveLength(0);
+
+    now = 9;
+    setHidden(false);
+    tick(5000);
+
+    expect(frames).toHaveLength(2);
+    expect(frames.at(-1)).toMatchObject({ time: 9, delta: 0 });
+  });
+
+  it("holds a static frame at the source's time under reduced motion", async () => {
+    let now = 3;
+    const { host, frames } = create({
+      timeSource: () => now,
+      respectReducedMotion: true
+    });
+    await host.ready;
+    tick(1000);
+
+    now = 3.5;
+    mediaCb?.({ matches: true });
+
+    expect(host.status).toBe("paused");
+    expect(rafCallbacks).toHaveLength(0);
+    expect(frames.at(-1)).toMatchObject({ time: 3.5, delta: 0, reducedMotion: true });
+  });
+
+  it("keeps pointer input", async () => {
+    const { host, frames, canvas } = create({ timeSource: () => 1 });
+    await host.ready;
+
+    canvas.dispatch("pointermove", { clientX: 50, clientY: 25 });
+    tick(1000);
+
+    expect(frames.at(-1)?.pointer.active).toBe(1);
+  });
+
+  it("is ignored by a manual clock and kept for the return to realtime", async () => {
+    const { host, frames } = create({ timeSource: () => 6 });
+    await host.ready;
+
+    host.setClock("manual");
+    host.setTime(2);
+    host.render();
+    expect(frames.at(-1)?.time).toBe(2);
+
+    host.setClock("realtime");
+    tick(1000);
+    expect(frames.at(-1)?.time).toBe(6);
+  });
+
+  it("can be set and removed while running", async () => {
+    let now = 20;
+    const { host, frames } = create();
+    await host.ready;
+    tick(1000);
+    tick(1050);
+
+    host.setTimeSource(() => now);
+    expect(host.timeSource).not.toBeNull();
+    tick(1100);
+    expect(frames.at(-1)).toMatchObject({ time: 20, delta: 0 });
+
+    host.setTimeSource(null);
+    now = 99;
+    tick(1150);
+    expect(frames.at(-1)?.time).toBeCloseTo(20.05);
+  });
+
+  it("lets render() and captureFrame() redraw at the last frame's time", async () => {
+    let now = 1;
+    const { host, frames } = create({ timeSource: () => now });
+    await host.ready;
+    tick(1000);
+
+    host.stop();
+    now = 2;
+    host.render();
+    await host.captureFrame({ format: "rgba8" });
+
+    expect(frames.map((f) => f.time)).toEqual([1, 1, 1]);
+  });
+});
+
 describe("fixed resolution", () => {
   it("keeps the internal size independent of the target size", async () => {
     const { host, frames, canvas } = create({

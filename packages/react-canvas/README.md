@@ -123,6 +123,19 @@ const png = await ref.current?.captureFrame(); // rejects while nothing is mount
 The handle also forwards `resetFeedback()`. See the `@frapx/fx-canvas` README ("Deterministic Rendering") for the
 semantics.
 
+`timeSource` follows an external transport such as an audio player, keeping the
+offscreen, hidden and reduced-motion gates (see "Following an audio transport"
+in the `@frapx/fx-canvas` README). The latest function is called on every
+frame, so an inline arrow function neither recreates the instance nor restarts
+`u_delta`; removing the prop returns to animation frame time:
+
+```tsx
+<ShaderBackground
+  fragment={fragment}
+  timeSource={() => transport.getPositionMs() / 1000}
+/>
+```
+
 ### Timelines
 
 `uniformSources` binds `UniformSource`s such as `keyframes()` with

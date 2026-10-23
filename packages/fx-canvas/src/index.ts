@@ -36,6 +36,7 @@ export type {
   TextureMap,
   TextureOptions,
   TextureSource,
+  TimeSource,
   UniformInput,
   UniformInputMap,
   UniformRuntimeValue,

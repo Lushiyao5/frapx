@@ -13,6 +13,7 @@ import type {
   ShaderStatus,
   TextureInput,
   TextureMap,
+  TimeSource,
   UniformInput,
   UniformInputMap,
   UniformRuntimeValue
@@ -31,6 +32,7 @@ export type {
   ShaderStatus,
   TextureInput,
   TextureMap,
+  TimeSource,
   UniformInput,
   UniformInputMap,
   UniformRuntimeValue
@@ -143,6 +145,8 @@ export type CreatePassesOptions<
   renderMode?: RenderMode;
   /** Defaults to `"realtime"`. See `@frapx/fx-canvas`. */
   clock?: ClockMode;
+  /** Realtime frames take their time from this source. See `@frapx/fx-canvas`. */
+  timeSource?: TimeSource;
   /** Fixed internal render size. Required without `target` or `canvas`. */
   resolution?: Resolution;
   dpr?: DprOption;
@@ -189,6 +193,7 @@ export type PassesInstance<
   /** See `@frapx/fx-canvas`. Does not render by itself. */
   setTime(seconds: number): void;
   setClock(clock: ClockMode): void;
+  setTimeSource(source: TimeSource | null): void;
   setResolution(resolution: Resolution | null): void;
   /** Changes the accumulation settings and restarts the current frame's samples. */
   setAccumulation(options: AccumulationOptions): void;
