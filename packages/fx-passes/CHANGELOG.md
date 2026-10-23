@@ -6,6 +6,10 @@
 
 - `timeSource` option and `setTimeSource(source | null)`, as in `@frapx/fx-canvas`: the realtime loop follows an external transport and keeps the lifecycle gates. Re-exports the `TimeSource` type.
 
+### Fixed
+
+- Leaving `ready` unawaited no longer logs an unhandled rejection after `destroy()` or in an unsupported environment, via `@frapx/core`; awaiting it still rejects. fx-passes has no React binding, so this removes the `Uncaught (in promise) DestroyedError` that every StrictMode user saw.
+
 ## 0.3.0 - 2026-10-20
 
 ### Added

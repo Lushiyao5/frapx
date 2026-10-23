@@ -302,6 +302,7 @@ class RuntimeHost implements RuntimeHostInstance {
     }
 
     this.currentStatus = "destroyed";
+    this.markReadyHandled();
     this.readyReject?.(new DestroyedError("Runtime host was destroyed."));
   }
 
@@ -831,6 +832,8 @@ class RuntimeHost implements RuntimeHostInstance {
     this.currentStatus = "unsupported";
     this.debugWarn(error.message);
     this.options.onError?.(error);
+    // An unsupported environment is expected; a missing target stays loud.
+    if (error instanceof UnsupportedError) this.markReadyHandled();
     this.readyReject?.(error);
   }
 
@@ -839,6 +842,12 @@ class RuntimeHost implements RuntimeHostInstance {
     this.debugWarn(error.message);
     this.options.onError?.(error);
     this.readyReject?.(error);
+  }
+
+  // Keeps an unawaited `ready` from surfacing as an unhandled rejection, e.g.
+  // after a StrictMode cleanup or during SSR. Callers still see the rejection.
+  private markReadyHandled(): void {
+    this.ready.catch(() => {});
   }
 
   private debugWarn(message: string): void {

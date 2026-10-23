@@ -459,6 +459,8 @@ fx.setUniforms({ progress: 0.5, color: [1, 0, 0] });
 
 Unsupported environments return a no-op instance. `ready` rejects and `debug: true` prints warnings.
 
+`ready` resolves once the first setup finishes. It rejects with `DestroyedError` when `destroy()` runs first, with `UnsupportedError` when WebGL (or a feature the instance needs) is unavailable, and with the setup error, such as a `ShaderCompileError`, when initialization fails. Leaving `ready` unawaited after `destroy()` or in an unsupported environment does not produce an unhandled rejection, so a React StrictMode effect that destroys the instance in cleanup stays quiet. Setup failures and a missing target still surface as unhandled rejections when `ready` is left unhandled, even with `onError`.
+
 ### Hot reloading
 
 `setFragment(source)` swaps the fragment shader without recreating the instance: the time, uniforms, textures and feedback history carry over (call `resetFeedback()` to clear the history). A compile error never throws. It is returned and passed to `onError`, and the previous shader keeps drawing, so a typo mid-edit does not blank the page:
