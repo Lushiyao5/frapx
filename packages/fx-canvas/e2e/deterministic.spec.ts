@@ -11,7 +11,8 @@ type Instance = {
 
 type Win = typeof window & {
   __frapxShader?: Instance;
-  __frapxShaderSample?: { frames: number };
+  __frapxShaderSample?: { frames: number; pixel: number[] | null };
+  __frapxTransportTime?: number;
 };
 
 // Draw and read back in the same task: the drawing buffer is not preserved,
@@ -117,4 +118,64 @@ test("returns to the animation loop with setClock('realtime')", async ({
     .toBe("running");
   const before = await frames(page);
   await expect.poll(() => frames(page)).toBeGreaterThan(before);
+});
+
+const setTransportTime = (page: Page, seconds: number) =>
+  page.evaluate((time) => {
+    (window as Win).__frapxTransportTime = time;
+  }, seconds);
+
+const pixel = (page: Page) =>
+  page.evaluate(() => (window as Win).__frapxShaderSample?.pixel ?? null);
+
+const status = (page: Page) =>
+  page.evaluate(() => (window as Win).__frapxShader!.status);
+
+test("follows an external time source on every frame", async ({ page }) => {
+  await page.goto("/?timeSource=1");
+  await setTransportTime(page, 1.5);
+  await waitReady(page);
+
+  // The source holds still, so the loop keeps drawing the same frame.
+  let before = await frames(page);
+  await expect.poll(() => frames(page)).toBeGreaterThan(before + 2);
+  const held = await pixel(page);
+  before = await frames(page);
+  await expect.poll(() => frames(page)).toBeGreaterThan(before + 2);
+  expect(await pixel(page)).toEqual(held);
+
+  await setTransportTime(page, 4);
+  await expect.poll(() => pixel(page)).not.toEqual(held);
+});
+
+test("pauses drawing while hidden with a time source", async ({ page }) => {
+  await page.goto("/?timeSource=1");
+  await waitReady(page);
+  await expect.poll(() => status(page)).toBe("running");
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      get: () => true
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect.poll(() => status(page)).toBe("paused");
+
+  const before = await frames(page);
+  await setTransportTime(page, 3);
+  await page.waitForTimeout(300);
+  expect(await frames(page)).toBe(before);
+});
+
+test("holds a frame under reduced motion with a time source", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/?timeSource=1&reducedMotion=1");
+  await waitReady(page);
+  await expect.poll(() => status(page)).toBe("paused");
+
+  const before = await frames(page);
+  await setTransportTime(page, 2);
+  await page.waitForTimeout(300);
+  expect(await frames(page)).toBe(before);
 });

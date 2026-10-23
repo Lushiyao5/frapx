@@ -12,6 +12,7 @@ import type {
   ShaderStatus,
   TextureInput,
   TextureMap,
+  TimeSource,
   UniformInput,
   UniformInputMap,
   UniformRuntimeValue
@@ -112,6 +113,7 @@ class ShaderBackground<TUniforms extends UniformInputMap>
       ...(options.respectReducedMotion !== undefined && { respectReducedMotion: options.respectReducedMotion }),
       ...(options.renderMode !== undefined && { renderMode: options.renderMode }),
       ...(options.clock !== undefined && { clock: options.clock }),
+      ...(options.timeSource !== undefined && { timeSource: options.timeSource }),
       ...(options.resolution !== undefined && { resolution: options.resolution }),
       ...(options.debug !== undefined && { debug: options.debug }),
 
@@ -233,6 +235,11 @@ class ShaderBackground<TUniforms extends UniformInputMap>
   setClock(clock: ClockMode): void {
     if (this.shaderDestroyed) return;
     this.host.setClock(clock);
+  }
+
+  setTimeSource(source: TimeSource | null): void {
+    if (this.shaderDestroyed) return;
+    this.host.setTimeSource(source);
   }
 
   setResolution(resolution: Resolution | null): void {

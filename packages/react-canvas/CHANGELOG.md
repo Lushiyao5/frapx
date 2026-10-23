@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `timeSource` prop. It switches in place like `clock`, and the instance calls the latest function through a stable wrapper, so an inline arrow function neither recreates the instance nor restarts `u_delta`.
+
 ## 0.7.0 - 2026-10-16
 
 ### Added

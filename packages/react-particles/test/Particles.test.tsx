@@ -24,6 +24,7 @@ const makeInstance = (maxParticles: number) => ({
   destroy: vi.fn(),
   setTime: vi.fn(),
   setClock: vi.fn(),
+  setTimeSource: vi.fn(),
   setResolution: vi.fn(),
   captureFrame: vi.fn(() => Promise.resolve(new Uint8Array(4))),
   reset: vi.fn(),
@@ -263,6 +264,26 @@ describe("Particles", () => {
     await render(<Particles lifetime={[1, 3]} uniformSources={[b]} />);
     for (const remove of removers) expect(remove).toHaveBeenCalledTimes(1);
     expect(latest().bindUniforms).toHaveBeenLastCalledWith(b);
+  });
+
+  it("follows the latest timeSource without recreating", async () => {
+    await act(async () => {
+      root.render(<Particles timeSource={() => 1} />);
+    });
+    const source = lastOptions().timeSource as () => number;
+    expect(source()).toBe(1);
+
+    await act(async () => {
+      root.render(<Particles timeSource={() => 2} />);
+    });
+    expect(source()).toBe(2);
+    expect(created()).toBe(1);
+
+    await act(async () => {
+      root.render(<Particles />);
+    });
+    expect(latest().setTimeSource).toHaveBeenLastCalledWith(null);
+    expect(created()).toBe(1);
   });
 
   it("switches clock and resolution in place", async () => {

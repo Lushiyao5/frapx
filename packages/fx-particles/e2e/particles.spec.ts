@@ -358,3 +358,47 @@ test("runs in realtime and keeps running after a far seek", async ({ page }) => 
   expect(result.status).toBe("running");
   expect(result.after).toBe("running");
 });
+
+test("follows a time source without stalling on far jumps", async ({ page }) => {
+  await open(page);
+  const result = await page.evaluate(async () => {
+    const { createParticles } = (window as Win).__frapx;
+    const host = document.createElement("div");
+    host.style.cssText = "position:fixed;inset:0";
+    document.body.append(host);
+    let now = 0;
+    const fx = createParticles({ target: host, preset: "sparkles", timeSource: () => now });
+    await fx.ready;
+    const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    await wait(200);
+
+    // An exact seek to an hour in would run 216,000 steps in one frame.
+    let longest = 0;
+    let previous = performance.now();
+    let watching = true;
+    const watch = () => {
+      const t = performance.now();
+      longest = Math.max(longest, t - previous);
+      previous = t;
+      if (watching) requestAnimationFrame(watch);
+    };
+    requestAnimationFrame(watch);
+    now = 3600;
+    await wait(200);
+    now = 0.05;
+    await wait(200);
+    watching = false;
+
+    const frame = await fx.captureFrame({ format: "rgba8" });
+    let covered = 0;
+    for (let i = 3; i < frame.length; i += 4) if (frame[i]! > 0) covered++;
+    const status = fx.status;
+    fx.destroy();
+    host.remove();
+    return { longest, covered, status };
+  });
+  expect(result.status).toBe("running");
+  expect(result.longest).toBeLessThan(250);
+  // Going back restarts from the prewarmed start, so the frame is not empty.
+  expect(result.covered).toBeGreaterThan(0);
+});
