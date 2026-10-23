@@ -1,6 +1,6 @@
 {
   "name": "@frapx/fx-canvas",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "description": "Lightweight WebGL shader background runtime for websites.",
   "keywords": [
     "webgl",

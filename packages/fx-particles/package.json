@@ -1,6 +1,6 @@
 {
   "name": "@frapx/fx-particles",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "WebGL2 GPU particle runtime for website backgrounds: declarative presets, transform-feedback simulation, and deterministic fixed-step playback for frame export.",
   "keywords": [
     "webgl2",
