@@ -1,9 +1,47 @@
 # frapx
 
-Web graphics utilities for building lightweight visual effects on the web.
+<p align="center">
+  <a href="./examples/vite-liminal-vein">
+    <picture>
+      <source srcset="./assets/readme/liminal-vein.avif" type="image/avif">
+      <img src="./assets/readme/liminal-vein.jpg" width="880" alt="LIMINAL VEIN: a dark tunnel lit by cyan rings that change from circles to hexagons and stars, with a thin violet streak">
+    </picture>
+  </a>
+  <br>
+  <sub><b>LIMINAL VEIN</b> — a 15-second loop made with <code>@frapx/fx-passes</code> and rendered offline with <code>@frapx/tool-render</code>. <a href="./examples/vite-liminal-vein">Source</a></sub>
+</p>
 
-📖 Full documentation, a live shader demo, and per-package guides:
-**https://kramhash.github.io/frapx/**
+**Put the GLSL you wrote on a production website.** `@frapx/fx-canvas` runs your
+fragment shader behind any element in about 11 kB (min+gzip, including
+`@frapx/core`) and handles what bites in production: pausing offscreen and in
+hidden tabs, reduced motion, SSR-safe imports, and WebGL1 as well as WebGL2.
+
+```sh
+pnpm add @frapx/fx-canvas
+```
+
+```ts
+import { createShaderBackground, glsl } from "@frapx/fx-canvas";
+
+createShaderBackground({
+  target: ".hero",
+  respectReducedMotion: true,
+  fragment: glsl`
+    precision highp float;
+    uniform vec2 u_resolution;
+    uniform float u_time;
+
+    void main() {
+      vec2 uv = gl_FragCoord.xy / u_resolution;
+      gl_FragColor = vec4(uv, 0.5 + 0.5 * sin(u_time), 1.0);
+    }
+  `
+});
+```
+
+**Try it:** [Live demo](https://kramhash.github.io/frapx/live-demo/) ·
+[Getting started](https://kramhash.github.io/frapx/getting-started/) ·
+[Documentation](https://kramhash.github.io/frapx/)
 
 ## Packages
 

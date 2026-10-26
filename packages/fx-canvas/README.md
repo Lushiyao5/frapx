@@ -2,9 +2,20 @@
 
 [![npm version](https://img.shields.io/npm/v/@frapx/fx-canvas.svg)](https://www.npmjs.com/package/@frapx/fx-canvas)
 
-Lightweight WebGL shader background runtime for websites.
+<p align="center">
+  <a href="https://github.com/kramhash/frapx/tree/main/examples/vite-liminal-vein">
+    <picture>
+      <source srcset="https://raw.githubusercontent.com/kramhash/frapx/main/assets/readme/liminal-vein.avif" type="image/avif">
+      <img src="https://raw.githubusercontent.com/kramhash/frapx/main/assets/readme/liminal-vein.jpg" width="880" alt="LIMINAL VEIN: a dark tunnel lit by cyan rings that change from circles to hexagons and stars, with a thin violet streak">
+    </picture>
+  </a>
+  <br>
+  <sub><b>LIMINAL VEIN</b> — made with frapx (<code>@frapx/fx-passes</code>, rendered offline with <code>@frapx/tool-render</code>).</sub>
+</p>
 
-This is not a scene, camera, mesh, or full rendering-engine abstraction. It creates and manages a WebGL canvas for an existing DOM region, then lets you drive fragment shaders with built-in uniforms, custom uniforms, textures, and optional previous-frame feedback.
+**Put the GLSL you wrote on a production website.** `@frapx/fx-canvas` runs your fragment shader behind any element in about 11 kB (min+gzip, including `@frapx/core`) and handles what bites in production: pausing offscreen and in hidden tabs, reduced motion, SSR-safe imports, and WebGL1 as well as WebGL2.
+
+**Try it:** [Live demo](https://kramhash.github.io/frapx/live-demo/) · [Getting started](https://kramhash.github.io/frapx/getting-started/) · [Documentation](https://kramhash.github.io/frapx/)
 
 ## Install
 
@@ -500,6 +511,10 @@ void main() {
 }
 `;
 ```
+
+## Scope
+
+`@frapx/fx-canvas` creates and manages a WebGL canvas for an existing DOM region, then lets you drive fragment shaders with built-in uniforms, custom uniforms, textures, and optional previous-frame feedback. It is not a scene, camera, mesh, or full rendering-engine abstraction.
 
 ## SSR Notes
 
