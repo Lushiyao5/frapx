@@ -39,6 +39,10 @@
     "url": "git+https://github.com/kramhash/frapx.git",
     "directory": "packages/glsl-raymarch"
   },
+  "homepage": "https://kramhash.github.io/frapx/packages/glsl-raymarch/",
+  "bugs": {
+    "url": "https://github.com/kramhash/frapx/issues"
+  },
   "publishConfig": {
     "access": "public"
   }

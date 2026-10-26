@@ -38,6 +38,10 @@
     "url": "git+https://github.com/kramhash/frapx.git",
     "directory": "packages/glsl-noise"
   },
+  "homepage": "https://kramhash.github.io/frapx/packages/glsl-noise/",
+  "bugs": {
+    "url": "https://github.com/kramhash/frapx/issues"
+  },
   "publishConfig": {
     "access": "public"
   }

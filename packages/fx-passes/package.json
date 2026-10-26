@@ -43,6 +43,10 @@
     "url": "git+https://github.com/kramhash/frapx.git",
     "directory": "packages/fx-passes"
   },
+  "homepage": "https://kramhash.github.io/frapx/packages/fx-passes/",
+  "bugs": {
+    "url": "https://github.com/kramhash/frapx/issues"
+  },
   "publishConfig": {
     "access": "public"
   }

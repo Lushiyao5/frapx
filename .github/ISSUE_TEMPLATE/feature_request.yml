@@ -1,0 +1,24 @@
+name: Feature request
+description: Suggest an addition or change to a frapx package.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. 日本語で書いていただいても大丈夫です。
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to build?
+      description: The effect or workflow you have in mind, and where frapx gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: An API sketch or behaviour, if you have one.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Workarounds you have tried

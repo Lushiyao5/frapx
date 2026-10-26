@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Questions and showcase
+    url: https://github.com/kramhash/frapx/discussions
+    about: Ask how to do something, or share what you made with frapx.
+  - name: Documentation
+    url: https://kramhash.github.io/frapx/
+    about: Guides and API reference for every package.

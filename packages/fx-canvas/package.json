@@ -47,6 +47,10 @@
     "url": "git+https://github.com/kramhash/frapx.git",
     "directory": "packages/fx-canvas"
   },
+  "homepage": "https://kramhash.github.io/frapx/packages/fx-canvas/",
+  "bugs": {
+    "url": "https://github.com/kramhash/frapx/issues"
+  },
   "publishConfig": {
     "access": "public"
   }

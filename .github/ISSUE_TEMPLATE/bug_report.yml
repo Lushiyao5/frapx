@@ -1,0 +1,62 @@
+name: Bug report
+description: Something in a frapx package does not work as documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. 日本語で書いていただいても大丈夫です。
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      options:
+        - "@frapx/core"
+        - "@frapx/fx-canvas"
+        - "@frapx/fx-particles"
+        - "@frapx/fx-passes"
+        - "@frapx/glsl-flowmap"
+        - "@frapx/glsl-noise"
+        - "@frapx/glsl-raymarch"
+        - "@frapx/glsl-sdf"
+        - "@frapx/react-canvas"
+        - "@frapx/react-particles"
+        - "@frapx/tool-capture"
+        - "@frapx/tool-dev"
+        - "@frapx/tool-render"
+        - "Docs site / examples"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      placeholder: "0.11.0"
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: A minimal shader and setup code, or a link to a repository / StackBlitz / CodePen.
+      render: ts
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser, OS and GPU
+      description: For rendering issues, the output of https://webglreport.com helps too.
+      placeholder: "Chrome 141, macOS 26, Apple M3"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console output
+      description: "Errors or warnings, ideally with `debug: true`."
+      render: text

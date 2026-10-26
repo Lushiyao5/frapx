@@ -43,6 +43,10 @@
     "url": "git+https://github.com/kramhash/frapx.git",
     "directory": "packages/fx-particles"
   },
+  "homepage": "https://kramhash.github.io/frapx/packages/fx-particles/",
+  "bugs": {
+    "url": "https://github.com/kramhash/frapx/issues"
+  },
   "publishConfig": {
     "access": "public"
   }

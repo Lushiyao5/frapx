@@ -35,6 +35,10 @@
     "url": "git+https://github.com/kramhash/frapx.git",
     "directory": "packages/glsl-flowmap"
   },
+  "homepage": "https://kramhash.github.io/frapx/packages/glsl-flowmap/",
+  "bugs": {
+    "url": "https://github.com/kramhash/frapx/issues"
+  },
   "publishConfig": {
     "access": "public"
   }
