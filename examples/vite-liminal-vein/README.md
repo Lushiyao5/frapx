@@ -79,11 +79,12 @@ node packages/tool-render/dist/cli.js examples/vite-liminal-vein/dist \
 ```
 
 The page renders 900 frames (15 s at 60 fps) at 1920 × 1080 with 32 samples
-by default, about 0.8 s per frame on an M4 Max. `--audio` muxes the song into
+by default, about 0.4 s per frame on an M4 Max on AC power (about 6 min for
+the loop; much slower on battery or if the machine sleeps). `--audio` muxes the song into
 the encoded videos; `--strict-audio` stops before rendering if its length is
 not the loop's.
 
-- `--resolution 3840x2160` renders another size (4K takes about 1.5 s per
+- `--resolution 3840x2160` renders another size (4K takes about 1.2 s per
   frame on an M4 Max); `--fps 30` another rate (the loop stays 15 s).
 - `--set spp=64` changes the samples per frame, `--set shutter=0` turns motion
   blur off.
