@@ -38,6 +38,10 @@
     "url": "git+https://github.com/kramhash/frapx.git",
     "directory": "packages/tool-dev"
   },
+  "homepage": "https://kramhash.github.io/frapx/packages/tool-dev/",
+  "bugs": {
+    "url": "https://github.com/kramhash/frapx/issues"
+  },
   "publishConfig": {
     "access": "public"
   }

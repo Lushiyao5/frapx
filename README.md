@@ -127,6 +127,11 @@ The docs site ([`apps/docs`](./apps/docs), Astro + Starlight) requires
 `pnpm build` to have run first, since its Live Demo page imports the real
 built `@frapx/fx-canvas` package rather than an aliased source path.
 
+## Contributing
+
+Bug reports, ideas and pull requests are welcome, in English or Japanese.
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
 ## License
 
 MIT © 2026 kramhash. See [LICENSE](./LICENSE).

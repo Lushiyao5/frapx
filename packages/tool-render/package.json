@@ -49,6 +49,10 @@
     "url": "git+https://github.com/kramhash/frapx.git",
     "directory": "packages/tool-render"
   },
+  "homepage": "https://kramhash.github.io/frapx/packages/tool-render/",
+  "bugs": {
+    "url": "https://github.com/kramhash/frapx/issues"
+  },
   "publishConfig": {
     "access": "public"
   }
