@@ -248,6 +248,28 @@ describe("manual clock", () => {
     expect(frames).toHaveLength(0);
   });
 
+  it("reads back the time of the last frame drawn", async () => {
+    const { host } = create({ clock: "manual" });
+    await host.ready;
+
+    expect(host.time).toBe(0);
+    host.setTime(3);
+    expect(host.time).toBe(3);
+    host.setTime(7.5);
+    expect(host.time).toBe(7.5);
+  });
+
+  it("keeps the time put while a gate stops the loop", async () => {
+    const { host } = create({ clock: "manual" });
+    await host.ready;
+
+    host.setTime(4);
+    host.render();
+    setHidden(true);
+
+    expect(host.time).toBe(4);
+  });
+
   it("reports a neutral pointer and no reduced motion", async () => {
     mediaMatches = true;
     const { host, frames, canvas } = create({ clock: "manual" });
