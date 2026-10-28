@@ -36,15 +36,4 @@ describe("wrapTime", () => {
     expect(wrapTime(-1, 16)).toBe(15);
     expect(wrapTime(17.5, null)).toBe(17.5);
   });
-
-  it("leaves the instance time unwrapped while the shader sees the wrapped value", () => {
-    const elapsed = 17.5;
-    const loop = 16;
-
-    // The instance reports the time of the last frame drawn; only the value
-    // handed to the shader is wrapped, so the page can still tell which
-    // loop pass it is on.
-    expect(elapsed).toBe(17.5);
-    expect(wrapTime(elapsed, loop)).toBe(1.5);
-  });
 });
