@@ -87,11 +87,11 @@ fx.bindUniforms(songRhythm);
 soundButton.addEventListener("click", () => {
   soundButton.disabled = true;
   soundtrack
-    // Take the loop position from the instance's own time, then hand the
+    // Read the instance's time when the song is ready, then hand the
     // clock over to the song (or back to realtime when it stops). Switching
     // sources in realtime mode continues from the new source's current value,
     // so the picture never jumps at either transition.
-    .toggle(fx.time)
+    .toggle(() => fx.time)
     .then((playing) => {
       const clock = soundtrack.clock();
       fx.setTimeSource(clock ?? null);

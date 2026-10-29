@@ -11,8 +11,8 @@ const SONG_URL = `${import.meta.env.BASE_URL}music.m4a`;
 export type SongClock = () => number;
 
 export type Soundtrack = {
-  /** Starts the song where the loop is, or silences it. Resolves to whether it plays. */
-  toggle(startFrom: number): Promise<boolean>;
+  /** Reads the loop position after loading, then starts the song, or silences it. */
+  toggle(startFrom: () => number): Promise<boolean>;
   /** Returns the song's clock, or `null` while silent. */
   clock(): SongClock | null;
 };
@@ -45,7 +45,7 @@ export const createSoundtrack = (): Soundtrack => {
     playing = null;
   };
 
-  const start = async (from: number): Promise<void> => {
+  const start = async (readTime: () => number): Promise<void> => {
     // Created within the click, which is what lets it sound.
     context ??= new AudioContext();
     song ??= fetch(SONG_URL)
@@ -65,6 +65,8 @@ export const createSoundtrack = (): Soundtrack => {
     // Exactly the loop, whatever padding the decoder left at the end.
     node.loopEnd = LOOP_SECONDS;
     node.connect(context.destination);
+    // Loading and resuming may take time while the picture keeps advancing.
+    const from = readTime();
     const offset = ((from % LOOP_SECONDS) + LOOP_SECONDS) % LOOP_SECONDS;
     node.start(0, offset);
     // Keeps the time unwrapped, so it never runs backwards at the switch.
